@@ -6,20 +6,20 @@ import { focusStore } from '../services/FocusStore';
 import { FocusBackgroundService, FocusNotificationService } from '../services/FocusNativeServices';
 import { FocusProject, FocusSettings, FocusTask, ForestPlant, PomodoroRecord, PomodoroStatus, StatPoint, TaskStatus } from '../models/FocusModels';
 
-const PAGE_BG: string = '#F4F5F8';
+const PAGE_BG: string = '#EEF2F7';
 const CARD_BG: string = '#FFFFFF';
-const CARD_SOFT: string = '#FAFBFD';
-const BORDER: string = '#ECEEF3';
-const BORDER_SOFT: string = '#F1F3F7';
+const CARD_SOFT: string = '#F8FAFC';
+const BORDER: string = '#E4E9F2';
+const BORDER_SOFT: string = '#EEF1F6';
 
 const TEXT_MAIN: string = '#0E1626';
 const TEXT_SUB: string = '#3F4A60';
 const TEXT_MUTED: string = '#7A8398';
 const TEXT_DIM: string = '#AAB1C2';
 
-const ACCENT: string = '#4F63D2';
-const ACCENT_DEEP: string = '#3B4DB8';
-const ACCENT_SOFT: string = '#EEF0FA';
+const ACCENT: string = '#4258C9';
+const ACCENT_DEEP: string = '#3142A2';
+const ACCENT_SOFT: string = '#EDF1FF';
 
 const SUCCESS: string = '#1FA37A';
 const SUCCESS_SOFT: string = '#EAF5F0';
@@ -32,15 +32,17 @@ const VIOLET_SOFT: string = '#F0EDF8';
 const TEAL: string = '#3FA8B3';
 const TEAL_SOFT: string = '#EAF4F5';
 
-const DEEP: string = '#1A2138';
-const DEEP_2: string = '#222A45';
-const DEEP_3: string = '#2D3656';
+const DEEP: string = '#151D31';
+const DEEP_2: string = '#202942';
+const DEEP_3: string = '#2B3552';
 const DEEP_4: string = '#3D4A6F';
 const MUTED_ON_DARK: string = '#B4BCD3';
 const FAINT_ON_DARK: string = '#7A8299';
 
 const SURFACE_ALT: string = '#F1F3F7';
 const TRACK: string = '#E6E9F0';
+const CARD_SHADOW: string = '#0B142614';
+const CARD_SHADOW_STRONG: string = '#0B102628';
 
 const BLUE_TINT: string = '#EEF0FA';
 const MINT_TINT: string = '#EAF5F0';
@@ -474,8 +476,8 @@ struct Index {
             .fontWeight(FontWeight.Bold)
             .fontColor('#80FFFFFF')
             .letterSpacing(3)
-          Text('沉下心来，专注此刻')
-            .fontSize(26)
+          Text('把今天最重要的事完成')
+            .fontSize(28)
             .fontWeight(FontWeight.Bold)
             .fontColor('#FFFFFF')
             .margin({ top: 12 })
@@ -483,6 +485,22 @@ struct Index {
             .fontSize(12)
             .fontColor('#B0FFFFFF')
             .margin({ top: 6 })
+          Row() {
+            Text('RDB 持久化')
+              .fontSize(11)
+              .fontColor('#D6FFFFFF')
+              .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+              .backgroundColor('#14FFFFFF')
+              .borderRadius(10)
+            Text('番茄闭环')
+              .fontSize(11)
+              .fontColor('#D6FFFFFF')
+              .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+              .backgroundColor('#14FFFFFF')
+              .borderRadius(10)
+              .margin({ left: 8 })
+          }
+          .margin({ top: 16 })
         }
         .width('100%')
         .alignItems(HorizontalAlign.Start)
@@ -490,14 +508,15 @@ struct Index {
 
         Column() {
           Column() {
-            Text('欢迎回来')
-              .fontSize(20)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(TEXT_MAIN)
-            Text('选择一种方式开始你的专注旅程')
-              .fontSize(12)
-              .fontColor(TEXT_MUTED)
-              .margin({ top: 4 })
+          Text('欢迎回来')
+            .fontSize(20)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+          Text('选择本地账户或游客模式，数据都会先保存在端侧。')
+            .fontSize(12)
+            .fontColor(TEXT_MUTED)
+            .lineHeight(18)
+            .margin({ top: 4 })
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
@@ -510,8 +529,9 @@ struct Index {
             .margin({ bottom: 6 })
           TextInput({ placeholder: '例如：kyc', text: this.loginName })
             .height(46)
-            .backgroundColor(SURFACE_ALT)
+            .backgroundColor(CARD_SOFT)
             .borderRadius(12)
+            .border({ width: 1, color: BORDER_SOFT })
             .padding({ left: 14, right: 14 })
             .fontSize(14)
             .onChange((value: string) => {
@@ -524,8 +544,9 @@ struct Index {
             .margin({ top: 12, bottom: 6 })
           TextInput({ placeholder: '本地学习者', text: this.loginNickname })
             .height(46)
-            .backgroundColor(SURFACE_ALT)
+            .backgroundColor(CARD_SOFT)
             .borderRadius(12)
+            .border({ width: 1, color: BORDER_SOFT })
             .padding({ left: 14, right: 14 })
             .fontSize(14)
             .onChange((value: string) => {
@@ -540,6 +561,7 @@ struct Index {
             .backgroundColor(ACCENT)
             .fontColor('#FFFFFF')
             .borderRadius(12)
+            .shadow({ radius: 18, color: '#253A7A24', offsetX: 0, offsetY: 8 })
             .margin({ top: 18 })
             .onClick(() => {
               this.doLocalLogin();
@@ -566,10 +588,11 @@ struct Index {
         }
         .width('100%')
         .constraintSize({ maxWidth: 440 })
-        .padding(22)
+        .padding(24)
         .backgroundColor('#FFFFFF')
-        .borderRadius(18)
-        .shadow({ radius: 30, color: '#0B102622', offsetX: 0, offsetY: 14 })
+        .borderRadius(20)
+        .border({ width: 1, color: '#26FFFFFF' })
+        .shadow({ radius: 34, color: CARD_SHADOW_STRONG, offsetX: 0, offsetY: 16 })
       }
       .width('100%')
       .height('100%')
@@ -732,12 +755,31 @@ struct Index {
       }
       .width('100%')
 
+      Row() {
+        Column()
+          .width(7)
+          .height(7)
+          .borderRadius(3.5)
+          .backgroundColor(SUCCESS)
+          .margin({ right: 7 })
+        Text(`${this.currentModeText} · 已保存到本地`)
+          .fontSize(11)
+          .fontColor('#CCFFFFFF')
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .width('100%')
+      .padding({ left: 10, right: 10, top: 7, bottom: 7 })
+      .backgroundColor('#10FFFFFF')
+      .borderRadius(10)
+      .margin({ top: 16 })
+
       Text('今日聚焦')
         .fontSize(10)
         .fontWeight(FontWeight.Medium)
         .fontColor('#99FFFFFF')
         .letterSpacing(2)
-        .margin({ top: 22 })
+        .margin({ top: 20 })
       Text('拿下最重要的一件事')
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
@@ -768,13 +810,14 @@ struct Index {
       .alignItems(VerticalAlign.Center)
     }
     .width('100%')
-    .padding(18)
+    .padding(20)
     .alignItems(HorizontalAlign.Start)
-    .borderRadius(16)
+    .borderRadius(20)
     .linearGradient({
       angle: 160,
       colors: [[DEEP, 0.0], [DEEP_3, 1.0]]
     })
+    .shadow({ radius: 30, color: CARD_SHADOW_STRONG, offsetX: 0, offsetY: 14 })
     .margin({ bottom: 12 })
   }
 
@@ -891,21 +934,33 @@ struct Index {
   @Builder
   QuickAddCard() {
     Column() {
-      Text('快速添加任务')
-        .fontSize(15)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(TEXT_MAIN)
-        .alignSelf(ItemAlign.Start)
-      Text('默认归入「移动开发 / 紧急重要」')
-        .fontSize(11)
-        .fontColor(TEXT_MUTED)
-        .alignSelf(ItemAlign.Start)
-        .margin({ top: 2 })
+      Row() {
+        Column() {
+          Text('快速添加任务')
+            .fontSize(15)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+          Text('默认归入「移动开发 / 紧急重要」')
+            .fontSize(11)
+            .fontColor(TEXT_MUTED)
+            .margin({ top: 2 })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+        Text('本地写入')
+          .fontSize(11)
+          .fontColor(ACCENT)
+          .padding({ left: 9, right: 9, top: 5, bottom: 5 })
+          .backgroundColor(ACCENT_SOFT)
+          .borderRadius(9)
+      }
+      .width('100%')
 
       TextInput({ placeholder: '例如：整理期末答辩 PPT', text: this.newTaskTitle })
         .height(46)
-        .backgroundColor(SURFACE_ALT)
+        .backgroundColor(CARD_SOFT)
         .borderRadius(12)
+        .border({ width: 1, color: BORDER_SOFT })
         .padding({ left: 14, right: 14 })
         .fontSize(14)
         .margin({ top: 14 })
@@ -925,6 +980,7 @@ struct Index {
           .backgroundColor(ACCENT)
           .fontColor('#FFFFFF')
           .borderRadius(12)
+          .shadow({ radius: 14, color: '#253A7A1C', offsetX: 0, offsetY: 6 })
           .onClick(() => {
             this.addQuickTask();
           })
@@ -1152,8 +1208,9 @@ struct Index {
     Column() {
       TextInput({ placeholder: '搜索任务、备注或标签', text: this.searchText })
         .height(44)
-        .backgroundColor(SURFACE_ALT)
+        .backgroundColor(CARD_SOFT)
         .borderRadius(12)
+        .border({ width: 1, color: BORDER_SOFT })
         .fontSize(14)
         .padding({ left: 14, right: 14 })
         .onChange((value: string) => {
@@ -1174,7 +1231,7 @@ struct Index {
           .fontWeight(this.filterProjectId === 0 ? FontWeight.Bold : FontWeight.Medium)
           .fontColor(this.filterProjectId === 0 ? '#FFFFFF' : TEXT_SUB)
           .backgroundColor(this.filterProjectId === 0 ? ACCENT : SURFACE_ALT)
-          .borderRadius(15)
+          .borderRadius(10)
           .padding({ left: 12, right: 12 })
           .margin({ right: 6, bottom: 6 })
           .onClick(() => {
@@ -1187,7 +1244,7 @@ struct Index {
             .fontWeight(this.filterProjectId === project.id ? FontWeight.Bold : FontWeight.Medium)
             .fontColor(this.filterProjectId === project.id ? '#FFFFFF' : TEXT_SUB)
             .backgroundColor(this.filterProjectId === project.id ? project.color : SURFACE_ALT)
-            .borderRadius(15)
+            .borderRadius(10)
             .padding({ left: 12, right: 12 })
             .margin({ right: 6, bottom: 6 })
             .onClick(() => {
@@ -1211,7 +1268,7 @@ struct Index {
           .fontWeight(this.filterPriority < 0 ? FontWeight.Bold : FontWeight.Medium)
           .fontColor(this.filterPriority < 0 ? '#FFFFFF' : TEXT_SUB)
           .backgroundColor(this.filterPriority < 0 ? TEXT_MAIN : SURFACE_ALT)
-          .borderRadius(15)
+          .borderRadius(10)
           .padding({ left: 12, right: 12 })
           .margin({ right: 6, bottom: 6 })
           .onClick(() => {
@@ -1224,7 +1281,7 @@ struct Index {
             .fontWeight(this.filterPriority === priority ? FontWeight.Bold : FontWeight.Medium)
             .fontColor(this.filterPriority === priority ? '#FFFFFF' : TEXT_SUB)
             .backgroundColor(this.filterPriority === priority ? this.priorityColor(priority) : SURFACE_ALT)
-            .borderRadius(15)
+            .borderRadius(10)
             .padding({ left: 12, right: 12 })
             .margin({ right: 6, bottom: 6 })
             .onClick(() => {
@@ -1263,8 +1320,8 @@ struct Index {
         Column() {
           Row() {
             Text(task.title)
-              .fontSize(14)
-              .fontWeight(FontWeight.Medium)
+              .fontSize(15)
+              .fontWeight(FontWeight.Bold)
               .fontColor(task.status === TaskStatus.DONE ? TEXT_MUTED : TEXT_MAIN)
               .decoration({ type: task.status === TaskStatus.DONE ? TextDecorationType.LineThrough : TextDecorationType.None })
               .layoutWeight(1)
@@ -1273,6 +1330,9 @@ struct Index {
             Text(this.dueText(task.dueAt))
               .fontSize(11)
               .fontColor(this.dueText(task.dueAt) === '已到期' ? DANGER : TEXT_MUTED)
+              .backgroundColor(this.dueText(task.dueAt) === '已到期' ? DANGER_SOFT : SURFACE_ALT)
+              .borderRadius(8)
+              .padding({ left: 8, right: 8, top: 3, bottom: 3 })
               .margin({ left: 8 })
           }
           .width('100%')
@@ -1327,7 +1387,7 @@ struct Index {
                 .height(28)
                 .fontSize(11)
                 .fontWeight(FontWeight.Medium)
-                .backgroundColor(SURFACE_ALT)
+                .backgroundColor(SUCCESS_SOFT)
                 .fontColor(SUCCESS)
                 .borderRadius(8)
                 .padding({ left: 10, right: 10 })
@@ -1343,6 +1403,7 @@ struct Index {
                 .fontColor('#FFFFFF')
                 .borderRadius(8)
                 .padding({ left: 12, right: 12 })
+                .shadow({ radius: 10, color: '#253A7A18', offsetX: 0, offsetY: 4 })
                 .onClick(() => {
                   this.selectTask(task.id);
                 })
@@ -1371,11 +1432,14 @@ struct Index {
       .alignItems(VerticalAlign.Top)
     }
     .width('100%')
-    .padding({ left: 12, right: 4, top: 10, bottom: 10 })
+    .padding({ left: 13, right: 10, top: 12, bottom: 12 })
+    .backgroundColor(task.status === TaskStatus.DONE ? CARD_SOFT : '#FFFFFF')
+    .borderRadius(14)
     .border({
-      width: { left: 3, bottom: 1 },
-      color: { left: task.status === TaskStatus.DONE ? TEXT_DIM : this.priorityColor(task.priority), bottom: BORDER_SOFT }
+      width: { left: 3 },
+      color: { left: task.status === TaskStatus.DONE ? TEXT_DIM : this.priorityColor(task.priority) }
     })
+    .margin({ bottom: 8 })
     .animation({ duration: 180, curve: Curve.EaseOut })
   }
 
@@ -1447,14 +1511,14 @@ struct Index {
 
       Stack() {
         Progress({ value: this.timerProgress(), total: 100, type: ProgressType.Ring })
-          .width(208)
-          .height(208)
+          .width(218)
+          .height(218)
           .color(ACCENT)
-          .backgroundColor('#1AFFFFFF')
-          .style({ strokeWidth: 8 })
+          .backgroundColor('#22FFFFFF')
+          .style({ strokeWidth: 9 })
         Column() {
           Text(this.timeText(this.remainingSeconds))
-            .fontSize(48)
+            .fontSize(52)
             .fontWeight(FontWeight.Bold)
             .fontColor('#FFFFFF')
           Text(`${this.settings.focusMinutes} / ${this.settings.shortBreakMinutes} 分钟节奏`)
@@ -1463,17 +1527,27 @@ struct Index {
             .margin({ top: 6 })
         }
       }
-      .height(220)
+      .height(230)
       .width('100%')
       .margin({ top: 16 })
 
+      Text('完成和中断都会写入本地记录，用于复盘统计。')
+        .fontSize(11)
+        .fontColor('#CCFFFFFF')
+        .lineHeight(16)
+        .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+        .backgroundColor('#10FFFFFF')
+        .borderRadius(10)
+        .width('100%')
+        .margin({ top: 4 })
+
       Row() {
         Button(this.timerStatus === PomodoroStatus.RUNNING ? '暂停' : '开始')
-          .height(44)
+          .height(46)
           .layoutWeight(1)
           .fontSize(14)
           .fontWeight(FontWeight.Bold)
-          .backgroundColor(this.timerStatus === PomodoroStatus.RUNNING ? '#1FFFFFFF' : ACCENT)
+          .backgroundColor(this.timerStatus === PomodoroStatus.RUNNING ? '#26FFFFFF' : ACCENT)
           .fontColor('#FFFFFF')
           .borderRadius(12)
           .onClick(() => {
@@ -1484,11 +1558,11 @@ struct Index {
             }
           })
         Button('完成')
-          .height(44)
+          .height(46)
           .layoutWeight(1)
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor('#1AFFFFFF')
+          .backgroundColor('#22FFFFFF')
           .fontColor('#FFFFFF')
           .borderRadius(12)
           .margin({ left: 10 })
@@ -1537,11 +1611,12 @@ struct Index {
     .width('100%')
     .padding(18)
     .alignItems(HorizontalAlign.Start)
-    .borderRadius(16)
+    .borderRadius(20)
     .linearGradient({
       angle: 160,
       colors: [[DEEP, 0.0], [DEEP_3, 1.0]]
     })
+    .shadow({ radius: 30, color: CARD_SHADOW_STRONG, offsetX: 0, offsetY: 14 })
   }
 
   @Builder
@@ -1787,9 +1862,18 @@ struct Index {
   @Builder
   KpiCard(title: string, value: string, unit: string) {
     Column() {
-      Text(title)
-        .fontSize(11)
-        .fontColor(TEXT_MUTED)
+      Row() {
+        Column()
+          .width(6)
+          .height(6)
+          .borderRadius(3)
+          .backgroundColor(ACCENT)
+          .margin({ right: 7 })
+        Text(title)
+          .fontSize(11)
+          .fontColor(TEXT_MUTED)
+      }
+      .alignItems(VerticalAlign.Center)
       Row() {
         Text(value)
           .fontSize(24)
@@ -1804,6 +1888,7 @@ struct Index {
       .margin({ top: 8 })
     }
     .cardStyleTight()
+    .border({ width: { top: 3 }, color: { top: ACCENT_SOFT } })
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -1814,6 +1899,10 @@ struct Index {
         .fontSize(15)
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
+      Text('数据来自本地番茄记录')
+        .fontSize(11)
+        .fontColor(TEXT_MUTED)
+        .margin({ top: 2 })
       Row() {
         ForEach(points, (point: StatPoint) => {
           Column() {
@@ -1822,6 +1911,11 @@ struct Index {
               .fontColor(TEXT_MUTED)
               .margin({ bottom: 6 })
             Stack() {
+              Column()
+                .width(18)
+                .height(114)
+                .borderRadius(9)
+                .backgroundColor(CARD_SOFT)
               Column()
                 .width(18)
                 .height(Math.max(6, Math.min(108, point.value * 2 + 6)))
@@ -1858,6 +1952,10 @@ struct Index {
         .fontSize(15)
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
+      Text('中断不会被隐藏，它会成为复盘线索')
+        .fontSize(11)
+        .fontColor(TEXT_MUTED)
+        .margin({ top: 2 })
       Row() {
         Column() {
           Text(`${focusStore.completedPomodoros()}`)
@@ -1877,10 +1975,14 @@ struct Index {
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
+        .padding(12)
+        .backgroundColor(SUCCESS_SOFT)
+        .borderRadius(12)
         Column()
           .width(1)
           .height(48)
           .backgroundColor(BORDER)
+          .margin({ left: 10, right: 10 })
         Column() {
           Text(`${focusStore.interruptedPomodoros()}`)
             .fontSize(28)
@@ -1899,7 +2001,9 @@ struct Index {
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
-        .padding({ left: 18 })
+        .padding(12)
+        .backgroundColor(DANGER_SOFT)
+        .borderRadius(12)
       }
       .width('100%')
       .margin({ top: 14 })
@@ -2130,7 +2234,8 @@ function cardStyle() {
   .padding(18)
   .backgroundColor(CARD_BG)
   .borderRadius(20)
-  .shadow({ radius: 28, color: '#0F1A3414', offsetX: 0, offsetY: 14 })
+  .border({ width: 1, color: BORDER_SOFT })
+  .shadow({ radius: 24, color: CARD_SHADOW, offsetX: 0, offsetY: 10 })
 }
 
 @Extend(Column)
@@ -2139,5 +2244,6 @@ function cardStyleTight() {
   .padding(14)
   .backgroundColor(CARD_BG)
   .borderRadius(16)
-  .shadow({ radius: 22, color: '#0F1A340F', offsetX: 0, offsetY: 10 })
+  .border({ width: 1, color: BORDER_SOFT })
+  .shadow({ radius: 18, color: CARD_SHADOW, offsetX: 0, offsetY: 8 })
 }

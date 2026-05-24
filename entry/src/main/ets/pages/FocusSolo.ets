@@ -4,9 +4,9 @@ import { FocusBackgroundService, FocusNotificationService } from '../services/Fo
 import { focusStore } from '../services/FocusStore';
 
 const TEXT_MUTED: string = '#7A8398';
-const ACCENT: string = '#4F63D2';
-const DEEP: string = '#1A2138';
-const DEEP_3: string = '#2D3656';
+const ACCENT: string = '#4258C9';
+const DEEP: string = '#151D31';
+const DEEP_3: string = '#2B3552';
 const FAINT_ON_DARK: string = '#7A8299';
 
 @Entry
@@ -116,8 +116,8 @@ struct FocusSolo {
               .fontSize(11)
               .fontColor('#99FFFFFF')
               .letterSpacing(2)
-            Text('保持专注，不要切走')
-              .fontSize(20)
+            Text('只做这一件事')
+              .fontSize(22)
               .fontWeight(FontWeight.Bold)
               .fontColor('#FFFFFF')
               .margin({ top: 8 })
@@ -133,6 +133,9 @@ struct FocusSolo {
             .padding({ left: 10, right: 10, top: 5, bottom: 5 })
         }
         .width('100%')
+        .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+        .backgroundColor('#10FFFFFF')
+        .borderRadius(14)
 
         Column() {
           Text('当前任务')
@@ -148,21 +151,21 @@ struct FocusSolo {
         }
         .width('100%')
         .alignItems(HorizontalAlign.Start)
-        .padding(16)
+        .padding(18)
         .backgroundColor('#14FFFFFF')
-        .borderRadius(14)
+        .borderRadius(16)
         .margin({ top: 20 })
 
         Stack() {
           Progress({ value: 25 * 60 - this.remainingSeconds, total: 25 * 60, type: ProgressType.Ring })
-            .width(228)
-            .height(228)
+            .width(236)
+            .height(236)
             .color(ACCENT)
-            .backgroundColor('#1AFFFFFF')
-            .style({ strokeWidth: 9 })
+            .backgroundColor('#22FFFFFF')
+            .style({ strokeWidth: 10 })
           Column() {
             Text(this.timeText(this.remainingSeconds))
-              .fontSize(50)
+              .fontSize(54)
               .fontWeight(FontWeight.Bold)
               .fontColor('#FFFFFF')
             Text(this.running ? '沉浸中' : '准备开始')
@@ -174,13 +177,23 @@ struct FocusSolo {
         .height(244)
         .margin({ top: 28 })
 
+        Text('完成后会写入本地番茄记录，回到主页即可用于复盘。')
+          .fontSize(11)
+          .fontColor('#CCFFFFFF')
+          .lineHeight(16)
+          .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+          .backgroundColor('#10FFFFFF')
+          .borderRadius(10)
+          .width('100%')
+          .margin({ top: 2 })
+
         Row() {
           Button(this.running ? '暂停' : '开始')
             .height(46)
             .layoutWeight(1)
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
-            .backgroundColor(this.running ? '#1FFFFFFF' : ACCENT)
+            .backgroundColor(this.running ? '#26FFFFFF' : ACCENT)
             .fontColor('#FFFFFF')
             .borderRadius(12)
             .onClick(() => {
@@ -195,7 +208,7 @@ struct FocusSolo {
             .layoutWeight(1)
             .fontSize(14)
             .fontWeight(FontWeight.Medium)
-            .backgroundColor('#1AFFFFFF')
+            .backgroundColor('#22FFFFFF')
             .fontColor('#FFFFFF')
             .borderRadius(12)
             .margin({ left: 10 })

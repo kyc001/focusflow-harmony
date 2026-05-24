@@ -1,0 +1,40 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Focus"
+    },
+    {
+      "name": "EntryFormAbility_label",
+      "value": "Focus Card"
+    },
+    {
+      "name": "EntryFormAbility_desc",
+      "value": "Today tasks and pomodoro progress card"
+    },
+    {
+      "name": "widget_display_name",
+      "value": "Focus 今日"
+    },
+    {
+      "name": "widget_desc",
+      "value": "显示今日待办 Top 3 与番茄进度"
+    },
+    {
+      "name": "FocusAbility_label",
+      "value": "Focus 专注"
+    },
+    {
+      "name": "FocusAbility_desc",
+      "value": "独立番茄专注窗口"
+    }
+  ]
+}

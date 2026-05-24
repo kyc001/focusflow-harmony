@@ -1,0 +1,75 @@
+package com.focus.server.controller;
+
+import com.focus.server.common.Result;
+import com.focus.server.dto.SyncBundle;
+import com.focus.server.dto.SyncPushRequest;
+import com.focus.server.entity.Pomodoro;
+import com.focus.server.entity.Project;
+import com.focus.server.entity.Task;
+import com.focus.server.mapper.PomodoroMapper;
+import com.focus.server.mapper.ProjectMapper;
+import com.focus.server.mapper.TaskMapper;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/sync")
+public class SyncController {
+    private final ProjectMapper projectMapper;
+    private final TaskMapper taskMapper;
+    private final PomodoroMapper pomodoroMapper;
+
+    public SyncController(ProjectMapper projectMapper, TaskMapper taskMapper, PomodoroMapper pomodoroMapper) {
+        this.projectMapper = projectMapper;
+        this.taskMapper = taskMapper;
+        this.pomodoroMapper = pomodoroMapper;
+    }
+
+    @PostMapping("/pull")
+    public Result<SyncBundle> pull(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+                                   @RequestParam(value = "since", defaultValue = "0") Long since) {
+        SyncBundle bundle = new SyncBundle();
+        bundle.setServerTime(System.currentTimeMillis());
+        bundle.setProjects(projectMapper.findUpdatedSince(userId, since));
+        bundle.setTasks(taskMapper.findUpdatedSince(userId, since));
+        bundle.setPomodoros(pomodoroMapper.findUpdatedSince(userId, since));
+        return Result.ok(bundle);
+    }
+
+    @PostMapping("/push")
+    public Result<SyncBundle> push(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+                                   @RequestBody SyncPushRequest request) {
+        long now = System.currentTimeMillis();
+        for (Project project : request.getProjects()) {
+            project.setUserId(userId);
+            project.setUpdatedAt(now);
+            project.setIsDeleted(project.getIsDeleted() == null ? 0 : project.getIsDeleted());
+            if (project.getId() == null) {
+                projectMapper.insert(project);
+            } else {
+                projectMapper.update(project);
+            }
+        }
+        for (Task task : request.getTasks()) {
+            task.setUserId(userId);
+            task.setUpdatedAt(now);
+            task.setCreatedAt(task.getCreatedAt() == null ? now : task.getCreatedAt());
+            task.setCompletedAt(task.getCompletedAt() == null ? 0L : task.getCompletedAt());
+            task.setPomodoroCount(task.getPomodoroCount() == null ? 0 : task.getPomodoroCount());
+            task.setIsDeleted(task.getIsDeleted() == null ? 0 : task.getIsDeleted());
+            if (task.getId() == null) {
+                taskMapper.insert(task);
+            } else {
+                taskMapper.update(task);
+            }
+        }
+        for (Pomodoro pomodoro : request.getPomodoros()) {
+            pomodoro.setUserId(userId);
+            pomodoro.setUpdatedAt(now);
+            if (pomodoro.getClientRequestId() == null || pomodoroMapper.findByClientRequestId(userId, pomodoro.getClientRequestId()) == null) {
+                pomodoroMapper.insert(pomodoro);
+            }
+        }
+        return pull(userId, 0L);
+    }
+}
+

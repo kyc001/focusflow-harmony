@@ -1,0 +1,68 @@
+export enum TaskStatus {
+  TODO = 0,
+  DONE = 1,
+  DELETED = 2
+}
+
+export enum PomodoroStatus {
+  IDLE = 0,
+  RUNNING = 1,
+  PAUSED = 2,
+  BREAK = 3,
+  FINISHED = 4
+}
+
+export interface FocusProject {
+  id: number;
+  name: string;
+  color: string;
+  icon: string;
+}
+
+export interface FocusTask {
+  id: number;
+  title: string;
+  note: string;
+  projectId: number;
+  priority: number;
+  dueAt: number;
+  status: number;
+  pomodoroCount: number;
+  createdAt: number;
+  completedAt: number;
+  tags: string[];
+  subtasks: string[];
+}
+
+export interface PomodoroRecord {
+  id: number;
+  taskId: number;
+  startAt: number;
+  duration: number;
+  completed: number;
+  interruptReason: string;
+}
+
+export interface FocusSettings {
+  focusMinutes: number;
+  shortBreakMinutes: number;
+  longBreakMinutes: number;
+  themeColor: string;
+  noise: string;
+  notificationEnabled: boolean;
+}
+
+export interface ForestPlant {
+  id: number;
+  name: string;
+  icon: string;
+  unlockPomodoros: number;
+  unlockStreak: number;
+  color: string;
+}
+
+export interface StatPoint {
+  label: string;
+  value: number;
+}
+

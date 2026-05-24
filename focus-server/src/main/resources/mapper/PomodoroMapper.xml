@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.focus.server.mapper.PomodoroMapper">
+    <resultMap id="PomodoroMap" type="com.focus.server.entity.Pomodoro">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="task_id" property="taskId"/>
+        <result column="start_at" property="startAt"/>
+        <result column="duration" property="duration"/>
+        <result column="completed" property="completed"/>
+        <result column="interrupt_reason" property="interruptReason"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="client_request_id" property="clientRequestId"/>
+    </resultMap>
+
+    <select id="findByRange" resultMap="PomodoroMap">
+        SELECT * FROM pomodoros
+        WHERE user_id = #{userId}
+          AND start_at &gt;= #{startAt}
+          AND start_at &lt;= #{endAt}
+        ORDER BY start_at DESC
+    </select>
+
+    <select id="findUpdatedSince" resultMap="PomodoroMap">
+        SELECT * FROM pomodoros WHERE user_id = #{userId} AND updated_at &gt; #{since} ORDER BY updated_at ASC
+    </select>
+
+    <select id="findByClientRequestId" resultMap="PomodoroMap">
+        SELECT * FROM pomodoros WHERE user_id = #{userId} AND client_request_id = #{clientRequestId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pomodoros (user_id, task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id)
+        VALUES (#{userId}, #{taskId}, #{startAt}, #{duration}, #{completed}, #{interruptReason}, #{updatedAt}, #{clientRequestId})
+    </insert>
+
+    <select id="sumCompletedDuration" resultType="int">
+        SELECT COALESCE(SUM(duration), 0) FROM pomodoros WHERE user_id = #{userId} AND completed = 1
+    </select>
+
+    <select id="countByCompleted" resultType="int">
+        SELECT COUNT(*) FROM pomodoros WHERE user_id = #{userId} AND completed = #{completed}
+    </select>
+</mapper>
+

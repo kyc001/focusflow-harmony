@@ -1,6 +1,18 @@
-# Electron + React Frontend Development Guidelines
+# Frontend Development Guidelines
 
-> Universal frontend development guidelines for Electron applications with React + Vite + TypeScript.
+> Project note: this repository is a HarmonyOS ArkTS app. Read the Focus-specific Harmony spec first; the older Electron/React notes below are retained only as generic quality references.
+
+## Project-Specific Must Read
+
+| File | Description | Priority |
+| --- | --- | --- |
+| [harmony-focus-local-first.md](./harmony-focus-local-first.md) | HarmonyOS ArkTS, RDB, FocusStore, FocusAbility, ArkWeb, and local-first product contracts | **Must Read** |
+
+---
+
+# Legacy Electron + React Frontend Development Guidelines
+
+> Universal frontend development guidelines for Electron applications with React + Vite + TypeScript. Use only when the guidance is framework-neutral enough to apply to ArkTS.
 
 ## Tech Stack
 

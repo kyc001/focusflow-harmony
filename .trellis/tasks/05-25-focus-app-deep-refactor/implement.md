@@ -2,65 +2,65 @@
 
 ## Phase 0: Readiness
 
-- [ ] Read relevant frontend/shared Trellis specs before editing via `trellis-before-dev`.
-- [ ] Re-read `HANDOVER.md` known ArkTS pitfalls before touching UI builders.
-- [ ] Capture current build commands and environment variables.
+- [x] Read relevant frontend/shared Trellis specs before editing via `trellis-before-dev`.
+- [x] Re-read `HANDOVER.md` known ArkTS pitfalls before touching UI builders.
+- [x] Capture current build commands and environment variables.
 
 ## Phase 1: Documentation Scope Reset
 
-- [ ] Rewrite `需求文档.md` around local-first mature product scope.
-- [ ] Keep optional backend/course highlights but demote speculative features to stretch.
-- [ ] Update acceptance/delivery sections to match what the implementation can prove.
+- [x] Rewrite `需求文档.md` around local-first mature product scope.
+- [x] Keep optional backend/course highlights but demote speculative features to stretch.
+- [x] Update acceptance/delivery sections to match what the implementation can prove.
 
 ## Phase 2: Local Persistence Foundation
 
-- [ ] Expand `FocusDatabase.ets` into an RDB access layer with open/create/migration helpers.
-- [ ] Add row mapping for `FocusProject`, `FocusTask`, and `PomodoroRecord`.
-- [ ] Add CRUD/read APIs for projects/tasks/pomodoros.
-- [ ] Add seed-on-empty initialization.
-- [ ] Ensure ResultSet objects are released in query paths.
-- [ ] Keep timestamps in Unix milliseconds.
+- [x] Expand `FocusDatabase.ets` into an RDB access layer with open/create/migration helpers.
+- [x] Add row mapping for `FocusProject`, `FocusTask`, and `PomodoroRecord`.
+- [x] Add CRUD/read APIs for projects/tasks/pomodoros.
+- [x] Add seed-on-empty initialization.
+- [x] Ensure ResultSet objects are released in query paths.
+- [x] Keep timestamps in Unix milliseconds.
 
 ## Phase 3: Repository / State Facade
 
-- [ ] Introduce a local repository or refactor `FocusStore` to become RDB-backed.
-- [ ] Preserve existing UI method semantics where possible: add task, toggle, soft delete, restore, record Pomodoro, stats.
-- [ ] Add an explicit async initialization and refresh path.
-- [ ] Route ArkWeb bridge stats through the same store/repository data.
+- [x] Introduce a local repository or refactor `FocusStore` to become RDB-backed.
+- [x] Preserve existing UI method semantics where possible: add task, toggle, soft delete, restore, record Pomodoro, stats.
+- [x] Add an explicit async initialization and refresh path.
+- [x] Route ArkWeb bridge stats through the same store/repository data.
 
 ## Phase 4: Optional Local Backend Integration
 
-- [ ] Keep backend buildable and documented as optional backup/sync/full-stack demo infrastructure.
-- [ ] Add HTTP client and UI wiring only after core persistence and UX are stable.
-- [ ] If added, backend failure must remain non-blocking for local task/Pomodoro operations.
+- [x] Keep backend buildable and documented as optional backup/sync/full-stack demo infrastructure.
+- [x] Add HTTP client and UI wiring only after core persistence and UX are stable.
+- [x] If added, backend failure must remain non-blocking for local task/Pomodoro operations.
 
 ## Phase 5: UI Flow Stabilization
 
-- [ ] Update `Index.ets` to load async persisted data and refresh after mutations.
-- [ ] Ensure quick add, complete, delete, restore, Pomodoro complete, and Pomodoro interrupt all update one state source.
-- [ ] Keep optional backend/sync affordances from crowding the primary task/focus workflow.
-- [ ] Improve empty states, button labels, and first-action clarity.
+- [x] Update `Index.ets` to load async persisted data and refresh after mutations.
+- [x] Ensure quick add, complete, delete, restore, Pomodoro complete, and Pomodoro interrupt all update one state source.
+- [x] Keep optional backend/sync affordances from crowding the primary task/focus workflow.
+- [x] Improve empty states, button labels, and first-action clarity.
 - [ ] Reduce `Index.ets` size by extracting safe, low-risk components or helpers if build compatibility allows.
-- [ ] Keep visual changes restrained and product-focused.
+- [x] Keep visual changes restrained and product-focused.
 
 ## Phase 6: Cross-Ability Refresh
 
-- [ ] Keep FocusAbility cold/hot Want parsing.
-- [ ] Make FocusAbility completion/interruption behavior compatible with the main repository/store refresh path where practical.
-- [ ] If full cross-Ability writeback is risky, document the limitation and keep the in-tab Focus flow fully persistent.
+- [x] Keep FocusAbility cold/hot Want parsing.
+- [x] Make FocusAbility completion/interruption behavior compatible with the main repository/store refresh path where practical.
+- [x] If full cross-Ability writeback is risky, document the limitation and keep the in-tab Focus flow fully persistent.
 
 ## Phase 7: Verification
 
-- [ ] Run frontend HAP build with DevEco/JDK environment variables.
-- [ ] Run backend Maven package.
-- [ ] Run or document local backend startup requirements.
-- [ ] Review changed UI code for ArkUI pitfalls listed in `HANDOVER.md`.
-- [ ] Confirm no accidental dependency on backend for core offline app flow.
+- [x] Run frontend HAP build with DevEco/JDK environment variables.
+- [x] Run backend Maven package.
+- [x] Run or document local backend startup requirements.
+- [x] Review changed UI code for ArkUI pitfalls listed in `HANDOVER.md`.
+- [x] Confirm no accidental dependency on backend for core offline app flow.
 
 ## Phase 8: Handover
 
-- [ ] Update `HANDOVER.md` with new architecture, changed files, verification results, known warnings, and remaining manual device checks.
-- [ ] Record remaining stretch items clearly.
+- [x] Update `HANDOVER.md` with new architecture, changed files, verification results, known warnings, and remaining manual device checks.
+- [x] Record remaining stretch items clearly.
 
 ## Validation Commands
 
@@ -102,4 +102,13 @@ Run backend command from `focus-server/`.
 ## Review Gate Before Start
 
 - [x] User confirmed final product direction: local-first mature app core, backend optional for backup/sync/course demo.
-- [ ] User approves planning artifacts or asks for implementation.
+- [x] User approves planning artifacts or asks for implementation.
+
+## Final Verification Notes
+
+- Frontend HAP build passed on 2026-05-25 with DevEco hvigor: `BUILD SUCCESSFUL in 24 s 280 ms`.
+- HAP output: `entry/build/default/outputs/default/entry-default-unsigned.hap`.
+- Backend Maven package passed on 2026-05-25 with exit code `0`.
+- Backend jar path: `focus-server/target/focus-server-0.0.1-SNAPSHOT.jar`.
+- Remaining manual check: emulator or real-device flow test for RDB persistence after app restart, ArkWeb render, FocusAbility writeback, and service-card display.
+- Deferred deliberately: large `Index.ets` extraction, full backend sync UI, signed HAP, JWT/RCP/distributed/AI/AVPlayer extensions.

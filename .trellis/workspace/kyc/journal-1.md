@@ -71,3 +71,36 @@ Created and completed a frontend polish task for Focus, refining login, Today, t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Focus detailed design document
+
+**Date**: 2026-05-25
+**Task**: Focus detailed design document
+**Branch**: `master`
+
+### Summary
+
+Added a root-level Chinese detailed design document for the local-first Focus HarmonyOS app, covering module implementation, RDB/Preferences data flow, FocusAbility, ArkWeb, service card, optional backend, course knowledge mapping, validation notes, and defense guidance.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c28be72` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -1,5 +1,6 @@
 import { common } from '@kit.AbilityKit';
 import { picker } from '@kit.CoreFileKit';
+import http from '@ohos.net.http';
 import webview from '@ohos.web.webview';
 import { authRepository, LoginProfile } from '../repository/AuthRepository';
 import { focusAiCoachService } from '../services/FocusAiCoachService';
@@ -192,6 +193,9 @@ struct Index {
   @State showFocusTimer: boolean = false;
   @State showResourceDetail: boolean = false;
   @State aiLastRefreshTime: number = 0;
+  @State showAiSettingsDialog: boolean = false;
+  @State aiModelList: string[] = [];
+  @State aiModelLoading: boolean = false;
   private timerId: number = -1;
   private webController: webview.WebviewController = new webview.WebviewController();
   private reviewBridge: ReviewBridge = new ReviewBridge();
@@ -301,7 +305,7 @@ struct Index {
     this.aiEndpointInput = settings.endpoint;
     this.aiModelInput = settings.model;
     this.aiApiKeyInput = '';
-    this.aiSettingsMessage = settings.enabled && settings.apiKey.length > 0 ? `远程 AI 已配置：${this.maskedAiKey()}` : '当前使用本地 AI 教练';
+    this.aiSettingsMessage = settings.apiKey.length > 0 ? 'AI 已配置' : '未配置 AI';
   }
 
   private refreshLocalCoachSnapshot(): void {
@@ -320,10 +324,7 @@ struct Index {
     }
     this.aiLoading = true;
     try {
-      if (useRemote) {
-        if (!this.aiSettings.enabled || this.aiSettings.apiKey.length === 0) {
-          this.aiSettingsMessage = '请先启用远程 AI 并保存 API Key，已使用本地建议';
-        }
+      if (useRemote && this.aiSettings.apiKey.length > 0) {
         this.aiAdvice = await focusAiCoachService.requestAdvice(
           this.aiSettings,
           this.tasks,
@@ -332,10 +333,14 @@ struct Index {
           this.settings,
           this.selectedTaskId
         );
+        this.aiSettingsMessage = 'AI 建议已更新';
       } else {
         this.refreshLocalCoachSnapshot();
-        this.aiSettingsMessage = '已基于本地记录重新计算建议';
+        this.aiSettingsMessage = '建议已更新';
       }
+    } catch (err) {
+      this.refreshLocalCoachSnapshot();
+      this.aiSettingsMessage = 'AI 请求失败，已使用默认建议';
     } finally {
       this.aiLoading = false;
     }
@@ -344,7 +349,7 @@ struct Index {
   private async saveAiSettings(): Promise<void> {
     const nextApiKey: string = this.aiApiKeyInput.trim().length > 0 ? this.aiApiKeyInput : this.aiSettings.apiKey;
     const settings: AiCoachSettings = {
-      enabled: this.aiSettings.enabled,
+      enabled: true,
       endpoint: this.aiEndpointInput,
       model: this.aiModelInput,
       apiKey: nextApiKey
@@ -353,7 +358,55 @@ struct Index {
     this.aiEndpointInput = this.aiSettings.endpoint;
     this.aiModelInput = this.aiSettings.model;
     this.aiApiKeyInput = '';
-    this.aiSettingsMessage = this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? `远程 AI 已保存：${this.maskedAiKey()}` : '已保存，本地建议可继续使用';
+    this.aiSettingsMessage = `已保存：${this.aiSettings.endpoint}`;
+    this.showAiSettingsDialog = false;
+  }
+
+  private async fetchModelList(): Promise<void> {
+    if (this.aiModelLoading) {
+      return;
+    }
+    this.aiModelLoading = true;
+    this.aiSettingsMessage = '正在拉取模型列表...';
+
+    try {
+      const endpoint: string = this.aiEndpointInput.trim().length > 0 ? this.aiEndpointInput : this.aiSettings.endpoint;
+      const apiKey: string = this.aiApiKeyInput.trim().length > 0 ? this.aiApiKeyInput : this.aiSettings.apiKey;
+
+      if (apiKey.length === 0) {
+        this.aiSettingsMessage = '请先填写 API Key';
+        return;
+      }
+
+      const url: string = endpoint.endsWith('/v1') ? `${endpoint}/models` : `${endpoint}/v1/models`;
+
+      const request = http.createHttp();
+      const response = await request.request(url, {
+        method: http.RequestMethod.GET,
+        expectDataType: http.HttpDataType.STRING,
+        connectTimeout: 10000,
+        readTimeout: 15000,
+        header: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      });
+
+      const responseCode: number = Number(response.responseCode);
+      if (responseCode >= 200 && responseCode < 300) {
+        const resultStr: string = `${response.result}`;
+        const resultObj: object = JSON.parse(resultStr);
+        const data: object[] = (resultObj as Record<string, object[]>)['data'] || [];
+        this.aiModelList = data.map((item: object) => (item as Record<string, string>)['id'] || '');
+        this.aiSettingsMessage = `已获取 ${this.aiModelList.length} 个模型`;
+      } else {
+        this.aiSettingsMessage = `拉取失败：${responseCode}`;
+      }
+      request.destroy();
+    } catch (err) {
+      this.aiSettingsMessage = `拉取失败：${JSON.stringify(err)}`;
+    } finally {
+      this.aiModelLoading = false;
+    }
   }
 
   private toggleRemoteAi(): void {
@@ -899,6 +952,10 @@ struct Index {
 
         if (this.showResourceDetail) {
           this.ResourceDetailOverlay()
+        }
+
+        if (this.showAiSettingsDialog) {
+          this.AiSettingsDialog()
         }
       }
       .width('100%')
@@ -1573,60 +1630,43 @@ struct Index {
   AiCoachCard(compact: boolean) {
     Column() {
       Row() {
-        Stack() {
-          if (this.isRemoteAdvice()) {
-            Image($r('app.media.focus_ui_remote_cloud'))
-              .width(compact ? 56 : 72)
-              .height(compact ? 56 : 72)
-              .objectFit(ImageFit.Cover)
-              .borderRadius(compact ? 16 : 20)
-          } else {
-            Image($r('app.media.focus_ui_ai_orb'))
-              .width(compact ? 56 : 72)
-              .height(compact ? 56 : 72)
-              .objectFit(ImageFit.Cover)
-              .borderRadius(compact ? 16 : 20)
-          }
-          Text('AI')
-            .fontSize(10)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
-            .padding({ left: 7, right: 7, top: 3, bottom: 3 })
-            .backgroundColor('#660E1626')
-            .borderRadius(8)
-        }
-        .margin({ right: 14 })
+        Image($r('app.media.focus_ui_ai_orb'))
+          .width(compact ? 40 : 48)
+          .height(compact ? 40 : 48)
+          .objectFit(ImageFit.Cover)
+          .borderRadius(compact ? 12 : 14)
+          .margin({ right: 12 })
 
         Column() {
           Row() {
-            Text('AI Study Coach')
-              .fontSize(compact ? 14 : 16)
+            Text('AI 学习助手')
+              .fontSize(compact ? 14 : 15)
               .fontWeight(FontWeight.Bold)
               .fontColor(TEXT_MAIN)
             Blank()
-            Text(this.adviceSourceLabel())
-              .fontSize(10)
-              .fontColor(this.isRemoteAdvice() ? VIOLET : TEXT_MUTED)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-              .backgroundColor(this.isRemoteAdvice() ? VIOLET_SOFT : SURFACE_ALT)
-              .borderRadius(8)
+            if (this.aiSettings.apiKey.length > 0) {
+              Text('已连接')
+                .fontSize(10)
+                .fontColor(SUCCESS)
+                .padding({ left: 6, right: 6, top: 3, bottom: 3 })
+                .backgroundColor(SUCCESS_SOFT)
+                .borderRadius(6)
+            } else {
+              Text('未配置')
+                .fontSize(10)
+                .fontColor(TEXT_MUTED)
+                .padding({ left: 6, right: 6, top: 3, bottom: 3 })
+                .backgroundColor(SURFACE_ALT)
+                .borderRadius(6)
+            }
           }
           .width('100%')
+
           Text(this.aiAdvice.headline)
-            .fontSize(compact ? 13 : 15)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(TEXT_MAIN)
-            .lineHeight(compact ? 19 : 22)
-            .maxLines(compact ? 2 : 3)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .margin({ top: 6 })
-          Text(this.aiAdvice.nextAction)
-            .fontSize(12)
+            .fontSize(compact ? 13 : 14)
             .fontColor(TEXT_SUB)
-            .lineHeight(18)
-            .maxLines(2)
+            .lineHeight(compact ? 18 : 20)
+            .maxLines(compact ? 2 : 3)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .margin({ top: 6 })
         }
@@ -1634,55 +1674,31 @@ struct Index {
         .layoutWeight(1)
       }
       .width('100%')
-      .alignItems(VerticalAlign.Top)
+      .alignItems(VerticalAlign.Center)
 
       Row() {
-        this.AiCoachMetric('安排', this.aiAdvice.sessionPlan, 'timer')
-        Column()
-          .width(1)
-          .height(38)
-          .backgroundColor(BORDER_SOFT)
-          .margin({ left: 10, right: 10 })
-        this.AiCoachMetric('置信', `${this.aiAdvice.confidence}%`, 'shield')
-      }
-      .width('100%')
-      .margin({ top: 14 })
-
-      Text(this.aiAdvice.risk)
-        .fontSize(11)
-        .fontColor(TEXT_MUTED)
-        .lineHeight(16)
-        .maxLines(compact ? 2 : 3)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .padding(12)
-        .backgroundColor(SURFACE_ALT)
-        .borderRadius(12)
-        .width('100%')
-        .margin({ top: 12 })
-
-      Row() {
-        Button(this.aiLoading ? '生成中' : '本地重算')
-          .height(34)
-          .layoutWeight(1)
+        Button(this.aiLoading ? '刷新中...' : '刷新建议')
+          .height(32)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(ACCENT)
+          .fontColor('#FFFFFF')
+          .borderRadius(8)
+          .padding({ left: 14, right: 14 })
+          .onClick(() => {
+            this.refreshAiCoach(true);
+          })
+        Blank()
+        Button('AI 设置')
+          .height(32)
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .backgroundColor(SURFACE_ALT)
           .fontColor(TEXT_SUB)
-          .borderRadius(10)
+          .borderRadius(8)
+          .padding({ left: 14, right: 14 })
           .onClick(() => {
-            this.refreshAiCoach(false);
-          })
-        Button(this.aiLoading ? '请求中' : '远程 AI')
-          .height(34)
-          .layoutWeight(1)
-          .fontSize(12)
-          .fontWeight(FontWeight.Bold)
-          .backgroundColor(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? ACCENT : ACCENT_SOFT)
-          .fontColor(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? '#FFFFFF' : ACCENT)
-          .borderRadius(10)
-          .margin({ left: 10 })
-          .onClick(() => {
-            this.refreshAiCoach(true);
+            this.showAiSettingsDialog = true;
           })
       }
       .width('100%')
@@ -4354,6 +4370,173 @@ struct Index {
         .margin({ top: 16 })
       }
       .width('86%')
+      .padding(20)
+      .backgroundColor('#FFFFFF')
+      .borderRadius(16)
+      .alignItems(HorizontalAlign.Start)
+      .shadow({ radius: 28, color: '#0B102622', offsetX: 0, offsetY: 14 })
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor('#0B102680')
+  }
+
+  @Builder
+  AiSettingsDialog() {
+    Column() {
+      Column() {
+        Row() {
+          Text('AI 设置')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+          Blank()
+          Button('关闭')
+            .height(28)
+            .fontSize(12)
+            .backgroundColor(SURFACE_ALT)
+            .fontColor(TEXT_SUB)
+            .borderRadius(8)
+            .onClick(() => {
+              this.showAiSettingsDialog = false;
+            })
+        }
+        .width('100%')
+
+        Text('配置远程 AI 服务')
+          .fontSize(12)
+          .fontColor(TEXT_MUTED)
+          .margin({ top: 4 })
+
+        // Base URL
+        Text('API 地址')
+          .fontSize(12)
+          .fontColor(TEXT_SUB)
+          .margin({ top: 16 })
+        TextInput({ placeholder: 'https://api.example.com', text: this.aiEndpointInput })
+          .height(42)
+          .backgroundColor(SURFACE_ALT)
+          .borderRadius(10)
+          .padding({ left: 12, right: 12 })
+          .fontSize(13)
+          .margin({ top: 6 })
+          .onChange((value: string) => {
+            this.aiEndpointInput = value;
+          })
+
+        // API Key
+        Text('API Key')
+          .fontSize(12)
+          .fontColor(TEXT_SUB)
+          .margin({ top: 12 })
+        TextInput({ placeholder: '输入 API Key（留空保持原值）', text: this.aiApiKeyInput })
+          .height(42)
+          .backgroundColor(SURFACE_ALT)
+          .borderRadius(10)
+          .padding({ left: 12, right: 12 })
+          .fontSize(13)
+          .margin({ top: 6 })
+          .type(InputType.Password)
+          .onChange((value: string) => {
+            this.aiApiKeyInput = value;
+          })
+
+        // Model
+        Text('模型')
+          .fontSize(12)
+          .fontColor(TEXT_SUB)
+          .margin({ top: 12 })
+        Row() {
+          TextInput({ placeholder: '选择或输入模型', text: this.aiModelInput })
+            .height(42)
+            .backgroundColor(SURFACE_ALT)
+            .borderRadius(10)
+            .padding({ left: 12, right: 12 })
+            .fontSize(13)
+            .layoutWeight(1)
+            .onChange((value: string) => {
+              this.aiModelInput = value;
+            })
+          Button(this.aiModelLoading ? '加载中' : '拉取模型')
+            .height(42)
+            .fontSize(12)
+            .fontWeight(FontWeight.Medium)
+            .backgroundColor(ACCENT_SOFT)
+            .fontColor(ACCENT)
+            .borderRadius(10)
+            .margin({ left: 8 })
+            .padding({ left: 12, right: 12 })
+            .onClick(() => {
+              this.fetchModelList();
+            })
+        }
+        .width('100%')
+        .margin({ top: 6 })
+
+        // Model List
+        if (this.aiModelList.length > 0) {
+          Column() {
+            Text('可用模型')
+              .fontSize(11)
+              .fontColor(TEXT_MUTED)
+              .margin({ bottom: 6 })
+            ForEach(this.aiModelList, (model: string) => {
+              Row() {
+                Text(model)
+                  .fontSize(12)
+                  .fontColor(TEXT_MAIN)
+                  .layoutWeight(1)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                if (this.aiModelInput === model) {
+                  Text('✓')
+                    .fontSize(12)
+                    .fontColor(ACCENT)
+                    .fontWeight(FontWeight.Bold)
+                }
+              }
+              .width('100%')
+              .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+              .backgroundColor(this.aiModelInput === model ? ACCENT_SOFT : Color.Transparent)
+              .borderRadius(8)
+              .onClick(() => {
+                this.aiModelInput = model;
+              })
+            })
+          }
+          .width('100%')
+          .margin({ top: 10 })
+          .padding(10)
+          .backgroundColor(SURFACE_ALT)
+          .borderRadius(10)
+        }
+
+        // Save Button
+        Row() {
+          Button('保存设置')
+            .height(42)
+            .layoutWeight(1)
+            .fontSize(14)
+            .fontWeight(FontWeight.Bold)
+            .backgroundColor(ACCENT)
+            .fontColor('#FFFFFF')
+            .borderRadius(12)
+            .onClick(() => {
+              this.saveAiSettings();
+            })
+        }
+        .width('100%')
+        .margin({ top: 16 })
+
+        Text(this.aiSettingsMessage)
+          .fontSize(11)
+          .fontColor(TEXT_MUTED)
+          .margin({ top: 8 })
+          .maxLines(2)
+      }
+      .width('90%')
       .padding(20)
       .backgroundColor('#FFFFFF')
       .borderRadius(16)

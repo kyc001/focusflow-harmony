@@ -39,7 +39,7 @@ interface ChatCompletionResponse {
 }
 
 const PREF_NAME: string = 'focus_ai';
-const DEFAULT_ENDPOINT: string = 'https://token-plan-cn.xiaomimimo.com/anthropic';
+const DEFAULT_ENDPOINT: string = 'https://token-plan-cn.xiaomimimo.com/v1';
 const DEFAULT_MODEL: string = 'mimo-v2.5-pro';
 
 export class FocusAiCoachService {

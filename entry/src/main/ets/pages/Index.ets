@@ -192,6 +192,8 @@ struct Index {
   };
   @State showFocusTimer: boolean = false;
   @State showResourceDetail: boolean = false;
+  @State showReviewDetail: boolean = false;
+  @State showSettingsDetail: boolean = false;
   @State aiLastRefreshTime: number = 0;
   @State showAiSettingsDialog: boolean = false;
   @State aiModelList: string[] = [];
@@ -373,25 +375,33 @@ struct Index {
       const endpoint: string = this.aiEndpointInput.trim().length > 0 ? this.aiEndpointInput : this.aiSettings.endpoint;
       const apiKey: string = this.aiApiKeyInput.trim().length > 0 ? this.aiApiKeyInput : this.aiSettings.apiKey;
 
+      console.info(`[AI] endpoint: ${endpoint}`);
+      console.info(`[AI] apiKey length: ${apiKey.length}`);
+
       if (apiKey.length === 0) {
         this.aiSettingsMessage = '请先填写 API Key';
+        this.aiModelLoading = false;
         return;
       }
 
       const url: string = endpoint.endsWith('/v1') ? `${endpoint}/models` : `${endpoint}/v1/models`;
+      console.info(`[AI] request url: ${url}`);
 
       const request = http.createHttp();
       const response = await request.request(url, {
         method: http.RequestMethod.GET,
         expectDataType: http.HttpDataType.STRING,
-        connectTimeout: 10000,
-        readTimeout: 15000,
+        connectTimeout: 15000,
+        readTimeout: 20000,
         header: {
           'Authorization': `Bearer ${apiKey}`
         }
       });
 
       const responseCode: number = Number(response.responseCode);
+      console.info(`[AI] response code: ${responseCode}`);
+      console.info(`[AI] response: ${response.result}`);
+
       if (responseCode >= 200 && responseCode < 300) {
         const resultStr: string = `${response.result}`;
         const resultObj: object = JSON.parse(resultStr);
@@ -399,10 +409,11 @@ struct Index {
         this.aiModelList = data.map((item: object) => (item as Record<string, string>)['id'] || '');
         this.aiSettingsMessage = `已获取 ${this.aiModelList.length} 个模型`;
       } else {
-        this.aiSettingsMessage = `拉取失败：${responseCode}`;
+        this.aiSettingsMessage = `拉取失败：HTTP ${responseCode}`;
       }
       request.destroy();
     } catch (err) {
+      console.error(`[AI] fetch error: ${JSON.stringify(err)}`);
       this.aiSettingsMessage = `拉取失败：${JSON.stringify(err)}`;
     } finally {
       this.aiModelLoading = false;
@@ -952,6 +963,14 @@ struct Index {
 
         if (this.showResourceDetail) {
           this.ResourceDetailOverlay()
+        }
+
+        if (this.showReviewDetail) {
+          this.ReviewDetailOverlay()
+        }
+
+        if (this.showSettingsDetail) {
+          this.SettingsDetailOverlay()
         }
 
         if (this.showAiSettingsDialog) {
@@ -3961,25 +3980,32 @@ struct Index {
 
   @Builder
   ProfileTab() {
-    Scroll() {
-      Column({ space: SPACING_LG }) {
-        // 个人信息卡片
-        this.ProfileHeaderCard()
-
-        // 复盘统计区域
-        this.ReviewSection()
-
-        // 学习资源库区域
-        this.ResourcesSection()
-
-        // 设置区域
-        this.SettingsSection()
+    Stack() {
+      Scroll() {
+        Column({ space: SPACING_LG }) {
+          this.ProfileHeaderCard()
+          this.ProfileMenuCard('复盘统计', '查看学习数据、完成率、项目占比', 'bars')
+          this.ProfileMenuCard('学习资源库', `${this.activeResourceCount()} 份活跃资料`, 'sync')
+          this.ProfileMenuCard('设置', '专注时长、白噪音、AI 配置', 'settings')
+        }
+        .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_XXL, bottom: SPACING_XXL })
       }
-      .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_XXL, bottom: SPACING_XXL })
+      .width('100%')
+      .height('100%')
+      .scrollBar(BarState.Off)
+
+      if (this.showReviewDetail) {
+        this.ReviewDetailOverlay()
+      }
+      if (this.showResourceDetail) {
+        this.ResourceDetailOverlay()
+      }
+      if (this.showSettingsDetail) {
+        this.SettingsDetailOverlay()
+      }
     }
     .width('100%')
     .height('100%')
-    .scrollBar(BarState.Off)
   }
 
   @Builder
@@ -4055,6 +4081,47 @@ struct Index {
       colors: [[DEEP, 0.0], [DEEP_3, 1.0]]
     })
     .shadow({ radius: 30, color: CARD_SHADOW_STRONG, offsetX: 0, offsetY: 14 })
+  }
+
+  @Builder
+  ProfileMenuCard(title: string, subtitle: string, icon: string) {
+    Row() {
+      this.SmallUiAsset(icon, 44)
+      Column() {
+        Text(title)
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
+        Text(subtitle)
+          .fontSize(12)
+          .fontColor(TEXT_MUTED)
+          .margin({ top: 4 })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+      .margin({ left: 14 })
+      Image($r('app.media.focus_ui_next_marker'))
+        .width(20)
+        .height(20)
+        .objectFit(ImageFit.Contain)
+        .opacity(0.4)
+    }
+    .width('100%')
+    .padding(SPACING_XL)
+    .backgroundColor(CARD_GLASS)
+    .backdropBlur(CARD_GLASS_BLUR)
+    .borderRadius(RADIUS_LG)
+    .border({ width: 1, color: '#CCFFFFFF' })
+    .shadow({ radius: SHADOW_CARD_RADIUS, color: SHADOW_CARD_COLOR, offsetX: SHADOW_CARD_OFFSET_X, offsetY: SHADOW_CARD_OFFSET_Y })
+    .onClick(() => {
+      if (title === '复盘统计') {
+        this.showReviewDetail = true;
+      } else if (title === '学习资源库') {
+        this.showResourceDetail = true;
+      } else if (title === '设置') {
+        this.showSettingsDetail = true;
+      }
+    })
   }
 
   @Builder
@@ -4308,6 +4375,88 @@ struct Index {
             this.ResourceFilterBar()
             this.ResourceList()
           }
+        }
+        .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_LG, bottom: SPACING_XXL })
+      }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(PAGE_BG)
+  }
+
+  @Builder
+  ReviewDetailOverlay() {
+    Column() {
+      Row() {
+        Button('返回')
+          .height(32)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(SURFACE_ALT)
+          .fontColor(TEXT_SUB)
+          .borderRadius(10)
+          .padding({ left: 14, right: 14 })
+          .onClick(() => {
+            this.showReviewDetail = false;
+          })
+        Blank()
+        Text('复盘统计')
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
+        Blank()
+        Text('')
+          .width(60)
+      }
+      .width('100%')
+      .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_XXL })
+
+      Scroll() {
+        Column() {
+          this.ReviewSection()
+        }
+        .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_LG, bottom: SPACING_XXL })
+      }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(PAGE_BG)
+  }
+
+  @Builder
+  SettingsDetailOverlay() {
+    Column() {
+      Row() {
+        Button('返回')
+          .height(32)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(SURFACE_ALT)
+          .fontColor(TEXT_SUB)
+          .borderRadius(10)
+          .padding({ left: 14, right: 14 })
+          .onClick(() => {
+            this.showSettingsDetail = false;
+          })
+        Blank()
+        Text('设置')
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
+        Blank()
+        Text('')
+          .width(60)
+      }
+      .width('100%')
+      .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_XXL })
+
+      Scroll() {
+        Column() {
+          this.SettingsSection()
         }
         .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_LG, bottom: SPACING_XXL })
       }

@@ -74,6 +74,39 @@ const MINT_TINT: string = '#EAF5F0';
 const WARM_TINT: string = '#FBF1E2';
 const ROSE_TINT: string = '#FBEAEE';
 
+// Design Tokens
+const PAGE_BG_START: string = '#F3F6FB';
+const PAGE_BG_END: string = '#E8EDF5';
+const CARD_GLASS: string = '#F8FFFFFF';
+const CARD_GLASS_BLUR: number = 20;
+
+// Spacing constants
+const SPACING_XS: number = 4;
+const SPACING_SM: number = 8;
+const SPACING_MD: number = 12;
+const SPACING_LG: number = 16;
+const SPACING_XL: number = 20;
+const SPACING_XXL: number = 24;
+const SPACING_XXXL: number = 32;
+
+// Radius constants
+const RADIUS_SM: number = 8;
+const RADIUS_MD: number = 12;
+const RADIUS_LG: number = 16;
+const RADIUS_XL: number = 20;
+const RADIUS_FULL: number = 9999;
+
+// Shadow constants
+const SHADOW_CARD_RADIUS: number = 12;
+const SHADOW_CARD_COLOR: string = '#0B14260F';
+const SHADOW_CARD_OFFSET_X: number = 0;
+const SHADOW_CARD_OFFSET_Y: number = 4;
+
+const SHADOW_FLOAT_RADIUS: number = 20;
+const SHADOW_FLOAT_COLOR: string = '#0B102620';
+const SHADOW_FLOAT_OFFSET_X: number = 0;
+const SHADOW_FLOAT_OFFSET_Y: number = 8;
+
 class ReviewBridge {
   getStats(): string {
     const points: StatPoint[] = focusStore.weekFocusPoints();
@@ -156,6 +189,9 @@ struct Index {
     estimatedMinutes: 25,
     generatedAt: Date.now()
   };
+  @State showFocusTimer: boolean = false;
+  @State showResourceDetail: boolean = false;
+  @State aiLastRefreshTime: number = 0;
   private timerId: number = -1;
   private webController: webview.WebviewController = new webview.WebviewController();
   private reviewBridge: ReviewBridge = new ReviewBridge();
@@ -831,19 +867,9 @@ struct Index {
             .tabBar('任务')
 
             TabContent() {
-              this.ResourcesTab()
+              this.ProfileTab()
             }
-            .tabBar('资料')
-
-            TabContent() {
-              this.FocusTab()
-            }
-            .tabBar('专注')
-
-            TabContent() {
-              this.ReviewTab()
-            }
-            .tabBar('复盘')
+            .tabBar('我的')
           }
           .barMode(BarMode.Fixed)
           .barBackgroundColor('#E6FFFFFF')
@@ -865,6 +891,14 @@ struct Index {
 
         if (this.showInterruptDialog) {
           this.InterruptDialog()
+        }
+
+        if (this.showFocusTimer) {
+          this.FocusTimerOverlay()
+        }
+
+        if (this.showResourceDetail) {
+          this.ResourceDetailOverlay()
         }
       }
       .width('100%')
@@ -3910,6 +3944,366 @@ struct Index {
   }
 
   @Builder
+  ProfileTab() {
+    Scroll() {
+      Column({ space: SPACING_LG }) {
+        // 个人信息卡片
+        this.ProfileHeaderCard()
+
+        // 复盘统计区域
+        this.ReviewSection()
+
+        // 学习资源库区域
+        this.ResourcesSection()
+
+        // 设置区域
+        this.SettingsSection()
+      }
+      .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_XXL, bottom: SPACING_XXL })
+    }
+    .width('100%')
+    .height('100%')
+    .scrollBar(BarState.Off)
+  }
+
+  @Builder
+  ProfileHeaderCard() {
+    Column() {
+      Row() {
+        Column() {
+          Text(this.currentNickname.length === 0 ? '本地学习者' : this.currentNickname)
+            .fontSize(22)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FFFFFF')
+          Text(this.currentModeText)
+            .fontSize(12)
+            .fontColor('#B0FFFFFF')
+            .margin({ top: 4 })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
+        Column() {
+          Text('🔥')
+            .fontSize(24)
+          Text(`${focusStore.streakDays()} 天`)
+            .fontSize(14)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FFFFFF')
+            .margin({ top: 4 })
+        }
+        .alignItems(HorizontalAlign.Center)
+        .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+        .backgroundColor('#1AFFFFFF')
+        .borderRadius(16)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      Row() {
+        this.DarkHeroStat('总专注', `${focusStore.totalFocusMinutes()} 分`)
+        Column()
+          .width(1)
+          .height(28)
+          .backgroundColor('#1AFFFFFF')
+        this.DarkHeroStat('完成番茄', `${focusStore.completedPomodoros()} 个`)
+        Column()
+          .width(1)
+          .height(28)
+          .backgroundColor('#1AFFFFFF')
+        this.DarkHeroStat('完成率', `${Math.round(focusStore.completedPomodoros() * 100 / Math.max(1, this.records.length))}%`)
+      }
+      .width('100%')
+      .margin({ top: 20 })
+      .alignItems(VerticalAlign.Center)
+
+      Button('退出登录')
+        .width('100%')
+        .height(40)
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .backgroundColor('#1AFFFFFF')
+        .fontColor('#CCFFFFFF')
+        .borderRadius(12)
+        .margin({ top: 16 })
+        .onClick(() => {
+          this.logout();
+        })
+    }
+    .width('100%')
+    .padding(20)
+    .alignItems(HorizontalAlign.Start)
+    .borderRadius(20)
+    .linearGradient({
+      angle: 160,
+      colors: [[DEEP, 0.0], [DEEP_3, 1.0]]
+    })
+    .shadow({ radius: 30, color: CARD_SHADOW_STRONG, offsetX: 0, offsetY: 14 })
+  }
+
+  @Builder
+  ReviewSection() {
+    Column() {
+      Row() {
+        this.SmallUiAsset('bars', 42)
+        Column() {
+          Text('复盘统计')
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+          Text('学习数据来自本地番茄记录')
+            .fontSize(11)
+            .fontColor(TEXT_MUTED)
+            .margin({ top: 2 })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .margin({ left: 10 })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .margin({ bottom: 14 })
+
+      GridRow({
+        columns: { xs: 4, sm: 4, md: 8, lg: 12 },
+        gutter: { x: 10, y: 10 }
+      }) {
+        GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 4 } }) {
+          this.KpiCard('总专注', `${focusStore.totalFocusMinutes()}`, '分钟', 'timer')
+        }
+        GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 4 } }) {
+          this.KpiCard('完成率', `${Math.round(focusStore.completedPomodoros() * 100 / Math.max(1, this.records.length))}`, '%', 'medal')
+        }
+        GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 4 } }) {
+          this.KpiCard('最长 streak', `${focusStore.bestStreakDays()}`, '天', 'heatmap')
+        }
+      }
+
+      this.BarChartCard('本周学习时长', focusStore.weekFocusPoints(), 'bars')
+      this.BarChartCard('项目时间占比', focusStore.projectFocusPoints(), 'sync')
+      this.CompletionCard()
+      this.HeatMapCard()
+      this.ForestCard()
+    }
+    .cardStyle()
+    .alignItems(HorizontalAlign.Start)
+    .margin({ top: 12 })
+  }
+
+  @Builder
+  ResourcesSection() {
+    Column() {
+      Row() {
+        this.SmallUiAsset('sync', 42)
+        Column() {
+          Text('学习资源库')
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+          Text(`${this.activeResourceCount()} 份活跃资料 · ${this.archivedResourceCount()} 份已归档`)
+            .fontSize(11)
+            .fontColor(TEXT_MUTED)
+            .margin({ top: 2 })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .margin({ left: 10 })
+        Blank()
+        Button('进入资源库')
+          .height(32)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(ACCENT)
+          .fontColor('#FFFFFF')
+          .borderRadius(10)
+          .padding({ left: 14, right: 14 })
+          .onClick(() => {
+            this.showResourceDetail = true;
+          })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .margin({ bottom: 14 })
+
+      this.ResourceWorkspaceTabs()
+
+      if (this.resourceWorkspace === 'memo') {
+        this.ResourceQuickAddCard()
+      } else if (this.resourceWorkspace === 'upload') {
+        this.ResourceImportCard()
+      } else if (this.resourceWorkspace === 'insight') {
+        GridRow({
+          columns: { xs: 4, sm: 4, md: 8, lg: 12 },
+          gutter: { x: 12, y: 12 }
+        }) {
+          GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 7 } }) {
+            this.ResourceAiCard()
+          }
+          GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 5 } }) {
+            this.ResourceList()
+          }
+        }
+      } else {
+        this.ResourceFilterBar()
+        this.ResourceList()
+      }
+    }
+    .cardStyle()
+    .alignItems(HorizontalAlign.Start)
+    .margin({ top: 12 })
+  }
+
+  @Builder
+  SettingsSection() {
+    Column() {
+      Row() {
+        this.SmallUiAsset('settings', 42)
+        Column() {
+          Text('设置')
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+          Text('专注时长、白噪音、AI 配置')
+            .fontSize(11)
+            .fontColor(TEXT_MUTED)
+            .margin({ top: 2 })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .margin({ left: 10 })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .margin({ bottom: 14 })
+
+      this.AiCoachCard(false)
+      this.AiSettingsCard()
+      this.SettingsCard()
+      this.WhiteNoiseCard()
+    }
+    .cardStyle()
+    .alignItems(HorizontalAlign.Start)
+    .margin({ top: 12 })
+  }
+
+  @Builder
+  FocusTimerOverlay() {
+    Column() {
+      // 顶部关闭按钮
+      Row() {
+        Button('返回')
+          .height(32)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor('#1AFFFFFF')
+          .fontColor('#CCFFFFFF')
+          .borderRadius(10)
+          .padding({ left: 14, right: 14 })
+          .onClick(() => {
+            this.showFocusTimer = false;
+          })
+        Blank()
+        Text('专注模式')
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#FFFFFF')
+        Blank()
+        Text(this.focusStateText())
+          .fontSize(11)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#FFFFFF')
+          .backgroundColor('#1AFFFFFF')
+          .borderRadius(10)
+          .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+      }
+      .width('100%')
+      .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_XXL })
+
+      // 专注计时器内容
+      Scroll() {
+        Column() {
+          this.TimerCard()
+          this.FocusSidePanel()
+        }
+        .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_LG, bottom: SPACING_XXL })
+      }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+    }
+    .width('100%')
+    .height('100%')
+    .linearGradient({
+      angle: 160,
+      colors: [[DEEP, 0.0], [DEEP_3, 1.0]]
+    })
+  }
+
+  @Builder
+  ResourceDetailOverlay() {
+    Column() {
+      // 顶部关闭按钮
+      Row() {
+        Button('返回')
+          .height(32)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(SURFACE_ALT)
+          .fontColor(TEXT_SUB)
+          .borderRadius(10)
+          .padding({ left: 14, right: 14 })
+          .onClick(() => {
+            this.showResourceDetail = false;
+          })
+        Blank()
+        Text('学习资源库')
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
+        Blank()
+        Text(`${this.activeResourceCount()} 份`)
+          .fontSize(11)
+          .fontColor(TEXT_MUTED)
+          .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+          .backgroundColor(SURFACE_ALT)
+          .borderRadius(8)
+      }
+      .width('100%')
+      .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_XXL })
+
+      // 资源详情内容
+      Scroll() {
+        Column() {
+          this.ResourceHeroCard()
+          this.ResourceWorkspaceTabs()
+          if (this.resourceWorkspace === 'memo') {
+            this.ResourceQuickAddCard()
+          } else if (this.resourceWorkspace === 'upload') {
+            this.ResourceImportCard()
+          } else if (this.resourceWorkspace === 'insight') {
+            GridRow({
+              columns: { xs: 4, sm: 4, md: 8, lg: 12 },
+              gutter: { x: 12, y: 12 }
+            }) {
+              GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 7 } }) {
+                this.ResourceAiCard()
+              }
+              GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 5 } }) {
+                this.ResourceList()
+              }
+            }
+          } else {
+            this.ResourceFilterBar()
+            this.ResourceList()
+          }
+        }
+        .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_LG, bottom: SPACING_XXL })
+      }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(PAGE_BG)
+  }
+
+  @Builder
   InterruptDialog() {
     Column() {
       Column() {
@@ -3977,23 +4371,23 @@ struct Index {
 @Extend(Column)
 function cardStyle() {
   .width('100%')
-  .padding(18)
-  .backgroundColor(CARD_BG)
-  .backgroundBlurStyle(BlurStyle.COMPONENT_ULTRA_THIN)
-  .borderRadius(20)
+  .padding(SPACING_XL)
+  .backgroundColor(CARD_GLASS)
+  .backdropBlur(CARD_GLASS_BLUR)
+  .borderRadius(RADIUS_XL)
   .border({ width: 1, color: '#CCFFFFFF' })
-  .shadow({ radius: 22, color: CARD_SHADOW, offsetX: 0, offsetY: 8 })
+  .shadow({ radius: SHADOW_FLOAT_RADIUS, color: SHADOW_FLOAT_COLOR, offsetX: SHADOW_FLOAT_OFFSET_X, offsetY: SHADOW_FLOAT_OFFSET_Y })
 }
 
 @Extend(Column)
 function cardStyleTight() {
   .width('100%')
-  .padding(14)
-  .backgroundColor(CARD_BG)
-  .backgroundBlurStyle(BlurStyle.COMPONENT_ULTRA_THIN)
-  .borderRadius(16)
+  .padding(SPACING_LG)
+  .backgroundColor(CARD_GLASS)
+  .backdropBlur(CARD_GLASS_BLUR)
+  .borderRadius(RADIUS_LG)
   .border({ width: 1, color: '#CCFFFFFF' })
-  .shadow({ radius: 16, color: CARD_SHADOW, offsetX: 0, offsetY: 6 })
+  .shadow({ radius: SHADOW_CARD_RADIUS, color: SHADOW_CARD_COLOR, offsetX: SHADOW_CARD_OFFSET_X, offsetY: SHADOW_CARD_OFFSET_Y })
 }
 
 @Extend(Image)

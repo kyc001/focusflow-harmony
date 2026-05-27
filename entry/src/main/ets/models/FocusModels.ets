@@ -66,3 +66,20 @@ export interface StatPoint {
   value: number;
 }
 
+export interface AiCoachSettings {
+  enabled: boolean;
+  endpoint: string;
+  model: string;
+  apiKey: string;
+}
+
+export interface AiCoachAdvice {
+  source: string;
+  headline: string;
+  nextAction: string;
+  sessionPlan: string;
+  risk: string;
+  estimatedMinutes: number;
+  confidence: number;
+  generatedAt: number;
+}

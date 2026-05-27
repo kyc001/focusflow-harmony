@@ -1,10 +1,31 @@
 import { common } from '@kit.AbilityKit';
 import webview from '@ohos.web.webview';
 import { authRepository, LoginProfile } from '../repository/AuthRepository';
+import { focusAiCoachService } from '../services/FocusAiCoachService';
 import { focusDatabase } from '../services/FocusDatabase';
+import { focusSettingsService } from '../services/FocusSettingsService';
 import { focusStore } from '../services/FocusStore';
 import { FocusBackgroundService, FocusNotificationService } from '../services/FocusNativeServices';
-import { FocusProject, FocusSettings, FocusTask, ForestPlant, PomodoroRecord, PomodoroStatus, StatPoint, TaskStatus } from '../models/FocusModels';
+import {
+  focusStateText as formatFocusStateText,
+  formatDueText,
+  formatTimerText,
+  priorityColor as formatPriorityColor,
+  priorityName as formatPriorityName,
+  priorityTint as formatPriorityTint
+} from '../utils/FocusFormatters';
+import {
+  AiCoachAdvice,
+  AiCoachSettings,
+  FocusProject,
+  FocusSettings,
+  FocusTask,
+  ForestPlant,
+  PomodoroRecord,
+  PomodoroStatus,
+  StatPoint,
+  TaskStatus
+} from '../models/FocusModels';
 
 const PAGE_BG: string = '#EEF2F7';
 const CARD_BG: string = '#FFFFFF';
@@ -94,6 +115,23 @@ struct Index {
   @State notificationReady: boolean = false;
   @State viewportWidth: number = 390;
   @State pulseOn: boolean = false;
+  @State aiAdvice: AiCoachAdvice = {
+    source: '本地规则',
+    headline: 'AI 教练正在读取本地节奏',
+    nextAction: '先选择一个任务，Focus 会给出下一步建议。',
+    sessionPlan: '25 分钟专注 + 5 分钟短休',
+    risk: '离线建议始终可用，远程模型是可选增强。',
+    estimatedMinutes: 25,
+    confidence: 70,
+    generatedAt: Date.now()
+  };
+  @State aiSettings: AiCoachSettings = focusAiCoachService.defaultSettings();
+  @State aiEndpointInput: string = '';
+  @State aiModelInput: string = '';
+  @State aiApiKeyInput: string = '';
+  @State aiLoading: boolean = false;
+  @State aiSettingsMessage: string = 'AI 教练默认使用本地规则';
+  @State focusSettingsMessage: string = '时长与白噪音会自动保存到本机';
   private timerId: number = -1;
   private webController: webview.WebviewController = new webview.WebviewController();
   private reviewBridge: ReviewBridge = new ReviewBridge();
@@ -111,9 +149,14 @@ struct Index {
     try {
       const context = getContext(this) as common.UIAbilityContext;
       await focusDatabase.init(context);
+      await focusSettingsService.init(context);
       await focusStore.refresh();
+      focusStore.settings = await focusSettingsService.loadSettings();
       this.syncFromStore();
       await authRepository.init(context);
+      await focusAiCoachService.init(context);
+      await this.loadAiSettings();
+      this.refreshLocalCoachSnapshot();
       const profile: LoginProfile | null = await authRepository.currentProfile();
       if (profile !== null) {
         this.applyProfile(profile);
@@ -151,6 +194,130 @@ struct Index {
     this.tasks = focusStore.tasks.slice();
     this.records = focusStore.pomodoros.slice();
     this.settings = focusStore.settings;
+  }
+
+  private async persistFocusSettings(message: string): Promise<void> {
+    const saved: FocusSettings = await focusSettingsService.saveSettings(this.settings);
+    focusStore.settings = saved;
+    this.settings = saved;
+    if (this.timerStatus === PomodoroStatus.IDLE) {
+      this.remainingSeconds = this.settings.focusMinutes * 60;
+    }
+    this.focusSettingsMessage = message;
+    this.refreshLocalCoachSnapshot();
+  }
+
+  private updateDurationSetting(label: string, value: number): void {
+    if (label === '专注') {
+      this.settings.focusMinutes = value;
+      if (this.timerStatus === PomodoroStatus.IDLE) {
+        this.remainingSeconds = this.settings.focusMinutes * 60;
+      }
+    } else if (label === '短休') {
+      this.settings.shortBreakMinutes = value;
+    } else {
+      this.settings.longBreakMinutes = value;
+    }
+    this.persistFocusSettings('时长设置已保存到本机').catch(() => {
+      this.focusSettingsMessage = '时长已在本次会话生效，暂未写入本机';
+    });
+  }
+
+  private updateNoiseSetting(noise: string): void {
+    this.settings.noise = noise;
+    this.persistFocusSettings(`白噪音已切换为 ${noise}`).catch(() => {
+      this.focusSettingsMessage = '白噪音已在本次会话生效，暂未写入本机';
+    });
+  }
+
+  private async loadAiSettings(): Promise<void> {
+    const settings: AiCoachSettings = await focusAiCoachService.loadSettings();
+    this.aiSettings = settings;
+    this.aiEndpointInput = settings.endpoint;
+    this.aiModelInput = settings.model;
+    this.aiApiKeyInput = '';
+    this.aiSettingsMessage = settings.enabled && settings.apiKey.length > 0 ? `远程 AI 已配置：${this.maskedAiKey()}` : '当前使用本地 AI 教练';
+  }
+
+  private refreshLocalCoachSnapshot(): void {
+    this.aiAdvice = focusAiCoachService.generateLocalAdvice(
+      this.tasks,
+      focusStore.projects,
+      this.records,
+      this.settings,
+      this.selectedTaskId
+    );
+  }
+
+  private async refreshAiCoach(useRemote: boolean): Promise<void> {
+    if (this.aiLoading) {
+      return;
+    }
+    this.aiLoading = true;
+    try {
+      if (useRemote) {
+        if (!this.aiSettings.enabled || this.aiSettings.apiKey.length === 0) {
+          this.aiSettingsMessage = '请先启用远程 AI 并保存 API Key，已使用本地建议';
+        }
+        this.aiAdvice = await focusAiCoachService.requestAdvice(
+          this.aiSettings,
+          this.tasks,
+          focusStore.projects,
+          this.records,
+          this.settings,
+          this.selectedTaskId
+        );
+      } else {
+        this.refreshLocalCoachSnapshot();
+        this.aiSettingsMessage = '已基于本地记录重新计算建议';
+      }
+    } finally {
+      this.aiLoading = false;
+    }
+  }
+
+  private async saveAiSettings(): Promise<void> {
+    const nextApiKey: string = this.aiApiKeyInput.trim().length > 0 ? this.aiApiKeyInput : this.aiSettings.apiKey;
+    const settings: AiCoachSettings = {
+      enabled: this.aiSettings.enabled,
+      endpoint: this.aiEndpointInput,
+      model: this.aiModelInput,
+      apiKey: nextApiKey
+    };
+    this.aiSettings = await focusAiCoachService.saveSettings(settings);
+    this.aiEndpointInput = this.aiSettings.endpoint;
+    this.aiModelInput = this.aiSettings.model;
+    this.aiApiKeyInput = '';
+    this.aiSettingsMessage = this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? `远程 AI 已保存：${this.maskedAiKey()}` : '已保存，本地建议可继续使用';
+  }
+
+  private toggleRemoteAi(): void {
+    this.aiSettings = {
+      enabled: !this.aiSettings.enabled,
+      endpoint: this.aiSettings.endpoint,
+      model: this.aiSettings.model,
+      apiKey: this.aiSettings.apiKey
+    };
+    this.aiSettingsMessage = this.aiSettings.enabled ? '远程 AI 开关已打开，保存后生效' : '已切回本地 AI 教练';
+  }
+
+  private maskedAiKey(): string {
+    const key: string = this.aiSettings.apiKey.trim();
+    if (key.length === 0) {
+      return '未配置';
+    }
+    return key.length <= 8 ? '已保存' : `${key.substring(0, 3)}***${key.substring(key.length - 4)}`;
+  }
+
+  private isRemoteAdvice(): boolean {
+    return this.aiAdvice.source === '远程 AI';
+  }
+
+  private adviceSourceLabel(): string {
+    if (this.aiAdvice.source === '远程 AI' || this.aiAdvice.source === '本地规则') {
+      return this.aiAdvice.source;
+    }
+    return '本地兜底';
   }
 
   private selectTask(taskId: number): void {
@@ -192,21 +359,25 @@ struct Index {
     this.newTaskTitle = '';
     this.selectedTaskId = task.id;
     this.syncFromStore();
+    this.refreshLocalCoachSnapshot();
   }
 
   private async toggleTask(taskId: number): Promise<void> {
     await focusStore.toggleTask(taskId);
     this.syncFromStore();
+    this.refreshLocalCoachSnapshot();
   }
 
   private async deleteTask(taskId: number): Promise<void> {
     await focusStore.softDeleteTask(taskId);
     this.syncFromStore();
+    this.refreshLocalCoachSnapshot();
   }
 
   private async restoreTask(taskId: number): Promise<void> {
     await focusStore.restoreTask(taskId);
     this.syncFromStore();
+    this.refreshLocalCoachSnapshot();
   }
 
   private filteredTasks(): FocusTask[] {
@@ -260,6 +431,7 @@ struct Index {
     this.timerStatus = PomodoroStatus.FINISHED;
     await focusStore.recordPomodoro(task.id, duration, true, '');
     this.syncFromStore();
+    this.refreshLocalCoachSnapshot();
     this.remainingSeconds = this.settings.shortBreakMinutes * 60;
     this.elapsedSeconds = 0;
     this.serviceMessage = FocusBackgroundService.stopPomodoroGuard();
@@ -273,6 +445,7 @@ struct Index {
     this.timerStatus = PomodoroStatus.IDLE;
     await focusStore.recordPomodoro(task.id, Math.max(this.elapsedSeconds, 60), false, reason);
     this.syncFromStore();
+    this.refreshLocalCoachSnapshot();
     this.remainingSeconds = this.settings.focusMinutes * 60;
     this.elapsedSeconds = 0;
     this.interruptionReason = '';
@@ -305,52 +478,28 @@ struct Index {
 
   private async requestNotification(): Promise<void> {
     this.notificationReady = await FocusNotificationService.requestPermission();
+    this.settings.notificationEnabled = this.notificationReady;
+    await this.persistFocusSettings(this.notificationReady ? '通知偏好已保存到本机' : '通知未开启，偏好已保存');
   }
 
   private timeText(seconds: number): string {
-    const minute: number = Math.floor(seconds / 60);
-    const second: number = seconds % 60;
-    const minuteText: string = minute < 10 ? `0${minute}` : `${minute}`;
-    const secondText: string = second < 10 ? `0${second}` : `${second}`;
-    return `${minuteText}:${secondText}`;
+    return formatTimerText(seconds);
   }
 
   private dueText(timestamp: number): string {
-    const diff: number = timestamp - Date.now();
-    if (diff <= 0) {
-      return '已到期';
-    }
-    const hours: number = Math.ceil(diff / (60 * 60 * 1000));
-    if (hours < 24) {
-      return `${hours} 小时内`;
-    }
-    return `${Math.ceil(hours / 24)} 天内`;
+    return formatDueText(timestamp);
   }
 
   private priorityName(priority: number): string {
-    if (priority === 0) {
-      return '紧急重要';
-    }
-    if (priority === 1) {
-      return '紧急不重要';
-    }
-    if (priority === 2) {
-      return '重要不紧急';
-    }
-    return '不紧急不重要';
+    return formatPriorityName(priority);
   }
 
   private priorityColor(priority: number): string {
-    if (priority === 0) {
-      return '#E4566E';
-    }
-    if (priority === 1) {
-      return '#F59E0B';
-    }
-    if (priority === 2) {
-      return '#2F6BFF';
-    }
-    return '#8B95A7';
+    return formatPriorityColor(priority);
+  }
+
+  private priorityTint(priority: number): string {
+    return formatPriorityTint(priority);
   }
 
   private timerProgress(): number {
@@ -381,29 +530,7 @@ struct Index {
   }
 
   private focusStateText(): string {
-    if (this.timerStatus === PomodoroStatus.RUNNING) {
-      return '沉浸中';
-    }
-    if (this.timerStatus === PomodoroStatus.PAUSED) {
-      return '已暂停';
-    }
-    if (this.timerStatus === PomodoroStatus.FINISHED) {
-      return '休息一下';
-    }
-    return '准备开始';
-  }
-
-  private focusStateColor(): string {
-    if (this.timerStatus === PomodoroStatus.RUNNING) {
-      return ACCENT;
-    }
-    if (this.timerStatus === PomodoroStatus.PAUSED) {
-      return WARNING;
-    }
-    if (this.timerStatus === PomodoroStatus.FINISHED) {
-      return SUCCESS;
-    }
-    return '#8B95A7';
+    return formatFocusStateText(this.timerStatus);
   }
 
   build() {
@@ -698,6 +825,7 @@ struct Index {
         }
 
         this.NextFocusCard()
+        this.AiCoachCard(false)
         this.TodayTaskList()
         this.QuoteCard()
       }
@@ -791,6 +919,44 @@ struct Index {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .margin({ top: 6 })
+
+      Image($r('app.media.focus_ai_hero'))
+        .width('100%')
+        .height(this.viewportWidth > 700 ? 150 : 104)
+        .objectFit(ImageFit.Cover)
+        .borderRadius(16)
+        .margin({ top: 14 })
+
+      Row() {
+        Row() {
+          Image($r('app.media.focus_ui_local_cube'))
+            .microAssetStyle(30)
+          Text('本地数据')
+            .fontSize(11)
+            .fontColor('#E8FFFFFF')
+            .margin({ left: 6 })
+        }
+        .layoutWeight(1)
+        .padding({ left: 8, right: 8, top: 6, bottom: 6 })
+        .backgroundColor('#14FFFFFF')
+        .borderRadius(12)
+
+        Row() {
+          Image($r('app.media.focus_ui_ai_orb'))
+            .microAssetStyle(30)
+          Text('AI 建议')
+            .fontSize(11)
+            .fontColor('#E8FFFFFF')
+            .margin({ left: 6 })
+        }
+        .layoutWeight(1)
+        .padding({ left: 8, right: 8, top: 6, bottom: 6 })
+        .backgroundColor('#14FFFFFF')
+        .borderRadius(12)
+        .margin({ left: 8 })
+      }
+      .width('100%')
+      .margin({ top: 10 })
 
       Row() {
         this.DarkHeroStat('完成率', `${this.completedPercent()}%`)
@@ -935,6 +1101,9 @@ struct Index {
   QuickAddCard() {
     Column() {
       Row() {
+        Image($r('app.media.focus_ui_quick_add'))
+          .microAssetStyle(44)
+          .margin({ right: 10 })
         Column() {
           Text('快速添加任务')
             .fontSize(15)
@@ -955,6 +1124,7 @@ struct Index {
           .borderRadius(9)
       }
       .width('100%')
+      .alignItems(VerticalAlign.Center)
 
       TextInput({ placeholder: '例如：整理期末答辩 PPT', text: this.newTaskTitle })
         .height(46)
@@ -1012,6 +1182,9 @@ struct Index {
   @Builder
   NextFocusCard() {
     Row() {
+      Image($r('app.media.focus_ui_next_marker'))
+        .microAssetStyle(58)
+        .margin({ right: 12 })
       Column() {
         Text('下一段专注')
           .fontSize(11)
@@ -1069,6 +1242,154 @@ struct Index {
   }
 
   @Builder
+  AiCoachCard(compact: boolean) {
+    Column() {
+      Row() {
+        Stack() {
+          if (this.isRemoteAdvice()) {
+            Image($r('app.media.focus_ui_remote_cloud'))
+              .width(compact ? 56 : 72)
+              .height(compact ? 56 : 72)
+              .objectFit(ImageFit.Cover)
+              .borderRadius(compact ? 16 : 20)
+          } else {
+            Image($r('app.media.focus_ui_ai_orb'))
+              .width(compact ? 56 : 72)
+              .height(compact ? 56 : 72)
+              .objectFit(ImageFit.Cover)
+              .borderRadius(compact ? 16 : 20)
+          }
+          Text('AI')
+            .fontSize(10)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FFFFFF')
+            .padding({ left: 7, right: 7, top: 3, bottom: 3 })
+            .backgroundColor('#660E1626')
+            .borderRadius(8)
+        }
+        .margin({ right: 14 })
+
+        Column() {
+          Row() {
+            Text('AI Focus Coach')
+              .fontSize(compact ? 14 : 16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(TEXT_MAIN)
+            Blank()
+            Text(this.adviceSourceLabel())
+              .fontSize(10)
+              .fontColor(this.isRemoteAdvice() ? VIOLET : TEXT_MUTED)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+              .backgroundColor(this.isRemoteAdvice() ? VIOLET_SOFT : SURFACE_ALT)
+              .borderRadius(8)
+          }
+          .width('100%')
+          Text(this.aiAdvice.headline)
+            .fontSize(compact ? 13 : 15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(TEXT_MAIN)
+            .lineHeight(compact ? 19 : 22)
+            .maxLines(compact ? 2 : 3)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 6 })
+          Text(this.aiAdvice.nextAction)
+            .fontSize(12)
+            .fontColor(TEXT_SUB)
+            .lineHeight(18)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 6 })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Top)
+
+      Row() {
+        this.AiCoachMetric('安排', this.aiAdvice.sessionPlan, 'timer')
+        Column()
+          .width(1)
+          .height(38)
+          .backgroundColor(BORDER_SOFT)
+          .margin({ left: 10, right: 10 })
+        this.AiCoachMetric('置信', `${this.aiAdvice.confidence}%`, 'shield')
+      }
+      .width('100%')
+      .margin({ top: 14 })
+
+      Text(this.aiAdvice.risk)
+        .fontSize(11)
+        .fontColor(TEXT_MUTED)
+        .lineHeight(16)
+        .maxLines(compact ? 2 : 3)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .padding(12)
+        .backgroundColor(SURFACE_ALT)
+        .borderRadius(12)
+        .width('100%')
+        .margin({ top: 12 })
+
+      Row() {
+        Button(this.aiLoading ? '生成中' : '本地重算')
+          .height(34)
+          .layoutWeight(1)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(SURFACE_ALT)
+          .fontColor(TEXT_SUB)
+          .borderRadius(10)
+          .onClick(() => {
+            this.refreshAiCoach(false);
+          })
+        Button(this.aiLoading ? '请求中' : '远程 AI')
+          .height(34)
+          .layoutWeight(1)
+          .fontSize(12)
+          .fontWeight(FontWeight.Bold)
+          .backgroundColor(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? ACCENT : ACCENT_SOFT)
+          .fontColor(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? '#FFFFFF' : ACCENT)
+          .borderRadius(10)
+          .margin({ left: 10 })
+          .onClick(() => {
+            this.refreshAiCoach(true);
+          })
+      }
+      .width('100%')
+      .margin({ top: 12 })
+    }
+    .cardStyle()
+    .alignItems(HorizontalAlign.Start)
+    .margin({ top: 12 })
+  }
+
+  @Builder
+  AiCoachMetric(label: string, value: string, icon: string) {
+    Row() {
+      this.SmallUiAsset(icon, 28)
+      Column() {
+        Text(label)
+          .fontSize(10)
+          .fontColor(TEXT_MUTED)
+        Text(value)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(TEXT_MAIN)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 4 })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+      .margin({ left: 8 })
+    }
+    .layoutWeight(1)
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
   TodayTaskList() {
     Column() {
       Row() {
@@ -1092,7 +1413,7 @@ struct Index {
       .margin({ bottom: 12 })
 
       if (focusStore.getTodayTasks().length === 0) {
-        this.EmptyState('今天没有待办', '可以先添加一个 25 分钟内能完成的小任务。')
+        this.EmptyState('今天没有待办', '可以先添加一个 25 分钟内能完成的小任务。', 'inbox')
       } else {
         ForEach(focusStore.getTodayTasks(), (task: FocusTask) => {
           this.TaskRow(task, true)
@@ -1105,12 +1426,14 @@ struct Index {
   }
 
   @Builder
-  EmptyState(title: string, caption: string) {
+  EmptyState(title: string, caption: string, variant: string) {
     Column() {
+      this.SmallUiAsset(variant, 76)
       Text(title)
         .fontSize(14)
         .fontWeight(FontWeight.Medium)
         .fontColor(TEXT_SUB)
+        .margin({ top: 8 })
       Text(caption)
         .fontSize(12)
         .fontColor(TEXT_MUTED)
@@ -1122,6 +1445,62 @@ struct Index {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(SURFACE_ALT)
     .borderRadius(12)
+  }
+
+  @Builder
+  SmallUiAsset(variant: string, size: number) {
+    if (variant === 'inbox') {
+      Image($r('app.media.focus_ui_empty_inbox'))
+        .microAssetStyle(size)
+    } else if (variant === 'quick') {
+      Image($r('app.media.focus_ui_quick_add'))
+        .microAssetStyle(size)
+    } else if (variant === 'marker') {
+      Image($r('app.media.focus_ui_next_marker'))
+        .microAssetStyle(size)
+    } else if (variant === 'priority') {
+      Image($r('app.media.focus_ui_priority_flag'))
+        .microAssetStyle(size)
+    } else if (variant === 'ai') {
+      Image($r('app.media.focus_ui_ai_orb'))
+        .microAssetStyle(size)
+    } else if (variant === 'local') {
+      Image($r('app.media.focus_ui_local_cube'))
+        .microAssetStyle(size)
+    } else if (variant === 'remote') {
+      Image($r('app.media.focus_ui_remote_cloud'))
+        .microAssetStyle(size)
+    } else if (variant === 'timer') {
+      Image($r('app.media.focus_ui_timer_token'))
+        .microAssetStyle(size)
+    } else if (variant === 'pause') {
+      Image($r('app.media.focus_ui_pause_resume'))
+        .microAssetStyle(size)
+    } else if (variant === 'bell') {
+      Image($r('app.media.focus_ui_notification_bell'))
+        .microAssetStyle(size)
+    } else if (variant === 'medal') {
+      Image($r('app.media.focus_ui_completion_medal'))
+        .microAssetStyle(size)
+    } else if (variant === 'shield') {
+      Image($r('app.media.focus_ui_risk_shield'))
+        .microAssetStyle(size)
+    } else if (variant === 'bars') {
+      Image($r('app.media.focus_ui_review_bars'))
+        .microAssetStyle(size)
+    } else if (variant === 'heatmap') {
+      Image($r('app.media.focus_ui_heatmap_grid'))
+        .microAssetStyle(size)
+    } else if (variant === 'settings') {
+      Image($r('app.media.focus_ui_settings_sliders'))
+        .microAssetStyle(size)
+    } else if (variant === 'sync') {
+      Image($r('app.media.focus_ui_sync_bridge'))
+        .microAssetStyle(size)
+    } else {
+      Image($r('app.media.focus_ui_empty_inbox'))
+        .microAssetStyle(size)
+    }
   }
 
   @Builder
@@ -1186,7 +1565,7 @@ struct Index {
           .margin({ bottom: 12 })
 
           if (this.filteredTasks().length === 0) {
-            this.EmptyState(this.showRecycle ? '回收站是空的' : '没有匹配的任务', '换一个筛选条件，或回到今日页快速添加。')
+            this.EmptyState(this.showRecycle ? '回收站是空的' : '没有匹配的任务', '换一个筛选条件，或回到今日页快速添加。', this.showRecycle ? 'medal' : 'inbox')
           } else {
             ForEach(this.filteredTasks(), (task: FocusTask) => {
               this.TaskRow(task, false)
@@ -1318,6 +1697,13 @@ struct Index {
         })
 
         Column() {
+          this.SmallUiAsset(task.status === TaskStatus.DONE ? 'medal' : 'priority', 38)
+        }
+        .width(38)
+        .height(38)
+        .margin({ right: 10 })
+
+        Column() {
           Row() {
             Text(task.title)
               .fontSize(15)
@@ -1346,6 +1732,9 @@ struct Index {
             Text(this.priorityName(task.priority))
               .fontSize(11)
               .fontColor(this.priorityColor(task.priority))
+              .padding({ left: 7, right: 7, top: 2, bottom: 2 })
+              .backgroundColor(task.status === TaskStatus.DONE ? SURFACE_ALT : this.priorityTint(task.priority))
+              .borderRadius(7)
             Text('·')
               .fontSize(10)
               .fontColor(TEXT_DIM)
@@ -1484,6 +1873,12 @@ struct Index {
   TimerCard() {
     Column() {
       Row() {
+        Image($r('app.media.focus_ui_timer_token'))
+          .width(44)
+          .height(44)
+          .objectFit(ImageFit.Cover)
+          .borderRadius(12)
+          .margin({ right: 10 })
         Column() {
           Text('专注模式')
             .fontSize(11)
@@ -1508,6 +1903,7 @@ struct Index {
           .padding({ left: 10, right: 10, top: 5, bottom: 5 })
       }
       .width('100%')
+      .alignItems(VerticalAlign.Center)
 
       Stack() {
         Progress({ value: this.timerProgress(), total: 100, type: ProgressType.Ring })
@@ -1540,6 +1936,47 @@ struct Index {
         .borderRadius(10)
         .width('100%')
         .margin({ top: 4 })
+
+      Row() {
+        Row() {
+          Image($r('app.media.focus_ui_pause_resume'))
+            .width(26)
+            .height(26)
+            .objectFit(ImageFit.Cover)
+            .borderRadius(8)
+            .margin({ right: 6 })
+          Text(this.timerStatus === PomodoroStatus.RUNNING ? '运行中' : '待开始')
+            .fontSize(11)
+            .fontColor('#E6FFFFFF')
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .padding({ left: 10, right: 10, top: 7, bottom: 7 })
+        .backgroundColor('#14FFFFFF')
+        .borderRadius(12)
+
+        Row() {
+          Image($r('app.media.focus_ui_risk_shield'))
+            .width(26)
+            .height(26)
+            .objectFit(ImageFit.Cover)
+            .borderRadius(8)
+            .margin({ right: 6 })
+          Text(`${focusStore.interruptedPomodoros()} 次中断`)
+            .fontSize(11)
+            .fontColor('#E6FFFFFF')
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .padding({ left: 10, right: 10, top: 7, bottom: 7 })
+        .backgroundColor('#14FFFFFF')
+        .borderRadius(12)
+        .margin({ left: 8 })
+      }
+      .width('100%')
+      .margin({ top: 12 })
 
       Row() {
         Button(this.timerStatus === PomodoroStatus.RUNNING ? '暂停' : '开始')
@@ -1622,11 +2059,120 @@ struct Index {
   @Builder
   FocusSidePanel() {
     Column() {
+      this.AiCoachCard(true)
+      this.AiSettingsCard()
       this.SettingsCard()
       this.WhiteNoiseCard()
       this.HistoryCard()
     }
     .width('100%')
+  }
+
+  @Builder
+  AiSettingsCard() {
+    Column() {
+      Row() {
+        Image($r('app.media.focus_ui_settings_sliders'))
+          .microAssetStyle(42)
+          .margin({ right: 10 })
+        Column() {
+          Text('AI 接入')
+            .fontSize(15)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+          Text('本地建议始终可用，远程模型按需启用')
+            .fontSize(11)
+            .fontColor(TEXT_MUTED)
+            .margin({ top: 2 })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+        Text(this.aiSettings.enabled ? '远程开' : '本地')
+          .fontSize(11)
+          .fontColor(this.aiSettings.enabled ? VIOLET : TEXT_MUTED)
+          .padding({ left: 9, right: 9, top: 5, bottom: 5 })
+          .backgroundColor(this.aiSettings.enabled ? VIOLET_SOFT : SURFACE_ALT)
+          .borderRadius(9)
+          .onClick(() => {
+            this.toggleRemoteAi();
+          })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      TextInput({ placeholder: 'https://api.openai.com/v1', text: this.aiEndpointInput })
+        .height(40)
+        .backgroundColor(CARD_SOFT)
+        .borderRadius(10)
+        .border({ width: 1, color: BORDER_SOFT })
+        .padding({ left: 12, right: 12 })
+        .fontSize(12)
+        .margin({ top: 12 })
+        .onChange((value: string) => {
+          this.aiEndpointInput = value;
+        })
+
+      TextInput({ placeholder: 'gpt-4o-mini', text: this.aiModelInput })
+        .height(40)
+        .backgroundColor(CARD_SOFT)
+        .borderRadius(10)
+        .border({ width: 1, color: BORDER_SOFT })
+        .padding({ left: 12, right: 12 })
+        .fontSize(12)
+        .margin({ top: 8 })
+        .onChange((value: string) => {
+          this.aiModelInput = value;
+        })
+
+      TextInput({ placeholder: `API Key：${this.maskedAiKey()}，留空保留`, text: this.aiApiKeyInput })
+        .height(40)
+        .backgroundColor(CARD_SOFT)
+        .borderRadius(10)
+        .border({ width: 1, color: BORDER_SOFT })
+        .padding({ left: 12, right: 12 })
+        .fontSize(12)
+        .margin({ top: 8 })
+        .onChange((value: string) => {
+          this.aiApiKeyInput = value;
+        })
+
+      Row() {
+        Button('保存配置')
+          .height(34)
+          .layoutWeight(1)
+          .fontSize(12)
+          .fontWeight(FontWeight.Bold)
+          .backgroundColor(ACCENT)
+          .fontColor('#FFFFFF')
+          .borderRadius(10)
+          .onClick(() => {
+            this.saveAiSettings();
+          })
+        Button('切换模式')
+          .height(34)
+          .layoutWeight(1)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(SURFACE_ALT)
+          .fontColor(TEXT_SUB)
+          .borderRadius(10)
+          .margin({ left: 10 })
+          .onClick(() => {
+            this.toggleRemoteAi();
+          })
+      }
+      .width('100%')
+      .margin({ top: 10 })
+
+      Text(this.aiSettingsMessage)
+        .fontSize(11)
+        .fontColor(TEXT_MUTED)
+        .lineHeight(16)
+        .margin({ top: 10 })
+    }
+    .cardStyle()
+    .alignItems(HorizontalAlign.Start)
+    .margin({ top: 12 })
   }
 
   @Builder
@@ -1646,6 +2192,11 @@ struct Index {
       this.SettingSlider('专注', this.settings.focusMinutes, 10, 60)
       this.SettingSlider('短休', this.settings.shortBreakMinutes, 3, 15)
       this.SettingSlider('长休', this.settings.longBreakMinutes, 10, 30)
+      Text(this.focusSettingsMessage)
+        .fontSize(11)
+        .fontColor(TEXT_MUTED)
+        .lineHeight(16)
+        .margin({ top: 12 })
     }
     .cardStyle()
     .alignItems(HorizontalAlign.Start)
@@ -1671,16 +2222,7 @@ struct Index {
         .selectedColor(ACCENT)
         .trackColor(TRACK)
         .onChange((changedValue: number) => {
-          if (label === '专注') {
-            this.settings.focusMinutes = Math.round(changedValue);
-            if (this.timerStatus === PomodoroStatus.IDLE) {
-              this.remainingSeconds = this.settings.focusMinutes * 60;
-            }
-          } else if (label === '短休') {
-            this.settings.shortBreakMinutes = Math.round(changedValue);
-          } else {
-            this.settings.longBreakMinutes = Math.round(changedValue);
-          }
+          this.updateDurationSetting(label, Math.round(changedValue));
         })
     }
     .width('100%')
@@ -1713,7 +2255,7 @@ struct Index {
             .padding({ left: 14, right: 14 })
             .margin({ right: 8, top: 12 })
             .onClick(() => {
-              this.settings.noise = noise;
+              this.updateNoiseSetting(noise);
             })
         }, (noise: string) => noise)
       }
@@ -1787,19 +2329,19 @@ struct Index {
           gutter: { x: 10, y: 10 }
         }) {
           GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 4 } }) {
-            this.KpiCard('总专注', `${focusStore.totalFocusMinutes()}`, '分钟')
+            this.KpiCard('总专注', `${focusStore.totalFocusMinutes()}`, '分钟', 'timer')
           }
           GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 4 } }) {
-            this.KpiCard('完成率', `${Math.round(focusStore.completedPomodoros() * 100 / Math.max(1, this.records.length))}`, '%')
+            this.KpiCard('完成率', `${Math.round(focusStore.completedPomodoros() * 100 / Math.max(1, this.records.length))}`, '%', 'medal')
           }
           GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 4 } }) {
-            this.KpiCard('最长 streak', `${focusStore.bestStreakDays()}`, '天')
+            this.KpiCard('最长 streak', `${focusStore.bestStreakDays()}`, '天', 'heatmap')
           }
         }
 
         this.WebReviewCard()
-        this.BarChartCard('本周学习时长', focusStore.weekFocusPoints())
-        this.BarChartCard('项目时间占比', focusStore.projectFocusPoints())
+        this.BarChartCard('本周学习时长', focusStore.weekFocusPoints(), 'bars')
+        this.BarChartCard('项目时间占比', focusStore.projectFocusPoints(), 'sync')
         this.CompletionCard()
         this.HeatMapCard()
         this.ForestCard()
@@ -1860,49 +2402,68 @@ struct Index {
   }
 
   @Builder
-  KpiCard(title: string, value: string, unit: string) {
+  KpiCard(title: string, value: string, unit: string, icon: string) {
     Column() {
       Row() {
-        Column()
-          .width(6)
-          .height(6)
-          .borderRadius(3)
-          .backgroundColor(ACCENT)
-          .margin({ right: 7 })
-        Text(title)
-          .fontSize(11)
-          .fontColor(TEXT_MUTED)
+        this.SmallUiAsset(icon, 46)
+        Column() {
+          Row() {
+            Column()
+              .width(6)
+              .height(6)
+              .borderRadius(3)
+              .backgroundColor(ACCENT)
+              .margin({ right: 7 })
+            Text(title)
+              .fontSize(11)
+              .fontColor(TEXT_MUTED)
+          }
+          .alignItems(VerticalAlign.Center)
+          Row() {
+            Text(value)
+              .fontSize(24)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(TEXT_MAIN)
+            Text(unit)
+              .fontSize(11)
+              .fontColor(TEXT_MUTED)
+              .margin({ left: 4, bottom: 3 })
+          }
+          .alignItems(VerticalAlign.Bottom)
+          .margin({ top: 8 })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+        .margin({ left: 10 })
       }
+      .width('100%')
       .alignItems(VerticalAlign.Center)
-      Row() {
-        Text(value)
-          .fontSize(24)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(TEXT_MAIN)
-        Text(unit)
-          .fontSize(11)
-          .fontColor(TEXT_MUTED)
-          .margin({ left: 4, bottom: 3 })
-      }
-      .alignItems(VerticalAlign.Bottom)
-      .margin({ top: 8 })
     }
     .cardStyleTight()
     .border({ width: { top: 3 }, color: { top: ACCENT_SOFT } })
-    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
-  BarChartCard(title: string, points: StatPoint[]) {
+  BarChartCard(title: string, points: StatPoint[], icon: string) {
     Column() {
-      Text(title)
-        .fontSize(15)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(TEXT_MAIN)
-      Text('数据来自本地番茄记录')
-        .fontSize(11)
-        .fontColor(TEXT_MUTED)
-        .margin({ top: 2 })
+      Row() {
+        this.SmallUiAsset(icon, 42)
+        Column() {
+          Text(title)
+            .fontSize(15)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+          Text('数据来自本地番茄记录')
+            .fontSize(11)
+            .fontColor(TEXT_MUTED)
+            .margin({ top: 2 })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+        .margin({ left: 10 })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
       Row() {
         ForEach(points, (point: StatPoint) => {
           Column() {
@@ -1948,14 +2509,24 @@ struct Index {
   @Builder
   CompletionCard() {
     Column() {
-      Text('完成 vs 中断')
-        .fontSize(15)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(TEXT_MAIN)
-      Text('中断不会被隐藏，它会成为复盘线索')
-        .fontSize(11)
-        .fontColor(TEXT_MUTED)
-        .margin({ top: 2 })
+      Row() {
+        this.SmallUiAsset('shield', 42)
+        Column() {
+          Text('完成 vs 中断')
+            .fontSize(15)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+          Text('中断不会被隐藏，它会成为复盘线索')
+            .fontSize(11)
+            .fontColor(TEXT_MUTED)
+            .margin({ top: 2 })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+        .margin({ left: 10 })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
       Row() {
         Column() {
           Text(`${focusStore.completedPomodoros()}`)
@@ -2018,10 +2589,12 @@ struct Index {
   HeatMapCard() {
     Column() {
       Row() {
+        this.SmallUiAsset('heatmap', 42)
         Text('每日热力图')
           .fontSize(15)
           .fontWeight(FontWeight.Bold)
           .fontColor(TEXT_MAIN)
+          .margin({ left: 10 })
         Blank()
         Row() {
           Text('少')
@@ -2098,6 +2671,46 @@ struct Index {
       }
       .width('100%')
 
+      Row() {
+        Image($r('app.media.focus_plant_forest'))
+          .width(96)
+          .height(96)
+          .objectFit(ImageFit.Contain)
+          .borderRadius(18)
+          .margin({ right: 14 })
+
+        Column() {
+          Text(`${focusStore.completedPomodoros()} 个番茄已种下`)
+            .fontSize(15)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(`连续 ${focusStore.streakDays()} 天 · 解锁 ${focusStore.unlockedPlants().length} 株植物`)
+            .fontSize(12)
+            .fontColor(TEXT_SUB)
+            .lineHeight(18)
+            .margin({ top: 6 })
+          Text('AI 教练会把完成和中断都纳入下一次建议')
+            .fontSize(11)
+            .fontColor(TEXT_MUTED)
+            .lineHeight(16)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ top: 8 })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+      }
+      .width('100%')
+      .padding(12)
+      .backgroundColor(CARD_SOFT)
+      .borderRadius(18)
+      .margin({ top: 14 })
+      .alignItems(VerticalAlign.Center)
+
+      this.ForestRewardStrip()
+
       Flex({ wrap: FlexWrap.Wrap }) {
         ForEach(focusStore.plants, (plant: ForestPlant) => {
           this.PlantTile(plant)
@@ -2107,15 +2720,24 @@ struct Index {
       .margin({ top: 14 })
 
       if (focusStore.interruptedPomodoros() > 0) {
-        Text(`枯萎角落 · 记录 ${focusStore.interruptedPomodoros()} 次中断，用来复盘注意力风险`)
-          .fontSize(11)
-          .fontColor(TEXT_SUB)
-          .lineHeight(16)
-          .padding(12)
-          .backgroundColor(SURFACE_ALT)
-          .borderRadius(10)
-          .margin({ top: 8 })
-          .width('100%')
+        Row() {
+          Image($r('app.media.focus_reward_compost'))
+            .width(42)
+            .height(42)
+            .objectFit(ImageFit.Contain)
+            .margin({ right: 10 })
+          Text(`复盘角落 · 记录 ${focusStore.interruptedPomodoros()} 次中断，用来校准下一次专注风险`)
+            .fontSize(11)
+            .fontColor(TEXT_SUB)
+            .lineHeight(16)
+            .layoutWeight(1)
+        }
+        .padding(12)
+        .backgroundColor(SURFACE_ALT)
+        .borderRadius(12)
+        .margin({ top: 8 })
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
       }
     }
     .cardStyle()
@@ -2124,17 +2746,54 @@ struct Index {
   }
 
   @Builder
+  ForestRewardStrip() {
+    Row() {
+      Column() {
+        Image($r('app.media.focus_reward_timer_token'))
+          .rewardAssetStyle()
+        Text(`${focusStore.completedPomodoros()}`)
+          .forestRewardValueStyle()
+        Text('番茄')
+          .forestRewardLabelStyle()
+      }
+      .forestRewardTileStyle()
+
+      Column() {
+        Image($r('app.media.focus_reward_water'))
+          .rewardAssetStyle()
+        Text(`${focusStore.streakDays()}`)
+          .forestRewardValueStyle()
+        Text('连续天')
+          .forestRewardLabelStyle()
+      }
+      .forestRewardTileStyle()
+      .margin({ left: 8 })
+
+      Column() {
+        Image($r('app.media.focus_reward_stone_path'))
+          .rewardAssetStyle()
+        Text(`${focusStore.unlockedPlants().length}`)
+          .forestRewardValueStyle()
+        Text('解锁')
+          .forestRewardLabelStyle()
+      }
+      .forestRewardTileStyle()
+      .margin({ left: 8 })
+    }
+    .width('100%')
+    .margin({ top: 12 })
+  }
+
+  @Builder
   PlantTile(plant: ForestPlant) {
     Column() {
       Stack() {
         Column()
-          .width(50)
-          .height(50)
+          .width(62)
+          .height(62)
           .borderRadius(16)
           .backgroundColor(this.isPlantUnlocked(plant) ? ACCENT_SOFT : SURFACE_ALT)
-        Text(plant.icon)
-          .fontSize(22)
-          .opacity(this.isPlantUnlocked(plant) ? 1 : 0.3)
+        this.PlantAsset(plant)
       }
       Text(plant.name)
         .fontSize(12)
@@ -2150,7 +2809,7 @@ struct Index {
         .margin({ top: 2 })
     }
     .width('31%')
-    .height(112)
+    .height(126)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .borderRadius(12)
@@ -2161,6 +2820,32 @@ struct Index {
 
   private isPlantUnlocked(plant: ForestPlant): boolean {
     return focusStore.completedPomodoros() >= plant.unlockPomodoros && focusStore.streakDays() >= plant.unlockStreak;
+  }
+
+  @Builder
+  PlantAsset(plant: ForestPlant) {
+    if (plant.id === 1) {
+      Image($r('app.media.focus_plant_seed'))
+        .plantAssetStyle(this.isPlantUnlocked(plant))
+    } else if (plant.id === 2) {
+      Image($r('app.media.focus_plant_ginkgo'))
+        .plantAssetStyle(this.isPlantUnlocked(plant))
+    } else if (plant.id === 3) {
+      Image($r('app.media.focus_plant_pine'))
+        .plantAssetStyle(this.isPlantUnlocked(plant))
+    } else if (plant.id === 4) {
+      Image($r('app.media.focus_plant_bloom'))
+        .plantAssetStyle(this.isPlantUnlocked(plant))
+    } else if (plant.id === 5) {
+      Image($r('app.media.focus_plant_maple'))
+        .plantAssetStyle(this.isPlantUnlocked(plant))
+    } else if (plant.id === 6) {
+      Image($r('app.media.focus_plant_forest'))
+        .plantAssetStyle(this.isPlantUnlocked(plant))
+    } else {
+      Image($r('app.media.focus_reward_locked_seed'))
+        .plantAssetStyle(false)
+    }
   }
 
   @Builder
@@ -2246,4 +2931,57 @@ function cardStyleTight() {
   .borderRadius(16)
   .border({ width: 1, color: BORDER_SOFT })
   .shadow({ radius: 18, color: CARD_SHADOW, offsetX: 0, offsetY: 8 })
+}
+
+@Extend(Image)
+function plantAssetStyle(isUnlocked: boolean) {
+  .width(58)
+  .height(58)
+  .objectFit(ImageFit.Contain)
+  .opacity(isUnlocked ? 1 : 0.34)
+}
+
+@Extend(Image)
+function rewardAssetStyle() {
+  .width(38)
+  .height(38)
+  .objectFit(ImageFit.Contain)
+}
+
+@Extend(Image)
+function microAssetStyle(size: number) {
+  .width(size)
+  .height(size)
+  .objectFit(ImageFit.Cover)
+  .borderRadius(Math.round(size / 4))
+}
+
+@Extend(Column)
+function forestRewardTileStyle() {
+  .layoutWeight(1)
+  .height(92)
+  .justifyContent(FlexAlign.Center)
+  .alignItems(HorizontalAlign.Center)
+  .backgroundColor(CARD_SOFT)
+  .border({ width: 1, color: BORDER_SOFT })
+  .borderRadius(14)
+}
+
+@Extend(Text)
+function forestRewardValueStyle() {
+  .fontSize(15)
+  .fontWeight(FontWeight.Bold)
+  .fontColor(TEXT_MAIN)
+  .maxLines(1)
+  .textOverflow({ overflow: TextOverflow.Ellipsis })
+  .margin({ top: 4 })
+}
+
+@Extend(Text)
+function forestRewardLabelStyle() {
+  .fontSize(10)
+  .fontColor(TEXT_MUTED)
+  .maxLines(1)
+  .textOverflow({ overflow: TextOverflow.Ellipsis })
+  .margin({ top: 2 })
 }

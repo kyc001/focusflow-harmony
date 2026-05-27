@@ -104,3 +104,36 @@ Added a root-level Chinese detailed design document for the local-first Focus Ha
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: AI Focus Coach and asset polish
+
+**Date**: 2026-05-27
+**Task**: AI Focus Coach and asset polish
+**Branch**: `master`
+
+### Summary
+
+Added local-first AI Focus Coach, generated/cropped visual assets, runtime focus settings persistence, formatter modularization, and validation docs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cdb1a70` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

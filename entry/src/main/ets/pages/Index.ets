@@ -76,10 +76,27 @@ const WARM_TINT: string = '#FBF1E2';
 const ROSE_TINT: string = '#FBEAEE';
 
 // Design Tokens
-const PAGE_BG_START: string = '#F3F6FB';
-const PAGE_BG_END: string = '#E8EDF5';
+const PAGE_BG_START: string = '#F0F2FF';
+const PAGE_BG_MID: string = '#E8ECF8';
+const PAGE_BG_END: string = '#F3F6FB';
 const CARD_GLASS: string = '#F8FFFFFF';
 const CARD_GLASS_BLUR: number = 20;
+
+// Gradient palettes
+const GRADIENT_PRIMARY_START: string = '#6366F1';
+const GRADIENT_PRIMARY_END: string = '#4F46E5';
+const GRADIENT_ACCENT_START: string = '#818CF8';
+const GRADIENT_ACCENT_END: string = '#6366F1';
+const GRADIENT_HERO_1: string = '#4338CA';
+const GRADIENT_HERO_2: string = '#6D28D9';
+const GRADIENT_HERO_3: string = '#7C3AED';
+const GRADIENT_SUCCESS_START: string = '#34D399';
+const GRADIENT_SUCCESS_END: string = '#10B981';
+const GRADIENT_WARM_START: string = '#F59E0B';
+const GRADIENT_WARM_END: string = '#EF4444';
+const GLOW_PURPLE: string = '#1A7C3AED';
+const GLOW_BLUE: string = '#1A6366F1';
+const BORDER_GLOW: string = '#33818CF8';
 
 // Spacing constants
 const SPACING_XS: number = 4;
@@ -721,7 +738,7 @@ struct Index {
     this.resourceMessage = '文件资料已保存到本地资料库';
   }
 
-  private async extractResource(resourceId: number, useRemote: boolean): Promise<void> {
+  private async extractResource(resourceId: number): Promise<void> {
     if (this.resourceLoading) {
       return;
     }
@@ -732,13 +749,11 @@ struct Index {
     }
     this.resourceLoading = true;
     try {
-      const insight: ResourceInsight = useRemote ?
-        await focusAiCoachService.requestResourceInsight(this.aiSettings, resource) :
-        focusAiCoachService.generateLocalResourceInsight(resource);
+      const insight: ResourceInsight = await focusAiCoachService.requestResourceInsight(this.aiSettings, resource);
       await focusStore.updateResourceInsight(resource.id, insight);
       this.syncFromStore();
       this.latestResourceInsight = insight;
-      this.resourceMessage = useRemote ? insight.source : '已使用本地规则提炼资料';
+      this.resourceMessage = insight.source;
     } finally {
       this.resourceLoading = false;
     }
@@ -913,6 +928,36 @@ struct Index {
     return formatFocusStateText(this.timerStatus);
   }
 
+  @Builder
+  tabBarItem(title: string, index: number) {
+    Column() {
+      Text(title)
+        .fontSize(11)
+        .fontWeight(this.activeTab === index ? FontWeight.Bold : FontWeight.Medium)
+        .fontColor(this.activeTab === index ? ACCENT : TEXT_MUTED)
+      if (this.activeTab === index) {
+        Column()
+          .width(24)
+          .height(3)
+          .borderRadius(2)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
+          .margin({ top: 4 })
+      } else {
+        Column()
+          .width(24)
+          .height(3)
+          .margin({ top: 4 })
+          .opacity(0)
+      }
+    }
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+  }
+
   build() {
     if (!this.isAuthed) {
       this.LoginScreen()
@@ -923,17 +968,17 @@ struct Index {
             TabContent() {
               this.TodayTab()
             }
-            .tabBar('今日')
+            .tabBar(this.tabBarItem('今日', 0))
 
             TabContent() {
               this.TasksTab()
             }
-            .tabBar('任务')
+            .tabBar(this.tabBarItem('任务', 1))
 
             TabContent() {
               this.ProfileTab()
             }
-            .tabBar('我的')
+            .tabBar(this.tabBarItem('我的', 2))
           }
           .barMode(BarMode.Fixed)
           .barBackgroundColor('#E6FFFFFF')
@@ -946,7 +991,10 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor(PAGE_BG)
+        .linearGradient({
+          angle: 180,
+          colors: [[PAGE_BG_START, 0.0], [PAGE_BG_MID, 0.5], [PAGE_BG_END, 1.0]]
+        })
         .onAreaChange((oldArea: Area, newArea: Area) => {
           if (typeof newArea.width === 'number') {
             this.viewportWidth = newArea.width;
@@ -990,7 +1038,7 @@ struct Index {
         .height('100%')
         .linearGradient({
           angle: 160,
-          colors: [[DEEP, 0.0], [DEEP_3, 1.0]]
+          colors: [[GRADIENT_HERO_1, 0.0], [GRADIENT_HERO_2, 0.5], [GRADIENT_HERO_3, 1.0]]
         })
 
       Column() {
@@ -1090,6 +1138,10 @@ struct Index {
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
             .backgroundColor(ACCENT)
+            .linearGradient({
+              angle: 90,
+              colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+            })
             .fontColor('#FFFFFF')
             .borderRadius(12)
             .shadow({ radius: 18, color: '#253A7A24', offsetX: 0, offsetY: 8 })
@@ -1207,7 +1259,7 @@ struct Index {
     .padding({ left: 20, right: 20, top: 20, bottom: 18 })
     .linearGradient({
       angle: 160,
-      colors: [[DEEP, 0.0], [DEEP_3, 1.0]]
+      colors: [[GRADIENT_HERO_1, 0.0], [GRADIENT_HERO_2, 0.5], [GRADIENT_HERO_3, 1.0]]
     })
   }
 
@@ -1385,10 +1437,18 @@ struct Index {
     .borderRadius(20)
     .linearGradient({
       angle: 160,
-      colors: [[DEEP, 0.0], [DEEP_3, 1.0]]
+      colors: [[GRADIENT_HERO_1, 0.0], [GRADIENT_HERO_2, 0.5], [GRADIENT_HERO_3, 1.0]]
     })
     .shadow({ radius: 30, color: CARD_SHADOW_STRONG, offsetX: 0, offsetY: 14 })
     .margin({ bottom: 12 })
+    .overlay(() => {
+      Column()
+        .width(120)
+        .height(120)
+        .borderRadius(60)
+        .backgroundColor(GLOW_PURPLE)
+        .position({ x: '65%', y: -30 })
+    })
   }
 
   @Builder
@@ -1438,7 +1498,7 @@ struct Index {
         })
           .width(132)
           .height(132)
-          .color(ACCENT)
+          .color(GRADIENT_PRIMARY_START)
           .backgroundColor(TRACK)
           .style({ strokeWidth: 10 })
         Column() {
@@ -1552,6 +1612,10 @@ struct Index {
           .fontSize(14)
           .fontWeight(FontWeight.Bold)
           .backgroundColor(ACCENT)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
           .fontColor('#FFFFFF')
           .borderRadius(12)
           .shadow({ radius: 14, color: '#253A7A1C', offsetX: 0, offsetY: 6 })
@@ -1628,6 +1692,11 @@ struct Index {
         .fontSize(13)
         .fontWeight(FontWeight.Bold)
         .backgroundColor(ACCENT)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
+          .shadow({ radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2 })
         .fontColor('#FFFFFF')
         .borderRadius(10)
         .padding({ left: 16, right: 16 })
@@ -1701,6 +1770,11 @@ struct Index {
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .backgroundColor(ACCENT)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
+          .shadow({ radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2 })
           .fontColor('#FFFFFF')
           .borderRadius(8)
           .padding({ left: 14, right: 14 })
@@ -2152,6 +2226,11 @@ struct Index {
                 .fontSize(11)
                 .fontWeight(FontWeight.Medium)
                 .backgroundColor(ACCENT)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
+          .shadow({ radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2 })
                 .fontColor('#FFFFFF')
                 .borderRadius(8)
                 .padding({ left: 12, right: 12 })
@@ -2452,6 +2531,11 @@ struct Index {
         .fontSize(13)
         .fontWeight(FontWeight.Bold)
         .backgroundColor(ACCENT)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
+          .shadow({ radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2 })
         .fontColor('#FFFFFF')
         .borderRadius(12)
         .shadow({ radius: 14, color: '#253A7A1C', offsetX: 0, offsetY: 6 })
@@ -2516,6 +2600,11 @@ struct Index {
           .fontSize(13)
           .fontWeight(FontWeight.Bold)
           .backgroundColor(ACCENT)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
+          .shadow({ radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2 })
           .fontColor('#FFFFFF')
           .borderRadius(12)
           .onClick(() => {
@@ -2698,38 +2787,42 @@ struct Index {
       .margin({ top: 14 })
 
       Row() {
-        Button(this.resourceLoading ? '提炼中' : '本地提炼')
-          .height(34)
-          .layoutWeight(1)
-          .fontSize(12)
-          .fontWeight(FontWeight.Medium)
-          .backgroundColor(SURFACE_ALT)
-          .fontColor(TEXT_SUB)
-          .borderRadius(10)
-          .onClick(() => {
-            this.extractResource(this.selectedResourceId, false);
-          })
-        Button(this.resourceLoading ? '请求中' : '远程 AI')
+        Button(this.resourceLoading ? '提炼中' : 'AI 提炼')
           .height(34)
           .layoutWeight(1)
           .fontSize(12)
           .fontWeight(FontWeight.Bold)
-          .backgroundColor(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? ACCENT : ACCENT_SOFT)
+          .backgroundColor(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? GRADIENT_PRIMARY_START : ACCENT_SOFT)
+          .linearGradient(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? {
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          } : undefined)
           .fontColor(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? '#FFFFFF' : ACCENT)
           .borderRadius(10)
-          .margin({ left: 8 })
+          .shadow(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? {
+            radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2
+          } : { radius: 0 })
           .onClick(() => {
-            this.extractResource(this.selectedResourceId, true);
+            if (!this.aiSettings.enabled || this.aiSettings.apiKey.length === 0) {
+              this.resourceMessage = '请先在设置中配置 API Key';
+              return;
+            }
+            this.extractResource(this.selectedResourceId);
           })
         Button('生成任务')
           .height(34)
           .layoutWeight(1)
           .fontSize(12)
           .fontWeight(FontWeight.Bold)
-          .backgroundColor(SUCCESS_SOFT)
-          .fontColor(SUCCESS)
+          .backgroundColor(GRADIENT_SUCCESS_START)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_SUCCESS_START, 0.0], [GRADIENT_SUCCESS_END, 1.0]]
+          })
+          .fontColor('#FFFFFF')
           .borderRadius(10)
           .margin({ left: 8 })
+          .shadow({ radius: 8, color: '#1A34D399', offsetX: 0, offsetY: 2 })
           .onClick(() => {
             this.createTaskFromResource(this.selectedResourceId);
           })
@@ -2939,7 +3032,7 @@ struct Index {
                 .margin({ left: 5 })
                 .onClick(() => {
                   this.selectResource(resource.id);
-                  this.extractResource(resource.id, false);
+                  this.extractResource(resource.id);
                 })
               Button('归档')
                 .height(28)
@@ -3181,7 +3274,7 @@ struct Index {
     .borderRadius(20)
     .linearGradient({
       angle: 160,
-      colors: [[DEEP, 0.0], [DEEP_3, 1.0]]
+      colors: [[GRADIENT_HERO_1, 0.0], [GRADIENT_HERO_2, 0.5], [GRADIENT_HERO_3, 1.0]]
     })
     .shadow({ radius: 30, color: CARD_SHADOW_STRONG, offsetX: 0, offsetY: 14 })
   }
@@ -3273,6 +3366,11 @@ struct Index {
           .fontSize(12)
           .fontWeight(FontWeight.Bold)
           .backgroundColor(ACCENT)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
+          .shadow({ radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2 })
           .fontColor('#FFFFFF')
           .borderRadius(10)
           .onClick(() => {
@@ -3543,6 +3641,11 @@ struct Index {
               .height(6)
               .borderRadius(3)
               .backgroundColor(ACCENT)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
+          .shadow({ radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2 })
               .margin({ right: 7 })
             Text(title)
               .fontSize(11)
@@ -3612,6 +3715,11 @@ struct Index {
                 .height(Math.max(6, Math.min(108, point.value * 2 + 6)))
                 .borderRadius(9)
                 .backgroundColor(ACCENT)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
+          .shadow({ radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2 })
             }
             .alignContent(Alignment.Bottom)
             .height(114)
@@ -3754,6 +3862,11 @@ struct Index {
             .height(10)
             .borderRadius(3)
             .backgroundColor(ACCENT)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
+          .shadow({ radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2 })
             .margin({ right: 6 })
           Text('多')
             .fontSize(10)
@@ -4078,7 +4191,7 @@ struct Index {
     .borderRadius(20)
     .linearGradient({
       angle: 160,
-      colors: [[DEEP, 0.0], [DEEP_3, 1.0]]
+      colors: [[GRADIENT_HERO_1, 0.0], [GRADIENT_HERO_2, 0.5], [GRADIENT_HERO_3, 1.0]]
     })
     .shadow({ radius: 30, color: CARD_SHADOW_STRONG, offsetX: 0, offsetY: 14 })
   }
@@ -4195,6 +4308,11 @@ struct Index {
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .backgroundColor(ACCENT)
+          .linearGradient({
+            angle: 90,
+            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+          })
+          .shadow({ radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2 })
           .fontColor('#FFFFFF')
           .borderRadius(10)
           .padding({ left: 14, right: 14 })
@@ -4314,7 +4432,7 @@ struct Index {
     .height('100%')
     .linearGradient({
       angle: 160,
-      colors: [[DEEP, 0.0], [DEEP_3, 1.0]]
+      colors: [[GRADIENT_HERO_1, 0.0], [GRADIENT_HERO_2, 0.5], [GRADIENT_HERO_3, 1.0]]
     })
   }
 
@@ -4670,6 +4788,10 @@ struct Index {
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
             .backgroundColor(ACCENT)
+            .linearGradient({
+              angle: 90,
+              colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+            })
             .fontColor('#FFFFFF')
             .borderRadius(12)
             .onClick(() => {

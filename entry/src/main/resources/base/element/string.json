@@ -10,7 +10,7 @@
     },
     {
       "name": "EntryAbility_label",
-      "value": "Focus"
+      "value": "知序"
     },
     {
       "name": "EntryFormAbility_label",
@@ -22,7 +22,7 @@
     },
     {
       "name": "widget_display_name",
-      "value": "Focus 今日"
+      "value": "知序 今日"
     },
     {
       "name": "widget_desc",
@@ -30,7 +30,7 @@
     },
     {
       "name": "FocusAbility_label",
-      "value": "Focus 专注"
+      "value": "知序 专注"
     },
     {
       "name": "FocusAbility_desc",

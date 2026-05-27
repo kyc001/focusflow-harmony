@@ -8,6 +8,8 @@ import {
   FocusSettings,
   FocusTask,
   PomodoroRecord,
+  ResourceInsight,
+  StudyResource,
   TaskStatus
 } from '../models/FocusModels';
 
@@ -151,7 +153,7 @@ export class FocusAiCoachService {
         messages: [
           {
             role: 'system',
-            content: '你是 Focus App 的学习教练。只给简洁、可执行、适合大学生学习场景的中文建议。'
+            content: '你是知序 App 的学习教练。只给简洁、可执行、适合大学生学习场景的中文建议。'
           },
           {
             role: 'user',
@@ -183,6 +185,71 @@ export class FocusAiCoachService {
       return this.parseRemoteAdvice(content, fallback);
     } catch (err) {
       return this.withFallbackStatus(fallback, '远程 AI 暂不可用，已使用本地建议');
+    } finally {
+      request.destroy();
+    }
+  }
+
+  generateLocalResourceInsight(resource: StudyResource): ResourceInsight {
+    const sentences: string[] = this.extractSentences(resource.content);
+    const keyPoints: string[] = this.pickResourceKeyPoints(resource, sentences);
+    const summaryBase: string = sentences.length > 0 ? sentences[0] : resource.title;
+    const summary: string = summaryBase.length > 72 ? `${summaryBase.substring(0, 72)}...` : summaryBase;
+    return {
+      source: '本地规则',
+      summary: summary.length > 0 ? summary : `围绕「${resource.title}」整理学习资料。`,
+      keyPoints: keyPoints,
+      nextTaskTitle: `整理「${resource.title}」复习卡片`,
+      estimatedMinutes: this.estimateResourceMinutes(resource),
+      generatedAt: Date.now()
+    };
+  }
+
+  async requestResourceInsight(settings: AiCoachSettings, resource: StudyResource): Promise<ResourceInsight> {
+    const fallback: ResourceInsight = this.generateLocalResourceInsight(resource);
+    if (!settings.enabled || settings.apiKey.trim().length === 0) {
+      return fallback;
+    }
+
+    const request: http.HttpRequest = http.createHttp();
+    try {
+      const payload: ChatRequestPayload = {
+        model: this.cleanOrDefault(settings.model, DEFAULT_MODEL),
+        messages: [
+          {
+            role: 'system',
+            content: '你是知序 App 的学习资料整理助手。只输出简洁中文，帮助大学生把资料转成下一步行动。'
+          },
+          {
+            role: 'user',
+            content: this.buildResourcePrompt(resource)
+          }
+        ],
+        temperature: 0.35,
+        max_tokens: 260
+      };
+      const response: http.HttpResponse = await request.request(this.chatCompletionsUrl(settings.endpoint), {
+        method: http.RequestMethod.POST,
+        expectDataType: http.HttpDataType.STRING,
+        connectTimeout: 12000,
+        readTimeout: 30000,
+        header: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${settings.apiKey.trim()}`
+        },
+        extraData: JSON.stringify(payload)
+      });
+      const responseCode: number = Number(response.responseCode);
+      if (responseCode < 200 || responseCode >= 300) {
+        return this.withResourceFallbackStatus(fallback, `远程 AI 返回 ${responseCode}，已使用本地提炼`);
+      }
+      const content: string = this.extractContent(`${response.result}`);
+      if (content.length === 0) {
+        return this.withResourceFallbackStatus(fallback, '远程 AI 返回为空，已使用本地提炼');
+      }
+      return this.parseRemoteResourceInsight(content, fallback);
+    } catch (err) {
+      return this.withResourceFallbackStatus(fallback, '远程 AI 暂不可用，已使用本地提炼');
     } finally {
       request.destroy();
     }
@@ -277,7 +344,7 @@ export class FocusAiCoachService {
     const interruptions: number = records.filter((record: PomodoroRecord) => record.completed === 0).length;
 
     return [
-      '请根据以下 Focus App 本地数据生成学习建议。',
+      '请根据以下知序 App 本地数据生成学习建议。',
       `当前任务：${nextTask.title}`,
       `项目：${project.name}`,
       `优先级：${nextTask.priority}`,
@@ -290,6 +357,21 @@ export class FocusAiCoachService {
       '下一步: ...',
       '安排: ...',
       '风险: ...'
+    ].join('\n');
+  }
+
+  private buildResourcePrompt(resource: StudyResource): string {
+    const content: string = resource.content.length > 1100 ? `${resource.content.substring(0, 1100)}...` : resource.content;
+    return [
+      '请把这份学习资料提炼成摘要、要点和一个可执行任务。',
+      `标题：${resource.title}`,
+      `类型：${resource.sourceType}`,
+      `内容：${content}`,
+      '只返回四行，格式严格如下：',
+      '摘要: ...',
+      '要点: 要点一 / 要点二 / 要点三',
+      '任务: ...',
+      '分钟: 25'
     ].join('\n');
   }
 
@@ -306,6 +388,22 @@ export class FocusAiCoachService {
       risk: risk,
       estimatedMinutes: fallback.estimatedMinutes,
       confidence: 88,
+      generatedAt: Date.now()
+    };
+  }
+
+  private parseRemoteResourceInsight(content: string, fallback: ResourceInsight): ResourceInsight {
+    const summary: string = this.pickLine(content, '摘要', fallback.summary);
+    const keyPointLine: string = this.pickLine(content, '要点', fallback.keyPoints.join(' / '));
+    const nextTaskTitle: string = this.pickLine(content, '任务', fallback.nextTaskTitle);
+    const minutesText: string = this.pickLine(content, '分钟', `${fallback.estimatedMinutes}`);
+    const parsedMinutes: number = Number(minutesText.replace('分钟', '').trim());
+    return {
+      source: '远程 AI',
+      summary: summary,
+      keyPoints: this.parseKeyPointLine(keyPointLine, fallback.keyPoints),
+      nextTaskTitle: nextTaskTitle,
+      estimatedMinutes: parsedMinutes !== parsedMinutes ? fallback.estimatedMinutes : Math.max(15, Math.min(60, Math.round(parsedMinutes))),
       generatedAt: Date.now()
     };
   }
@@ -339,6 +437,62 @@ export class FocusAiCoachService {
     }
   }
 
+  private extractSentences(content: string): string[] {
+    const normalized: string = content
+      .replace(/\r/g, '\n')
+      .replace(/\n/g, '。')
+      .replace(/；/g, '。')
+      .replace(/;/g, '。');
+    return normalized
+      .split('。')
+      .map((item: string) => item.trim())
+      .filter((item: string) => item.length > 0);
+  }
+
+  private pickResourceKeyPoints(resource: StudyResource, sentences: string[]): string[] {
+    const points: string[] = [];
+    for (const sentence of sentences) {
+      if (points.length >= 3) {
+        break;
+      }
+      const point: string = sentence.length > 42 ? sentence.substring(0, 42) : sentence;
+      if (points.indexOf(point) < 0) {
+        points.push(point);
+      }
+    }
+    if (points.length === 0) {
+      points.push(`阅读「${resource.title}」原文`);
+    }
+    while (points.length < 3) {
+      if (points.length === 1) {
+        points.push('提炼概念与例子');
+      } else {
+        points.push('转成 25 分钟内可完成的小任务');
+      }
+    }
+    return points;
+  }
+
+  private parseKeyPointLine(line: string, fallback: string[]): string[] {
+    const normalized: string = line.replace(/，/g, '/').replace(/、/g, '/').replace(/;/g, '/').replace(/；/g, '/');
+    const points: string[] = normalized
+      .split('/')
+      .map((item: string) => item.trim())
+      .filter((item: string) => item.length > 0)
+      .slice(0, 3);
+    return points.length > 0 ? points : fallback;
+  }
+
+  private estimateResourceMinutes(resource: StudyResource): number {
+    if (resource.sourceType === 'pdf' || resource.content.length > 700) {
+      return 40;
+    }
+    if (resource.sourceType === 'courseware' || resource.content.length > 300) {
+      return 30;
+    }
+    return 25;
+  }
+
   private chatCompletionsUrl(endpoint: string): string {
     const clean: string = this.cleanOrDefault(endpoint, DEFAULT_ENDPOINT).replace(/\/+$/, '');
     if (clean.endsWith('/v1')) {
@@ -361,6 +515,17 @@ export class FocusAiCoachService {
       risk: fallback.risk,
       estimatedMinutes: fallback.estimatedMinutes,
       confidence: fallback.confidence,
+      generatedAt: Date.now()
+    };
+  }
+
+  private withResourceFallbackStatus(fallback: ResourceInsight, message: string): ResourceInsight {
+    return {
+      source: message,
+      summary: fallback.summary,
+      keyPoints: fallback.keyPoints,
+      nextTaskTitle: fallback.nextTaskTitle,
+      estimatedMinutes: fallback.estimatedMinutes,
       generatedAt: Date.now()
     };
   }

@@ -1,5 +1,16 @@
 import { createDefaultSettings, createForestPlants, createSeedProjects } from '../data/SeedData';
-import { FocusProject, FocusSettings, FocusTask, ForestPlant, PomodoroRecord, StatPoint, TaskStatus } from '../models/FocusModels';
+import {
+  FocusProject,
+  FocusSettings,
+  FocusTask,
+  ForestPlant,
+  PomodoroRecord,
+  ResourceInsight,
+  StatPoint,
+  StudyResource,
+  StudyResourceStatus,
+  TaskStatus
+} from '../models/FocusModels';
 import { focusDatabase } from './FocusDatabase';
 
 const DAY_MS: number = 24 * 60 * 60 * 1000;
@@ -8,6 +19,7 @@ export class FocusStore {
   projects: FocusProject[] = createSeedProjects();
   tasks: FocusTask[] = [];
   pomodoros: PomodoroRecord[] = [];
+  resources: StudyResource[] = [];
   settings: FocusSettings = createDefaultSettings();
   plants: ForestPlant[] = createForestPlants();
 
@@ -18,6 +30,7 @@ export class FocusStore {
     this.projects = await focusDatabase.getProjects();
     this.tasks = await focusDatabase.getTasks();
     this.pomodoros = await focusDatabase.getPomodoros();
+    this.resources = await focusDatabase.getStudyResources();
     if (this.projects.length === 0) {
       this.projects = createSeedProjects();
     }
@@ -47,6 +60,14 @@ export class FocusStore {
     return this.tasks.filter((task: FocusTask) => task.status === TaskStatus.DELETED);
   }
 
+  getActiveResources(): StudyResource[] {
+    return this.resources.filter((resource: StudyResource) => resource.status === StudyResourceStatus.ACTIVE);
+  }
+
+  getArchivedResources(): StudyResource[] {
+    return this.resources.filter((resource: StudyResource) => resource.status === StudyResourceStatus.ARCHIVED);
+  }
+
   async addTask(title: string, projectId: number, priority: number, dueOffsetHours: number): Promise<FocusTask> {
     const now: number = Date.now();
     const task: FocusTask = {
@@ -64,6 +85,101 @@ export class FocusStore {
       subtasks: []
     };
     const saved: FocusTask = await focusDatabase.addTask(task);
+    await this.refresh();
+    return saved;
+  }
+
+  async addStudyResource(title: string, sourceType: string, projectId: number, content: string): Promise<StudyResource> {
+    const now: number = Date.now();
+    const resource: StudyResource = {
+      id: 0,
+      title: title,
+      sourceType: sourceType,
+      projectId: projectId,
+      linkedTaskId: 0,
+      content: content,
+      summary: '待 AI 或本地规则提炼摘要',
+      keyPoints: this.initialKeyPoints(content),
+      tags: this.initialTags(sourceType, content),
+      status: StudyResourceStatus.ACTIVE,
+      createdAt: now,
+      updatedAt: now,
+      reviewDueAt: now + DAY_MS
+    };
+    const saved: StudyResource = await focusDatabase.addStudyResource(resource);
+    await this.refresh();
+    return saved;
+  }
+
+  async updateResourceInsight(resourceId: number, insight: ResourceInsight): Promise<void> {
+    const resource: StudyResource | undefined = this.resources.find((item: StudyResource) => item.id === resourceId);
+    if (resource === undefined) {
+      return;
+    }
+    const updated: StudyResource = {
+      id: resource.id,
+      title: resource.title,
+      sourceType: resource.sourceType,
+      projectId: resource.projectId,
+      linkedTaskId: resource.linkedTaskId,
+      content: resource.content,
+      summary: insight.summary,
+      keyPoints: insight.keyPoints,
+      tags: resource.tags,
+      status: resource.status,
+      createdAt: resource.createdAt,
+      updatedAt: Date.now(),
+      reviewDueAt: resource.reviewDueAt
+    };
+    await focusDatabase.updateStudyResource(updated);
+    await this.refresh();
+  }
+
+  async archiveResource(resourceId: number): Promise<void> {
+    await this.setResourceStatus(resourceId, StudyResourceStatus.ARCHIVED);
+  }
+
+  async restoreResource(resourceId: number): Promise<void> {
+    await this.setResourceStatus(resourceId, StudyResourceStatus.ACTIVE);
+  }
+
+  async createTaskFromResource(resourceId: number, title: string, estimatedMinutes: number): Promise<FocusTask | undefined> {
+    const resource: StudyResource | undefined = this.resources.find((item: StudyResource) => item.id === resourceId);
+    if (resource === undefined) {
+      return undefined;
+    }
+    const now: number = Date.now();
+    const task: FocusTask = {
+      id: 0,
+      title: title,
+      note: `来自资料「${resource.title}」：${resource.summary}`,
+      projectId: resource.projectId,
+      priority: estimatedMinutes >= 35 ? 1 : 2,
+      dueAt: now + 8 * 60 * 60 * 1000,
+      status: TaskStatus.TODO,
+      pomodoroCount: 0,
+      createdAt: now,
+      completedAt: 0,
+      tags: ['资料生成'].concat(resource.tags.slice(0, 2)),
+      subtasks: resource.keyPoints.length > 0 ? resource.keyPoints.slice(0, 3) : ['阅读资料', '整理要点', '完成复习卡片']
+    };
+    const saved: FocusTask = await focusDatabase.addTask(task);
+    const updated: StudyResource = {
+      id: resource.id,
+      title: resource.title,
+      sourceType: resource.sourceType,
+      projectId: resource.projectId,
+      linkedTaskId: saved.id,
+      content: resource.content,
+      summary: resource.summary,
+      keyPoints: resource.keyPoints,
+      tags: resource.tags,
+      status: resource.status,
+      createdAt: resource.createdAt,
+      updatedAt: Date.now(),
+      reviewDueAt: resource.reviewDueAt
+    };
+    await focusDatabase.updateStudyResource(updated);
     await this.refresh();
     return saved;
   }
@@ -179,6 +295,63 @@ export class FocusStore {
     return this.plants.filter((plant: ForestPlant) => {
       return total >= plant.unlockPomodoros && streak >= plant.unlockStreak;
     });
+  }
+
+  extractedResourceCount(): number {
+    return this.resources.filter((resource: StudyResource) => {
+      return resource.summary.length > 0 && resource.summary !== '待 AI 或本地规则提炼摘要';
+    }).length;
+  }
+
+  private async setResourceStatus(resourceId: number, status: number): Promise<void> {
+    const resource: StudyResource | undefined = this.resources.find((item: StudyResource) => item.id === resourceId);
+    if (resource === undefined) {
+      return;
+    }
+    const updated: StudyResource = {
+      id: resource.id,
+      title: resource.title,
+      sourceType: resource.sourceType,
+      projectId: resource.projectId,
+      linkedTaskId: resource.linkedTaskId,
+      content: resource.content,
+      summary: resource.summary,
+      keyPoints: resource.keyPoints,
+      tags: resource.tags,
+      status: status,
+      createdAt: resource.createdAt,
+      updatedAt: Date.now(),
+      reviewDueAt: resource.reviewDueAt
+    };
+    await focusDatabase.updateStudyResource(updated);
+    await this.refresh();
+  }
+
+  private initialKeyPoints(content: string): string[] {
+    const trimmed: string = content.trim();
+    if (trimmed.length === 0) {
+      return ['补充资料正文'];
+    }
+    const normalized: string = trimmed.replace(/\n/g, '。');
+    const parts: string[] = normalized
+      .split('。')
+      .map((item: string) => item.trim())
+      .filter((item: string) => item.length > 0);
+    if (parts.length === 0) {
+      return [trimmed.substring(0, Math.min(24, trimmed.length))];
+    }
+    return parts.slice(0, 3).map((item: string) => item.substring(0, Math.min(36, item.length)));
+  }
+
+  private initialTags(sourceType: string, content: string): string[] {
+    const tags: string[] = ['资料'];
+    if (sourceType.length > 0) {
+      tags.push(sourceType);
+    }
+    if (content.indexOf('AI') >= 0 || content.indexOf('ai') >= 0) {
+      tags.push('AI');
+    }
+    return tags;
   }
 
   private copyTask(task: FocusTask, status: number, completedAt: number): FocusTask {

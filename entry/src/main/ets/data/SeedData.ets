@@ -1,4 +1,13 @@
-import { FocusProject, FocusSettings, FocusTask, ForestPlant, PomodoroRecord, TaskStatus } from '../models/FocusModels';
+import {
+  FocusProject,
+  FocusSettings,
+  FocusTask,
+  ForestPlant,
+  PomodoroRecord,
+  StudyResource,
+  StudyResourceStatus,
+  TaskStatus
+} from '../models/FocusModels';
 
 const ONE_HOUR: number = 60 * 60 * 1000;
 const ONE_DAY: number = 24 * ONE_HOUR;
@@ -73,7 +82,7 @@ export function createSeedTasks(): FocusTask[] {
     },
     {
       id: 5,
-      title: '整理 Focus App 答辩话术',
+      title: '整理知序 App 答辩话术',
       note: '突出服务卡片、一多布局、后台任务、本地数据闭环。',
       projectId: 4,
       priority: 1,
@@ -99,6 +108,57 @@ export function createSeedPomodoros(): PomodoroRecord[] {
   ];
 }
 
+export function createSeedStudyResources(): StudyResource[] {
+  const now: number = Date.now();
+  return [
+    {
+      id: 1,
+      title: '鸿蒙期末项目需求记录',
+      sourceType: 'note',
+      projectId: 4,
+      linkedTaskId: 1,
+      content: '老师要求课程项目一般要有 4-5 个页面，每个页面都要有实在功能。如果能连接服务器，服务器端再连接数据库，会更好。',
+      summary: '项目需要体现多页面、真实功能、本地数据库、可选服务器和课程知识点。',
+      keyPoints: ['4-5 个真实页面', '本地数据库闭环', '可选服务器加分'],
+      tags: ['课程要求', '答辩'],
+      status: StudyResourceStatus.ACTIVE,
+      createdAt: now - 2 * ONE_DAY,
+      updatedAt: now - 2 * ONE_DAY,
+      reviewDueAt: now + ONE_DAY
+    },
+    {
+      id: 2,
+      title: '数据库复习资料',
+      sourceType: 'courseware',
+      projectId: 1,
+      linkedTaskId: 2,
+      content: '索引、事务、范式、SQL 查询优化是期末复习重点。需要把概念拆成可完成的小任务。',
+      summary: '围绕数据库核心概念建立复习清单，并用番茄钟分段完成。',
+      keyPoints: ['索引与查询优化', '事务 ACID', '范式设计'],
+      tags: ['复习', '数据库'],
+      status: StudyResourceStatus.ACTIVE,
+      createdAt: now - ONE_DAY,
+      updatedAt: now - ONE_DAY,
+      reviewDueAt: now + 2 * ONE_DAY
+    },
+    {
+      id: 3,
+      title: '论文 Related Work 摘录',
+      sourceType: 'pdf',
+      projectId: 2,
+      linkedTaskId: 3,
+      content: '阅读相关工作时需要记录每篇论文的问题、方法、贡献和局限，并最终压缩成一段综述。',
+      summary: '按问题、方法、贡献、局限四栏整理文献，避免只摘抄摘要。',
+      keyPoints: ['问题定义', '方法贡献', '局限比较'],
+      tags: ['论文', '科研'],
+      status: StudyResourceStatus.ACTIVE,
+      createdAt: now - 6 * ONE_HOUR,
+      updatedAt: now - 6 * ONE_HOUR,
+      reviewDueAt: now + 3 * ONE_DAY
+    }
+  ];
+}
+
 export function createDefaultSettings(): FocusSettings {
   return {
     focusMinutes: 25,
@@ -120,4 +180,3 @@ export function createForestPlants(): ForestPlant[] {
     { id: 6, name: '知识森林', icon: 'Forest', unlockPomodoros: 25, unlockStreak: 7, color: '#0F766E' }
   ];
 }
-

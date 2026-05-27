@@ -11,7 +11,7 @@ interface FocusFormData {
 }
 
 const DEFAULT_FORM_DATA: FocusFormData = {
-  title: 'Focus 今日',
+  title: '知序 今日',
   subtitle: '本地学习闭环',
   progress: '4/6 番茄',
   task1: 'HW4 报告复盘',
@@ -36,4 +36,3 @@ export default class EntryFormAbility extends FormExtensionAbility {
     return formInfo.FormState.READY;
   }
 }
-

@@ -15,11 +15,12 @@ This project is a HarmonyOS ArkTS app, not an Electron/React app. Use this file 
 Local database:
 
 - DB name: `focus.db`
-- DB version: `2`
+- DB version: `3`
 - Tables:
   - `projects(id, name, color, icon, updated_at, is_deleted)`
   - `tasks(id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, tags_json, subtasks_json)`
   - `pomodoros(id, task_id, start_at, duration, completed, interrupt_reason, updated_at)`
+  - `study_resources(id, title, source_type, project_id, linked_task_id, content, summary, key_points_json, tags_json, status, created_at, updated_at, review_due_at)`
 
 RDB facade:
 
@@ -32,6 +33,9 @@ focusDatabase.addTask(task: FocusTask): Promise<FocusTask>
 focusDatabase.updateTask(task: FocusTask): Promise<void>
 focusDatabase.recordPomodoro(record: PomodoroRecord): Promise<PomodoroRecord>
 focusDatabase.incrementTaskPomodoro(taskId: number): Promise<void>
+focusDatabase.getStudyResources(): Promise<StudyResource[]>
+focusDatabase.addStudyResource(resource: StudyResource): Promise<StudyResource>
+focusDatabase.updateStudyResource(resource: StudyResource): Promise<void>
 ```
 
 UI-facing store:
@@ -43,6 +47,11 @@ focusStore.toggleTask(taskId: number): Promise<void>
 focusStore.softDeleteTask(taskId: number): Promise<void>
 focusStore.restoreTask(taskId: number): Promise<void>
 focusStore.recordPomodoro(taskId: number, duration: number, completed: boolean, reason: string): Promise<void>
+focusStore.addStudyResource(title: string, sourceType: string, projectId: number, content: string): Promise<StudyResource>
+focusStore.updateResourceInsight(resourceId: number, insight: ResourceInsight): Promise<void>
+focusStore.archiveResource(resourceId: number): Promise<void>
+focusStore.restoreResource(resourceId: number): Promise<void>
+focusStore.createTaskFromResource(resourceId: number, title: string, estimatedMinutes: number): Promise<FocusTask | undefined>
 ```
 
 `FocusAbility` Want parameters:
@@ -100,6 +109,138 @@ focusSettingsService.defaultSettings(): FocusSettings
 - Runtime settings must be normalized on load/save. Focus minutes clamp to 10-60, short break to 3-15, and long break to 10-30.
 - UI changes to timer length, white noise, or notification preference must save through `focusSettingsService.saveSettings()`, then copy the normalized result back into `focusStore.settings` and page state.
 - Preferences failures for runtime settings must degrade to defaults or normalized in-memory settings and must not block startup, task writes, or Pomodoro writes.
+
+## Scenario: Study Resources and Document Import
+
+### 1. Scope / Trigger
+
+- Trigger: Any change touching the Resources tab, `StudyResource`, the `study_resources` RDB table, resource AI extraction, or document/file import.
+- Product contract: resources are local-first learning objects. They may represent notes, links, courseware, PDFs, or picked local files.
+
+### 2. Signatures
+
+Study resource model:
+
+```typescript
+interface StudyResource {
+  id: number;
+  title: string;
+  sourceType: string;
+  projectId: number;
+  linkedTaskId: number;
+  content: string;
+  summary: string;
+  keyPoints: string[];
+  tags: string[];
+  status: number;
+  createdAt: number;
+  updatedAt: number;
+  reviewDueAt: number;
+}
+```
+
+Resource status values:
+
+- `0`: active
+- `1`: archived
+
+Supported `sourceType` values:
+
+- `note`: manually written note / memo
+- `link`: web link or link description
+- `courseware`: courseware or slide excerpt
+- `pdf`: PDF / paper excerpt
+- `file`: local document selected through `picker.DocumentViewPicker`
+
+Document import entry point:
+
+```typescript
+const documentPicker: picker.DocumentViewPicker = new picker.DocumentViewPicker(context);
+const options: picker.DocumentSelectOptions = new picker.DocumentSelectOptions();
+options.maxSelectNumber = 1;
+options.fileSuffixFilters = ['学习资料|.pdf,.doc,.docx,.ppt,.pptx,.txt,.md'];
+const uris: Array<string> = await documentPicker.select(options);
+```
+
+### 3. Contracts
+
+- `study_resources` is additive. Do not change existing task/project/pomodoro schemas when adding resource behavior.
+- Resource UI mutations must write through `FocusStore`, refresh from RDB, and copy state back into the page.
+- File import stores a URI reference plus user notes in `StudyResource.content`; it does not copy binary files or parse document bodies in this iteration.
+- Resource AI extraction updates `summary` and `keyPoints` only after the resource exists locally.
+- Creating a task from a resource must create a normal RDB-backed `FocusTask` and then update `linkedTaskId` on the resource.
+- Empty remote AI settings or request failures must fall back to local resource insight.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+| --- | --- |
+| `study_resources` table is missing | `createTables()` creates it before resource queries run. |
+| Resource query opens a `ResultSet` | Close it in `finally`. |
+| User cancels the document picker | Keep the page usable and show a non-blocking "no file selected" message. |
+| Document picker is unsupported in preview/device | Keep memo/text resource creation usable and show fallback guidance. |
+| Resource title/content is empty | Do not write; show a validation message. |
+| Remote AI disabled or unavailable | Generate local resource insight. |
+
+### 5. Good / Base / Bad Cases
+
+Good:
+
+- User writes a memo in Resources -> `focusStore.addStudyResource()` -> RDB row persists -> list refreshes.
+- User selects a file -> URI is saved as a `file` resource with notes -> AI/local extraction can still generate a task from the notes and URI context.
+- User taps "生成任务" -> a `FocusTask` is created locally and `linkedTaskId` is updated.
+
+Base:
+
+- No picker support: text memo and pasted-link workflows still work.
+- No AI key/network: local resource summary and task suggestion still work.
+
+Bad:
+
+- Showing add form, file import, AI extraction, filters, and full list all in one dense Resources view.
+- Storing API keys or file binary content in source/task/report files.
+- Writing resource UI state without going through `FocusStore`.
+
+### 6. Tests Required
+
+- Run `assembleHap` after changing resource UI, picker imports, media references, or resource data models.
+- Run `git diff --check`.
+- Run a secret scan for user-provided API token patterns.
+- Manual device/emulator checks when available:
+  - Add memo resource -> restart app -> resource persists.
+  - Select a document -> save file resource -> row appears as `本地文件`.
+  - Generate task from resource -> task appears in Today/Tasks and resource shows linked task.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```typescript
+this.resources.push(resource);
+// Looks updated but restart loses the resource and AI/task links diverge from RDB.
+```
+
+#### Correct
+
+```typescript
+const saved: StudyResource = await focusStore.addStudyResource(title, sourceType, projectId, content);
+this.selectedResourceId = saved.id;
+this.syncFromStore();
+```
+
+#### Wrong
+
+```typescript
+// Treat picked files as copied local documents.
+const content = 'file imported';
+```
+
+#### Correct
+
+```typescript
+const content: string = `文件：${pickedFileUri}\n备注：${note}`;
+await focusStore.addStudyResource(title, 'file', projectId, content);
+```
 
 ### 4. Validation & Error Matrix
 

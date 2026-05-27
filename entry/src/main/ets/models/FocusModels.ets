@@ -4,6 +4,11 @@ export enum TaskStatus {
   DELETED = 2
 }
 
+export enum StudyResourceStatus {
+  ACTIVE = 0,
+  ARCHIVED = 1
+}
+
 export enum PomodoroStatus {
   IDLE = 0,
   RUNNING = 1,
@@ -32,6 +37,22 @@ export interface FocusTask {
   completedAt: number;
   tags: string[];
   subtasks: string[];
+}
+
+export interface StudyResource {
+  id: number;
+  title: string;
+  sourceType: string;
+  projectId: number;
+  linkedTaskId: number;
+  content: string;
+  summary: string;
+  keyPoints: string[];
+  tags: string[];
+  status: number;
+  createdAt: number;
+  updatedAt: number;
+  reviewDueAt: number;
 }
 
 export interface PomodoroRecord {
@@ -81,5 +102,14 @@ export interface AiCoachAdvice {
   risk: string;
   estimatedMinutes: number;
   confidence: number;
+  generatedAt: number;
+}
+
+export interface ResourceInsight {
+  source: string;
+  summary: string;
+  keyPoints: string[];
+  nextTaskTitle: string;
+  estimatedMinutes: number;
   generatedAt: number;
 }

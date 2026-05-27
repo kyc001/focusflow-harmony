@@ -112,7 +112,7 @@ struct FocusSolo {
       Column() {
         Row() {
           Column() {
-            Text('Focus 沉浸模式')
+            Text('知序沉浸模式')
               .fontSize(11)
               .fontColor('#99FFFFFF')
               .letterSpacing(2)

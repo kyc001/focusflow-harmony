@@ -1,12 +1,12 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { common } from '@kit.AbilityKit';
-import { createSeedPomodoros, createSeedProjects, createSeedTasks } from '../data/SeedData';
-import { FocusProject, FocusTask, PomodoroRecord, TaskStatus } from '../models/FocusModels';
+import { createSeedPomodoros, createSeedProjects, createSeedStudyResources, createSeedTasks } from '../data/SeedData';
+import { FocusProject, FocusTask, PomodoroRecord, StudyResource, TaskStatus } from '../models/FocusModels';
 
 type ValueType = relationalStore.ValueType;
 
 const DB_NAME: string = 'focus.db';
-const DB_VERSION: number = 2;
+const DB_VERSION: number = 3;
 
 export class FocusDatabase {
   private store?: relationalStore.RdbStore;
@@ -23,6 +23,7 @@ export class FocusDatabase {
     this.store.version = DB_VERSION;
     await this.createTables();
     await this.seedIfEmpty();
+    await this.seedStudyResourcesIfEmpty();
   }
 
   async createTables(): Promise<void> {
@@ -66,6 +67,23 @@ export class FocusDatabase {
         'completed INTEGER NOT NULL, ' +
         'interrupt_reason TEXT, ' +
         'updated_at INTEGER NOT NULL DEFAULT 0' +
+        ')'
+    );
+    await store.executeSql(
+      'CREATE TABLE IF NOT EXISTS study_resources (' +
+        'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+        'title TEXT NOT NULL, ' +
+        'source_type TEXT NOT NULL, ' +
+        'project_id INTEGER NOT NULL, ' +
+        'linked_task_id INTEGER NOT NULL DEFAULT 0, ' +
+        'content TEXT, ' +
+        'summary TEXT, ' +
+        'key_points_json TEXT, ' +
+        'tags_json TEXT, ' +
+        'status INTEGER NOT NULL DEFAULT 0, ' +
+        'created_at INTEGER NOT NULL, ' +
+        'updated_at INTEGER NOT NULL, ' +
+        'review_due_at INTEGER NOT NULL DEFAULT 0' +
         ')'
     );
     await this.addColumnIfMissing('projects', 'updated_at', 'INTEGER NOT NULL DEFAULT 0');
@@ -147,6 +165,36 @@ export class FocusDatabase {
     return records;
   }
 
+  async getStudyResources(): Promise<StudyResource[]> {
+    const resultSet: relationalStore.ResultSet = await this.query(
+      'SELECT id, title, source_type, project_id, linked_task_id, content, summary, key_points_json, tags_json, status, created_at, updated_at, review_due_at ' +
+        'FROM study_resources ORDER BY status ASC, updated_at DESC, id DESC'
+    );
+    const resources: StudyResource[] = [];
+    try {
+      while (resultSet.goToNextRow()) {
+        resources.push({
+          id: this.longValue(resultSet, 'id'),
+          title: this.stringValue(resultSet, 'title', '未命名资料'),
+          sourceType: this.stringValue(resultSet, 'source_type', 'note'),
+          projectId: this.longValue(resultSet, 'project_id'),
+          linkedTaskId: this.longValue(resultSet, 'linked_task_id'),
+          content: this.stringValue(resultSet, 'content', ''),
+          summary: this.stringValue(resultSet, 'summary', ''),
+          keyPoints: this.parseStringArray(this.stringValue(resultSet, 'key_points_json', '[]')),
+          tags: this.parseStringArray(this.stringValue(resultSet, 'tags_json', '[]')),
+          status: this.longValue(resultSet, 'status'),
+          createdAt: this.longValue(resultSet, 'created_at'),
+          updatedAt: this.longValue(resultSet, 'updated_at'),
+          reviewDueAt: this.longValue(resultSet, 'review_due_at')
+        });
+      }
+    } finally {
+      resultSet.close();
+    }
+    return resources;
+  }
+
   async addTask(task: FocusTask): Promise<FocusTask> {
     const values: relationalStore.ValuesBucket = this.taskToBucket(task, false);
     const id: number = await this.requireStore().insert('tasks', values);
@@ -163,6 +211,26 @@ export class FocusDatabase {
       completedAt: task.completedAt,
       tags: task.tags,
       subtasks: task.subtasks
+    };
+  }
+
+  async addStudyResource(resource: StudyResource): Promise<StudyResource> {
+    const values: relationalStore.ValuesBucket = this.resourceToBucket(resource, false);
+    const id: number = await this.requireStore().insert('study_resources', values);
+    return {
+      id: id,
+      title: resource.title,
+      sourceType: resource.sourceType,
+      projectId: resource.projectId,
+      linkedTaskId: resource.linkedTaskId,
+      content: resource.content,
+      summary: resource.summary,
+      keyPoints: resource.keyPoints,
+      tags: resource.tags,
+      status: resource.status,
+      createdAt: resource.createdAt,
+      updatedAt: resource.updatedAt,
+      reviewDueAt: resource.reviewDueAt
     };
   }
 
@@ -197,10 +265,41 @@ export class FocusDatabase {
     );
   }
 
+  async upsertStudyResource(resource: StudyResource): Promise<void> {
+    const values: relationalStore.ValuesBucket = this.resourceToBucket(resource, true);
+    await this.requireStore().executeSql(
+      'INSERT OR REPLACE INTO study_resources (' +
+        'id, title, source_type, project_id, linked_task_id, content, summary, key_points_json, tags_json, status, created_at, updated_at, review_due_at' +
+        ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        values.id as number,
+        values.title as string,
+        values.source_type as string,
+        values.project_id as number,
+        values.linked_task_id as number,
+        values.content as string,
+        values.summary as string,
+        values.key_points_json as string,
+        values.tags_json as string,
+        values.status as number,
+        values.created_at as number,
+        values.updated_at as number,
+        values.review_due_at as number
+      ]
+    );
+  }
+
   async updateTask(task: FocusTask): Promise<void> {
     const values: relationalStore.ValuesBucket = this.taskToBucket(task, false);
     const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('tasks');
     predicates.equalTo('id', task.id);
+    await this.requireStore().update(values, predicates);
+  }
+
+  async updateStudyResource(resource: StudyResource): Promise<void> {
+    const values: relationalStore.ValuesBucket = this.resourceToBucket(resource, false);
+    const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('study_resources');
+    predicates.equalTo('id', resource.id);
     await this.requireStore().update(values, predicates);
   }
 
@@ -257,6 +356,17 @@ export class FocusDatabase {
     }
   }
 
+  private async seedStudyResourcesIfEmpty(): Promise<void> {
+    const count: number = await this.countRows('study_resources');
+    if (count > 0) {
+      return;
+    }
+    const resources: StudyResource[] = createSeedStudyResources();
+    for (const resource of resources) {
+      await this.upsertStudyResource(resource);
+    }
+  }
+
   private async addColumnIfMissing(tableName: string, columnName: string, definition: string): Promise<void> {
     const resultSet: relationalStore.ResultSet = await this.query(`PRAGMA table_info(${tableName})`);
     let exists: boolean = false;
@@ -304,6 +414,29 @@ export class FocusDatabase {
     };
     if (includeId) {
       values.id = task.id;
+    }
+    return values;
+  }
+
+  private resourceToBucket(resource: StudyResource, includeId: boolean): relationalStore.ValuesBucket {
+    const now: number = Date.now();
+    const values: relationalStore.ValuesBucket = {
+      title: resource.title,
+      source_type: resource.sourceType,
+      project_id: resource.projectId,
+      linked_task_id: resource.linkedTaskId,
+      content: resource.content,
+      summary: resource.summary,
+      key_points_json: JSON.stringify(resource.keyPoints),
+      tags_json: JSON.stringify(resource.tags),
+      status: resource.status,
+      created_at: resource.createdAt,
+      updated_at: now,
+      review_due_at: resource.reviewDueAt
+    };
+    if (includeId) {
+      values.id = resource.id;
+      values.updated_at = resource.updatedAt;
     }
     return values;
   }

@@ -21,7 +21,7 @@ struct FocusCard {
         Column() {
           Row() {
             Column() {
-              Text('Focus')
+              Text('知序')
                 .fontSize(16)
                 .fontWeight(FontWeight.Bold)
                 .fontColor('#FFFFFF')

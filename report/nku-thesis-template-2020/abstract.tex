@@ -1,0 +1,35 @@
+% -*- coding: utf-8 -*-
+
+
+\begin{zhaiyao}
+\begin{spacing}{1.5}
+{
+
+在移动互联网学习场景中，大学生通常同时面对课程资料分散、任务拆分困难、专注过程容易被打断、学习结果缺少复盘等问题。传统待办工具能够记录任务，但难以把课程资料、番茄专注和阶段复盘连接成闭环；单纯的计时器又缺少资料管理、任务生成和数据持久化能力。针对上述问题，本文设计并实现了一款名为“知序”的 HarmonyOS 学习管理应用。
+
+系统采用 ArkTS 与 ArkUI 完成端侧界面和交互，以 MVVM 思路组织模型、视图和控制逻辑；使用 RDB 保存项目、任务、番茄记录和学习资料，使用 Preferences 保存登录态、计时设置和 AI 接入配置；保留 Spring Boot + MyBatis + MySQL 后端作为可选同步与课程全栈展示层。在原有今日、任务、专注、复盘功能基础上，系统新增学习资料库页面，支持多类型资料录入、项目关联、本地/远程 AI 摘要提炼、要点抽取和一键生成专注任务。实现结果表明，该应用能够在离线状态下完成学习计划、资料整理、番茄执行和复盘统计，并在配置运行时模型接口后提供 AI 增强能力，满足课程项目“4-5 个页面且每页有实际功能”的要求。
+}
+
+\end{spacing}
+\end{zhaiyao}
+
+
+
+
+\begin{guanjianci}
+HarmonyOS；本地优先；学习资料库；AI 学习助手；MVVM
+\end{guanjianci}
+
+
+
+\begin{abstract}
+\begin{spacing}{1.5}
+In mobile learning scenarios, college students often face scattered materials, vague task decomposition, interrupted focus sessions, and insufficient review feedback. General todo tools can record tasks but rarely connect course materials, Pomodoro execution, and learning review into one workflow. This project designs and implements ZhiXu, a HarmonyOS study flow application. The system uses ArkTS and ArkUI for the client interface, follows an MVVM-oriented structure, stores projects, tasks, Pomodoro records, and study resources in local RDB, and stores account, timer, and AI runtime settings in Preferences. A Spring Boot, MyBatis, and MySQL backend is retained as an optional synchronization layer. The application now provides five practical pages: Today, Tasks, Resources, Focus, and Review. The new resource library supports notes, links, courseware excerpts, document-style records, AI/local summarization, key point extraction, and one-click task creation. The result shows that the app remains usable offline while providing AI enhancement after runtime model configuration.
+
+\end{spacing}
+\end{abstract}
+
+
+\begin{keywords}
+HarmonyOS; local-first; study resource library; AI learning assistant; MVVM
+\end{keywords} 

@@ -17,6 +17,61 @@ import {
   priorityTint as formatPriorityTint
 } from '../utils/FocusFormatters';
 import {
+  ACCENT,
+  ACCENT_SOFT,
+  BORDER,
+  BORDER_SOFT,
+  CARD_BG,
+  CARD_GLASS,
+  CARD_GLASS_BLUR,
+  CARD_SHADOW,
+  CARD_SHADOW_STRONG,
+  CARD_SOFT,
+  DANGER,
+  DANGER_SOFT,
+  DEEP_2,
+  DEEP_4,
+  FAINT_ON_DARK,
+  GLOW_BLUE,
+  GLOW_PURPLE,
+  GRADIENT_ACCENT_END,
+  GRADIENT_ACCENT_START,
+  GRADIENT_HERO_1,
+  GRADIENT_HERO_2,
+  GRADIENT_HERO_3,
+  GRADIENT_PRIMARY_START,
+  GRADIENT_SUCCESS_END,
+  GRADIENT_SUCCESS_START,
+  MUTED_ON_DARK,
+  PAGE_BG,
+  PAGE_BG_END,
+  PAGE_BG_MID,
+  PAGE_BG_START,
+  RADIUS_LG,
+  RADIUS_XL,
+  SHADOW_CARD_COLOR,
+  SHADOW_CARD_OFFSET_X,
+  SHADOW_CARD_OFFSET_Y,
+  SHADOW_CARD_RADIUS,
+  SHADOW_FLOAT_COLOR,
+  SHADOW_FLOAT_OFFSET_X,
+  SHADOW_FLOAT_OFFSET_Y,
+  SHADOW_FLOAT_RADIUS,
+  SPACING_LG,
+  SPACING_XL,
+  SPACING_XXL,
+  SUCCESS,
+  SUCCESS_SOFT,
+  SURFACE_ALT,
+  TEXT_DIM,
+  TEXT_MAIN,
+  TEXT_MUTED,
+  TEXT_SUB,
+  TRACK,
+  VIOLET,
+  VIOLET_SOFT
+} from '../utils/FocusDesignTokens';
+import {
   AiCoachAdvice,
   AiCoachSettings,
   FocusProject,
@@ -31,99 +86,6 @@ import {
   StudyResourceStatus,
   TaskStatus
 } from '../models/FocusModels';
-
-const PAGE_BG: string = '#F3F6FB';
-const CARD_BG: string = '#F8FFFFFF';
-const CARD_SOFT: string = '#F1F6FA';
-const BORDER: string = '#E4E9F2';
-const BORDER_SOFT: string = '#DDE6F3';
-
-const TEXT_MAIN: string = '#0E1626';
-const TEXT_SUB: string = '#3F4A60';
-const TEXT_MUTED: string = '#7A8398';
-const TEXT_DIM: string = '#AAB1C2';
-
-const ACCENT: string = '#4258C9';
-const ACCENT_DEEP: string = '#3142A2';
-const ACCENT_SOFT: string = '#EDF1FF';
-
-const SUCCESS: string = '#1FA37A';
-const SUCCESS_SOFT: string = '#EAF5F0';
-const WARNING: string = '#D88B2B';
-const WARNING_SOFT: string = '#FBF1E2';
-const DANGER: string = '#D8556A';
-const DANGER_SOFT: string = '#FBEAEE';
-const VIOLET: string = '#7A60D0';
-const VIOLET_SOFT: string = '#F0EDF8';
-const TEAL: string = '#3FA8B3';
-const TEAL_SOFT: string = '#EAF4F5';
-
-const DEEP: string = '#151D31';
-const DEEP_2: string = '#202942';
-const DEEP_3: string = '#2B3552';
-const DEEP_4: string = '#3D4A6F';
-const MUTED_ON_DARK: string = '#B4BCD3';
-const FAINT_ON_DARK: string = '#7A8299';
-
-const SURFACE_ALT: string = '#F1F3F7';
-const TRACK: string = '#E6E9F0';
-const CARD_SHADOW: string = '#0B14260F';
-const CARD_SHADOW_STRONG: string = '#0B102620';
-
-const BLUE_TINT: string = '#EEF0FA';
-const MINT_TINT: string = '#EAF5F0';
-const WARM_TINT: string = '#FBF1E2';
-const ROSE_TINT: string = '#FBEAEE';
-
-// Design Tokens
-const PAGE_BG_START: string = '#F0F2FF';
-const PAGE_BG_MID: string = '#E8ECF8';
-const PAGE_BG_END: string = '#F3F6FB';
-const CARD_GLASS: string = '#F8FFFFFF';
-const CARD_GLASS_BLUR: number = 20;
-
-// Gradient palettes
-const GRADIENT_PRIMARY_START: string = '#6366F1';
-const GRADIENT_PRIMARY_END: string = '#4F46E5';
-const GRADIENT_ACCENT_START: string = '#818CF8';
-const GRADIENT_ACCENT_END: string = '#6366F1';
-const GRADIENT_HERO_1: string = '#4338CA';
-const GRADIENT_HERO_2: string = '#6D28D9';
-const GRADIENT_HERO_3: string = '#7C3AED';
-const GRADIENT_SUCCESS_START: string = '#34D399';
-const GRADIENT_SUCCESS_END: string = '#10B981';
-const GRADIENT_WARM_START: string = '#F59E0B';
-const GRADIENT_WARM_END: string = '#EF4444';
-const GLOW_PURPLE: string = '#1A7C3AED';
-const GLOW_BLUE: string = '#1A6366F1';
-const BORDER_GLOW: string = '#33818CF8';
-
-// Spacing constants
-const SPACING_XS: number = 4;
-const SPACING_SM: number = 8;
-const SPACING_MD: number = 12;
-const SPACING_LG: number = 16;
-const SPACING_XL: number = 20;
-const SPACING_XXL: number = 24;
-const SPACING_XXXL: number = 32;
-
-// Radius constants
-const RADIUS_SM: number = 8;
-const RADIUS_MD: number = 12;
-const RADIUS_LG: number = 16;
-const RADIUS_XL: number = 20;
-const RADIUS_FULL: number = 9999;
-
-// Shadow constants
-const SHADOW_CARD_RADIUS: number = 12;
-const SHADOW_CARD_COLOR: string = '#0B14260F';
-const SHADOW_CARD_OFFSET_X: number = 0;
-const SHADOW_CARD_OFFSET_Y: number = 4;
-
-const SHADOW_FLOAT_RADIUS: number = 20;
-const SHADOW_FLOAT_COLOR: string = '#0B102620';
-const SHADOW_FLOAT_OFFSET_X: number = 0;
-const SHADOW_FLOAT_OFFSET_Y: number = 8;
 
 class ReviewBridge {
   getStats(): string {
@@ -172,13 +134,13 @@ struct Index {
   @State viewportWidth: number = 390;
   @State pulseOn: boolean = false;
   @State aiAdvice: AiCoachAdvice = {
-    source: '本地规则',
-    headline: 'AI 教练正在读取本地节奏',
-    nextAction: '先选择一个任务，知序会给出下一步建议。',
-    sessionPlan: '25 分钟专注 + 5 分钟短休',
-    risk: '离线建议始终可用，远程模型是可选增强。',
-    estimatedMinutes: 25,
-    confidence: 70,
+    source: '未配置 AI',
+    headline: '配置远程 AI 后获取学习建议',
+    nextAction: '打开 AI 设置，填写 endpoint、model 和 API Key。',
+    sessionPlan: '等待远程 AI 返回安排',
+    risk: '当前不会生成替代建议。',
+    estimatedMinutes: 0,
+    confidence: 0,
     generatedAt: Date.now()
   };
   @State aiSettings: AiCoachSettings = focusAiCoachService.defaultSettings();
@@ -186,7 +148,7 @@ struct Index {
   @State aiModelInput: string = '';
   @State aiApiKeyInput: string = '';
   @State aiLoading: boolean = false;
-  @State aiSettingsMessage: string = 'AI 教练默认使用本地规则';
+  @State aiSettingsMessage: string = '配置远程 AI 后使用智能建议';
   @State focusSettingsMessage: string = '时长与白噪音会自动保存到本机';
   @State newResourceTitle: string = '';
   @State newResourceContent: string = '';
@@ -200,10 +162,10 @@ struct Index {
   @State pickedFileUri: string = '';
   @State resourceMessage: string = '资料会保存到本地 RDB，可选 AI 提炼';
   @State latestResourceInsight: ResourceInsight = {
-    source: '本地规则',
-    summary: '选择一份资料后，可以生成摘要、要点和下一步任务。',
-    keyPoints: ['本地保存资料', 'AI 或规则提炼', '一键生成专注任务'],
-    nextTaskTitle: '整理学习资料',
+    source: '未提炼',
+    summary: '选择一份资料后，可使用远程 AI 生成摘要、要点和下一步任务。',
+    keyPoints: ['配置远程 AI', '选择学习资料', '生成专注任务'],
+    nextTaskTitle: '等待 AI 提炼资料',
     estimatedMinutes: 25,
     generatedAt: Date.now()
   };
@@ -239,7 +201,6 @@ struct Index {
       await authRepository.init(context);
       await focusAiCoachService.init(context);
       await this.loadAiSettings();
-      this.refreshLocalCoachSnapshot();
       const profile: LoginProfile | null = await authRepository.currentProfile();
       if (profile !== null) {
         this.applyProfile(profile);
@@ -292,7 +253,6 @@ struct Index {
       this.remainingSeconds = this.settings.focusMinutes * 60;
     }
     this.focusSettingsMessage = message;
-    this.refreshLocalCoachSnapshot();
   }
 
   private updateDurationSetting(label: string, value: number): void {
@@ -327,23 +287,13 @@ struct Index {
     this.aiSettingsMessage = settings.apiKey.length > 0 ? 'AI 已配置' : '未配置 AI';
   }
 
-  private refreshLocalCoachSnapshot(): void {
-    this.aiAdvice = focusAiCoachService.generateLocalAdvice(
-      this.tasks,
-      focusStore.projects,
-      this.records,
-      this.settings,
-      this.selectedTaskId
-    );
-  }
-
   private async refreshAiCoach(useRemote: boolean): Promise<void> {
     if (this.aiLoading) {
       return;
     }
     this.aiLoading = true;
     try {
-      if (useRemote && this.aiSettings.apiKey.length > 0) {
+      if (useRemote) {
         this.aiAdvice = await focusAiCoachService.requestAdvice(
           this.aiSettings,
           this.tasks,
@@ -354,12 +304,10 @@ struct Index {
         );
         this.aiSettingsMessage = 'AI 建议已更新';
       } else {
-        this.refreshLocalCoachSnapshot();
-        this.aiSettingsMessage = '建议已更新';
+        this.aiSettingsMessage = '请启用远程 AI 后刷新建议';
       }
     } catch (err) {
-      this.refreshLocalCoachSnapshot();
-      this.aiSettingsMessage = 'AI 请求失败，已使用默认建议';
+      this.aiSettingsMessage = 'AI 请求失败，请检查接口地址或服务状态';
     } finally {
       this.aiLoading = false;
     }
@@ -368,7 +316,7 @@ struct Index {
   private async saveAiSettings(): Promise<void> {
     const nextApiKey: string = this.aiApiKeyInput.trim().length > 0 ? this.aiApiKeyInput : this.aiSettings.apiKey;
     const settings: AiCoachSettings = {
-      enabled: true,
+      enabled: this.aiSettings.enabled,
       endpoint: this.aiEndpointInput,
       model: this.aiModelInput,
       apiKey: nextApiKey
@@ -392,9 +340,6 @@ struct Index {
       const endpoint: string = this.aiEndpointInput.trim().length > 0 ? this.aiEndpointInput : this.aiSettings.endpoint;
       const apiKey: string = this.aiApiKeyInput.trim().length > 0 ? this.aiApiKeyInput : this.aiSettings.apiKey;
 
-      console.info(`[AI] endpoint: ${endpoint}`);
-      console.info(`[AI] apiKey length: ${apiKey.length}`);
-
       if (apiKey.length === 0) {
         this.aiSettingsMessage = '请先填写 API Key';
         this.aiModelLoading = false;
@@ -402,36 +347,34 @@ struct Index {
       }
 
       const url: string = endpoint.endsWith('/v1') ? `${endpoint}/models` : `${endpoint}/v1/models`;
-      console.info(`[AI] request url: ${url}`);
 
-      const request = http.createHttp();
-      const response = await request.request(url, {
-        method: http.RequestMethod.GET,
-        expectDataType: http.HttpDataType.STRING,
-        connectTimeout: 15000,
-        readTimeout: 20000,
-        header: {
-          'Authorization': `Bearer ${apiKey}`
+      const request: http.HttpRequest = http.createHttp();
+      try {
+        const response: http.HttpResponse = await request.request(url, {
+          method: http.RequestMethod.GET,
+          expectDataType: http.HttpDataType.STRING,
+          connectTimeout: 15000,
+          readTimeout: 20000,
+          header: {
+            'Authorization': `Bearer ${apiKey}`
+          }
+        });
+
+        const responseCode: number = Number(response.responseCode);
+        if (responseCode >= 200 && responseCode < 300) {
+          const resultStr: string = `${response.result}`;
+          const resultObj: object = JSON.parse(resultStr);
+          const data: object[] = (resultObj as Record<string, object[]>)['data'] || [];
+          this.aiModelList = data.map((item: object) => (item as Record<string, string>)['id'] || '');
+          this.aiSettingsMessage = `已获取 ${this.aiModelList.length} 个模型`;
+        } else {
+          this.aiSettingsMessage = `拉取失败：HTTP ${responseCode}`;
         }
-      });
-
-      const responseCode: number = Number(response.responseCode);
-      console.info(`[AI] response code: ${responseCode}`);
-      console.info(`[AI] response: ${response.result}`);
-
-      if (responseCode >= 200 && responseCode < 300) {
-        const resultStr: string = `${response.result}`;
-        const resultObj: object = JSON.parse(resultStr);
-        const data: object[] = (resultObj as Record<string, object[]>)['data'] || [];
-        this.aiModelList = data.map((item: object) => (item as Record<string, string>)['id'] || '');
-        this.aiSettingsMessage = `已获取 ${this.aiModelList.length} 个模型`;
-      } else {
-        this.aiSettingsMessage = `拉取失败：HTTP ${responseCode}`;
+      } finally {
+        request.destroy();
       }
-      request.destroy();
     } catch (err) {
-      console.error(`[AI] fetch error: ${JSON.stringify(err)}`);
-      this.aiSettingsMessage = `拉取失败：${JSON.stringify(err)}`;
+      this.aiSettingsMessage = '拉取失败，请检查 API 地址或服务状态';
     } finally {
       this.aiModelLoading = false;
     }
@@ -444,7 +387,7 @@ struct Index {
       model: this.aiSettings.model,
       apiKey: this.aiSettings.apiKey
     };
-    this.aiSettingsMessage = this.aiSettings.enabled ? '远程 AI 开关已打开，保存后生效' : '已切回本地 AI 教练';
+    this.aiSettingsMessage = this.aiSettings.enabled ? '远程 AI 开关已打开，保存后生效' : '远程 AI 已关闭';
   }
 
   private maskedAiKey(): string {
@@ -452,7 +395,7 @@ struct Index {
     if (key.length === 0) {
       return '未配置';
     }
-    return key.length <= 8 ? '已保存' : `${key.substring(0, 3)}***${key.substring(key.length - 4)}`;
+    return '已保存';
   }
 
   private isRemoteAdvice(): boolean {
@@ -460,10 +403,10 @@ struct Index {
   }
 
   private adviceSourceLabel(): string {
-    if (this.aiAdvice.source === '远程 AI' || this.aiAdvice.source === '本地规则') {
+    if (this.aiAdvice.source === '远程 AI') {
       return this.aiAdvice.source;
     }
-    return '本地兜底';
+    return '待配置';
   }
 
   private selectTask(taskId: number): void {
@@ -505,25 +448,21 @@ struct Index {
     this.newTaskTitle = '';
     this.selectedTaskId = task.id;
     this.syncFromStore();
-    this.refreshLocalCoachSnapshot();
   }
 
   private async toggleTask(taskId: number): Promise<void> {
     await focusStore.toggleTask(taskId);
     this.syncFromStore();
-    this.refreshLocalCoachSnapshot();
   }
 
   private async deleteTask(taskId: number): Promise<void> {
     await focusStore.softDeleteTask(taskId);
     this.syncFromStore();
-    this.refreshLocalCoachSnapshot();
   }
 
   private async restoreTask(taskId: number): Promise<void> {
     await focusStore.restoreTask(taskId);
     this.syncFromStore();
-    this.refreshLocalCoachSnapshot();
   }
 
   private filteredTasks(): FocusTask[] {
@@ -569,6 +508,54 @@ struct Index {
     return '资料库';
   }
 
+  private resourceWorkspaceHint(): string {
+    if (this.resourceWorkspace === 'memo') {
+      return '快速写入课堂灵感、待查问题和复习提醒。';
+    }
+    if (this.resourceWorkspace === 'upload') {
+      return '选择本地文档后，保存文件引用和自己的备注。';
+    }
+    if (this.resourceWorkspace === 'insight') {
+      return '选择资料后提炼摘要、要点，并生成下一段专注任务。';
+    }
+    return '浏览活跃资料、筛选项目，并把资料沉淀成可复用素材。';
+  }
+
+  private resourceWorkspaceIcon(): string {
+    if (this.resourceWorkspace === 'memo') {
+      return 'quick';
+    }
+    if (this.resourceWorkspace === 'upload') {
+      return 'sync';
+    }
+    if (this.resourceWorkspace === 'insight') {
+      return 'ai';
+    }
+    return 'local';
+  }
+
+  private selectedResourceStatusText(): string {
+    const resource: StudyResource | undefined = this.selectedResource();
+    if (resource === undefined) {
+      return '未选择资料';
+    }
+    return `已选：${resource.title}`;
+  }
+
+  private isRemoteAiReady(): boolean {
+    return this.aiSettings.enabled && this.aiSettings.apiKey.length > 0;
+  }
+
+  private resourceAiStatusText(): string {
+    if (this.isRemoteAiReady()) {
+      return '远程 AI 已就绪';
+    }
+    if (this.aiSettings.enabled) {
+      return '远程 AI 缺少 Key';
+    }
+    return '远程 AI 未启用';
+  }
+
   private switchResourceWorkspace(mode: string): void {
     this.resourceWorkspace = mode;
     if (mode === 'memo') {
@@ -600,13 +587,13 @@ struct Index {
   }
 
   private resourceInsightForDisplay(resource: StudyResource): ResourceInsight {
-    const local: ResourceInsight = focusAiCoachService.generateLocalResourceInsight(resource);
+    const hasSavedInsight: boolean = resource.summary.length > 0 && resource.summary !== '待 AI 提炼摘要';
     return {
-      source: resource.summary.length > 0 && resource.summary !== '待 AI 或本地规则提炼摘要' ? '已保存提炼' : local.source,
-      summary: resource.summary.length > 0 ? resource.summary : local.summary,
-      keyPoints: resource.keyPoints.length > 0 ? resource.keyPoints : local.keyPoints,
-      nextTaskTitle: local.nextTaskTitle,
-      estimatedMinutes: local.estimatedMinutes,
+      source: hasSavedInsight ? '已保存提炼' : '未提炼',
+      summary: hasSavedInsight ? resource.summary : '配置远程 AI 后，可为这份资料生成摘要、要点和下一步任务。',
+      keyPoints: resource.keyPoints.length > 0 ? resource.keyPoints : ['配置远程 AI', '选择资料', '生成任务'],
+      nextTaskTitle: hasSavedInsight ? `复习「${resource.title}」` : '等待 AI 提炼资料',
+      estimatedMinutes: 25,
       generatedAt: Date.now()
     };
   }
@@ -647,10 +634,10 @@ struct Index {
   }
 
   private resourceInsightSourceLabel(): string {
-    if (this.latestResourceInsight.source === '远程 AI' || this.latestResourceInsight.source === '本地规则' || this.latestResourceInsight.source === '已保存提炼') {
+    if (this.latestResourceInsight.source === '远程 AI' || this.latestResourceInsight.source === '已保存提炼') {
       return this.latestResourceInsight.source;
     }
-    return '本地兜底';
+    return '待提炼';
   }
 
   private activeResourceCount(): number {
@@ -690,7 +677,7 @@ struct Index {
     this.newResourceContent = '';
     this.selectedResourceId = saved.id;
     this.syncFromStore();
-    this.latestResourceInsight = focusAiCoachService.generateLocalResourceInsight(saved);
+    this.latestResourceInsight = this.resourceInsightForDisplay(saved);
     this.resourceMessage = '资料已写入本地，可继续提炼或生成任务';
   }
 
@@ -734,7 +721,7 @@ struct Index {
     this.pickedFileUri = '';
     this.selectedResourceId = saved.id;
     this.syncFromStore();
-    this.latestResourceInsight = focusAiCoachService.generateLocalResourceInsight(saved);
+    this.latestResourceInsight = this.resourceInsightForDisplay(saved);
     this.resourceMessage = '文件资料已保存到本地资料库';
   }
 
@@ -747,13 +734,20 @@ struct Index {
       this.resourceMessage = '请先选择一份资料';
       return;
     }
+    if (!this.isRemoteAiReady()) {
+      this.resourceMessage = '请先在 AI 设置中启用远程模型并填写 API Key';
+      this.latestResourceInsight = this.resourceInsightForDisplay(resource);
+      return;
+    }
     this.resourceLoading = true;
     try {
       const insight: ResourceInsight = await focusAiCoachService.requestResourceInsight(this.aiSettings, resource);
-      await focusStore.updateResourceInsight(resource.id, insight);
-      this.syncFromStore();
       this.latestResourceInsight = insight;
       this.resourceMessage = insight.source;
+      if (insight.source === '远程 AI') {
+        await focusStore.updateResourceInsight(resource.id, insight);
+        this.syncFromStore();
+      }
     } finally {
       this.resourceLoading = false;
     }
@@ -767,13 +761,16 @@ struct Index {
     }
     const insight: ResourceInsight = resource.id === this.selectedResourceId ?
       this.latestResourceInsight :
-      focusAiCoachService.generateLocalResourceInsight(resource);
+      this.resourceInsightForDisplay(resource);
+    if (insight.source !== '远程 AI' && insight.source !== '已保存提炼') {
+      this.resourceMessage = '请先使用远程 AI 提炼资料，再生成任务';
+      return;
+    }
     const saved: FocusTask | undefined = await focusStore.createTaskFromResource(resource.id, insight.nextTaskTitle, insight.estimatedMinutes);
     this.syncFromStore();
     if (saved !== undefined) {
       this.selectedTaskId = saved.id;
       this.resourceMessage = '已从资料生成专注任务';
-      this.refreshLocalCoachSnapshot();
     }
   }
 
@@ -826,7 +823,6 @@ struct Index {
     this.timerStatus = PomodoroStatus.FINISHED;
     await focusStore.recordPomodoro(task.id, duration, true, '');
     this.syncFromStore();
-    this.refreshLocalCoachSnapshot();
     this.remainingSeconds = this.settings.shortBreakMinutes * 60;
     this.elapsedSeconds = 0;
     this.serviceMessage = FocusBackgroundService.stopPomodoroGuard();
@@ -840,7 +836,6 @@ struct Index {
     this.timerStatus = PomodoroStatus.IDLE;
     await focusStore.recordPomodoro(task.id, Math.max(this.elapsedSeconds, 60), false, reason);
     this.syncFromStore();
-    this.refreshLocalCoachSnapshot();
     this.remainingSeconds = this.settings.focusMinutes * 60;
     this.elapsedSeconds = 0;
     this.interruptionReason = '';
@@ -929,27 +924,133 @@ struct Index {
   }
 
   @Builder
+  TabMinimalIcon(index: number, active: boolean) {
+    if (index === 0) {
+      Column({ space: 3 }) {
+        Row({ space: 3 }) {
+          Column()
+            .width(7)
+            .height(7)
+            .borderRadius(3.5)
+            .backgroundColor(active ? ACCENT : TEXT_DIM)
+          Column()
+            .width(7)
+            .height(7)
+            .borderRadius(3.5)
+            .backgroundColor(active ? ACCENT : TEXT_DIM)
+            .opacity(active ? 0.68 : 0.46)
+        }
+        Row({ space: 3 }) {
+          Column()
+            .width(7)
+            .height(7)
+            .borderRadius(3.5)
+            .backgroundColor(active ? ACCENT : TEXT_DIM)
+            .opacity(active ? 0.68 : 0.46)
+          Column()
+            .width(7)
+            .height(7)
+            .borderRadius(3.5)
+            .backgroundColor(active ? SUCCESS : TEXT_DIM)
+        }
+      }
+      .width(26)
+      .height(23)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+    } else if (index === 1) {
+      Column({ space: 4 }) {
+        Row({ space: 4 }) {
+          Column()
+            .width(4)
+            .height(4)
+            .borderRadius(2)
+            .backgroundColor(active ? SUCCESS : TEXT_DIM)
+          Column()
+            .width(15)
+            .height(3)
+            .borderRadius(2)
+            .backgroundColor(active ? ACCENT : TEXT_DIM)
+        }
+        Row({ space: 4 }) {
+          Column()
+            .width(4)
+            .height(4)
+            .borderRadius(2)
+            .backgroundColor(active ? SUCCESS : TEXT_DIM)
+            .opacity(active ? 0.7 : 0.48)
+          Column()
+            .width(19)
+            .height(3)
+            .borderRadius(2)
+            .backgroundColor(active ? ACCENT : TEXT_DIM)
+            .opacity(active ? 0.72 : 0.48)
+        }
+        Row({ space: 4 }) {
+          Column()
+            .width(4)
+            .height(4)
+            .borderRadius(2)
+            .backgroundColor(active ? SUCCESS : TEXT_DIM)
+            .opacity(active ? 0.45 : 0.34)
+          Column()
+            .width(11)
+            .height(3)
+            .borderRadius(2)
+            .backgroundColor(active ? ACCENT : TEXT_DIM)
+            .opacity(active ? 0.5 : 0.34)
+        }
+      }
+      .width(26)
+      .height(23)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Start)
+    } else {
+      Column() {
+        Column()
+          .width(8)
+          .height(8)
+          .borderRadius(4)
+          .backgroundColor(active ? SUCCESS : TEXT_DIM)
+        Column()
+          .width(18)
+          .height(8)
+          .borderRadius(6)
+          .backgroundColor(active ? ACCENT : TEXT_DIM)
+          .opacity(active ? 0.76 : 0.5)
+          .margin({ top: 3 })
+      }
+      .width(26)
+      .height(23)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+    }
+  }
+
+  @Builder
   tabBarItem(title: string, index: number) {
     Column() {
+      this.TabMinimalIcon(index, this.activeTab === index)
       Text(title)
         .fontSize(11)
         .fontWeight(this.activeTab === index ? FontWeight.Bold : FontWeight.Medium)
         .fontColor(this.activeTab === index ? ACCENT : TEXT_MUTED)
+        .margin({ top: 2 })
       if (this.activeTab === index) {
         Column()
-          .width(24)
+          .width(20)
           .height(3)
           .borderRadius(2)
           .linearGradient({
             angle: 90,
-            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+            colors: [[ACCENT, 0.0], [SUCCESS, 1.0]]
           })
-          .margin({ top: 4 })
+          .margin({ top: 3 })
       } else {
         Column()
-          .width(24)
+          .width(20)
           .height(3)
-          .margin({ top: 4 })
+          .margin({ top: 3 })
           .opacity(0)
       }
     }
@@ -1037,68 +1138,67 @@ struct Index {
         .width('100%')
         .height('100%')
         .linearGradient({
-          angle: 160,
-          colors: [[GRADIENT_HERO_1, 0.0], [GRADIENT_HERO_2, 0.5], [GRADIENT_HERO_3, 1.0]]
+          angle: 180,
+          colors: [[PAGE_BG_START, 0.0], [PAGE_BG_MID, 0.45], [PAGE_BG_END, 1.0]]
         })
 
       Column() {
         Column() {
-          Text('知序')
-            .fontSize(11)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#80FFFFFF')
-            .letterSpacing(3)
-          Text('让学习资料变成行动')
-            .fontSize(28)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
-            .margin({ top: 12 })
-          Text('AI Study Flow · 本地优先 · 离线可用')
-            .fontSize(12)
-            .fontColor('#B0FFFFFF')
-            .margin({ top: 6 })
           Row() {
-            Text('RDB 持久化')
-              .fontSize(11)
-              .fontColor('#D6FFFFFF')
-              .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-              .backgroundColor('#14FFFFFF')
-              .borderRadius(10)
-            Text('番茄闭环')
-              .fontSize(11)
-              .fontColor('#D6FFFFFF')
-              .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-              .backgroundColor('#14FFFFFF')
-              .borderRadius(10)
-              .margin({ left: 8 })
-            Text('资料提炼')
-              .fontSize(11)
-              .fontColor('#D6FFFFFF')
-              .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-              .backgroundColor('#14FFFFFF')
-              .borderRadius(10)
-              .margin({ left: 8 })
+            this.SoftIconBadge('timer', 44, ACCENT_SOFT)
+            Column() {
+              Text('知序')
+                .fontSize(28)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(TEXT_MAIN)
+              Text('让学习资料变成行动')
+                .fontSize(13)
+                .fontColor(TEXT_MUTED)
+                .margin({ top: 3 })
+            }
+            .alignItems(HorizontalAlign.Start)
+            .margin({ left: 12 })
           }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
+
+          Text('资料、任务和专注记录都先落在端侧，打开就能继续。')
+            .fontSize(14)
+            .fontColor(TEXT_SUB)
+            .lineHeight(20)
+            .margin({ top: 18 })
+          Row() {
+            this.LoginFeaturePill('local', '本地数据')
+            this.LoginFeaturePill('timer', '番茄闭环')
+            this.LoginFeaturePill('settings', '灵活设置')
+          }
+          .width('100%')
           .margin({ top: 16 })
         }
         .width('100%')
         .alignItems(HorizontalAlign.Start)
-        .margin({ bottom: 28 })
+        .margin({ bottom: 22 })
 
         Column() {
-          Column() {
-          Text('欢迎回来')
-            .fontSize(20)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(TEXT_MAIN)
-          Text('选择本地账户或游客模式，数据都会先保存在端侧。')
-            .fontSize(12)
-            .fontColor(TEXT_MUTED)
-            .lineHeight(18)
-            .margin({ top: 4 })
+          Row() {
+            this.SoftIconBadge('local', 38, SUCCESS_SOFT)
+            Column() {
+              Text('欢迎回来')
+                .fontSize(20)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(TEXT_MAIN)
+              Text('选择本地账户或游客模式，稍后也可以补充同步配置。')
+                .fontSize(12)
+                .fontColor(TEXT_MUTED)
+                .lineHeight(18)
+                .margin({ top: 4 })
+            }
+            .layoutWeight(1)
+            .alignItems(HorizontalAlign.Start)
+            .margin({ left: 10 })
           }
           .width('100%')
-          .alignItems(HorizontalAlign.Start)
+          .alignItems(VerticalAlign.Center)
           .margin({ bottom: 18 })
 
           Text('账号 / 本地用户名')
@@ -1138,13 +1238,9 @@ struct Index {
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
             .backgroundColor(ACCENT)
-            .linearGradient({
-              angle: 90,
-              colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
-            })
             .fontColor('#FFFFFF')
             .borderRadius(12)
-            .shadow({ radius: 18, color: '#253A7A24', offsetX: 0, offsetY: 8 })
+            .shadow({ radius: 14, color: '#253A7A1A', offsetX: 0, offsetY: 6 })
             .margin({ top: 18 })
             .onClick(() => {
               this.doLocalLogin();
@@ -1172,10 +1268,11 @@ struct Index {
         .width('100%')
         .constraintSize({ maxWidth: 440 })
         .padding(24)
-        .backgroundColor('#FFFFFF')
+        .backgroundColor(CARD_GLASS)
+        .backdropBlur(CARD_GLASS_BLUR)
         .borderRadius(20)
-        .border({ width: 1, color: '#26FFFFFF' })
-        .shadow({ radius: 34, color: CARD_SHADOW_STRONG, offsetX: 0, offsetY: 16 })
+        .border({ width: 1, color: BORDER_SOFT })
+        .shadow({ radius: 28, color: SHADOW_FLOAT_COLOR, offsetX: 0, offsetY: 12 })
       }
       .width('100%')
       .height('100%')
@@ -1268,24 +1365,9 @@ struct Index {
     Scroll() {
       Column() {
         this.TodayHeroCard()
-        GridRow({
-          columns: { xs: 4, sm: 4, md: 8, lg: 12 },
-          gutter: { x: 12, y: 12 }
-        }) {
-          GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 5 } }) {
-            this.ProgressCard()
-          }
-          GridCol({ span: { xs: 4, sm: 4, md: 4, lg: 7 } }) {
-            this.QuickAddCard()
-          }
-        }
-
-        this.NextFocusCard()
-        this.AiCoachCard(false)
         this.TodayTaskList()
-        this.QuoteCard()
       }
-      .padding({ left: 14, right: 14, top: 14, bottom: 18 })
+      .padding({ left: 18, right: 18, top: 18, bottom: 18 })
     }
     .width('100%')
     .height('100%')
@@ -1296,159 +1378,80 @@ struct Index {
     Column() {
       Row() {
         Column() {
-          Text('知序')
-            .fontSize(20)
+          Text('今日')
+            .fontSize(12)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(TEXT_MUTED)
+          Text('先做这一件')
+            .fontSize(24)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
-          Text(this.currentNickname.length === 0 ? '本地学习者' : this.currentNickname)
-            .fontSize(11)
-            .fontColor('#B0FFFFFF')
-            .margin({ top: 2 })
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .fontColor(TEXT_MAIN)
+            .margin({ top: 6 })
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
-        Row() {
-          Text('🔥')
-            .fontSize(11)
-            .margin({ right: 4 })
-          Text(`${focusStore.streakDays()}`)
-            .fontSize(12)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
-          Text(' 天')
-            .fontSize(10)
-            .fontColor('#B0FFFFFF')
-        }
-        .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-        .backgroundColor('#1AFFFFFF')
-        .borderRadius(12)
-        Button('退出')
-          .height(26)
-          .fontSize(11)
-          .backgroundColor('#1AFFFFFF')
-          .fontColor('#CCFFFFFF')
-          .borderRadius(12)
-          .padding({ left: 10, right: 10 })
-          .margin({ left: 6 })
-          .onClick(() => {
-            this.logout();
-          })
+        this.SoftIconBadge('marker', 42, SUCCESS_SOFT)
       }
       .width('100%')
+      .alignItems(VerticalAlign.Center)
 
-      Row() {
-        Column()
-          .width(7)
-          .height(7)
-          .borderRadius(3.5)
-          .backgroundColor(SUCCESS)
-          .margin({ right: 7 })
-        Text(`${this.currentModeText} · 已保存到本地`)
-          .fontSize(11)
-          .fontColor('#CCFFFFFF')
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .width('100%')
-      .padding({ left: 10, right: 10, top: 7, bottom: 7 })
-      .backgroundColor('#10FFFFFF')
-      .borderRadius(10)
-      .margin({ top: 16 })
-
-      Text('今日聚焦')
-        .fontSize(10)
-        .fontWeight(FontWeight.Medium)
-        .fontColor('#99FFFFFF')
-        .letterSpacing(2)
-        .margin({ top: 20 })
-      Text('拿下最重要的一件事')
-        .fontSize(20)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#FFFFFF')
-        .margin({ top: 8 })
       Text(this.getSelectedTask().title)
-        .fontSize(12)
-        .fontColor('#B0FFFFFF')
-        .maxLines(1)
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(TEXT_SUB)
+        .lineHeight(22)
+        .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .margin({ top: 6 })
+        .margin({ top: 18 })
 
-      Image($r('app.media.focus_ai_hero'))
+      Progress({
+        value: this.todayDoneCount(),
+        total: Math.max(1, this.todayTotalCount()),
+        type: ProgressType.Linear
+      })
         .width('100%')
-        .height(this.viewportWidth > 700 ? 150 : 104)
-        .objectFit(ImageFit.Cover)
-        .borderRadius(16)
-        .margin({ top: 14 })
+        .height(6)
+        .color(ACCENT)
+        .backgroundColor(TRACK)
+        .borderRadius(3)
+        .margin({ top: 22 })
 
       Row() {
-        Row() {
-          Image($r('app.media.focus_ui_local_cube'))
-            .microAssetStyle(30)
-          Text('本地数据')
-            .fontSize(11)
-            .fontColor('#E8FFFFFF')
-            .margin({ left: 6 })
-        }
-        .layoutWeight(1)
-        .padding({ left: 8, right: 8, top: 6, bottom: 6 })
-        .backgroundColor('#14FFFFFF')
-        .borderRadius(12)
-
-        Row() {
-          Image($r('app.media.focus_ui_ai_orb'))
-            .microAssetStyle(30)
-          Text('AI 建议')
-            .fontSize(11)
-            .fontColor('#E8FFFFFF')
-            .margin({ left: 6 })
-        }
-        .layoutWeight(1)
-        .padding({ left: 8, right: 8, top: 6, bottom: 6 })
-        .backgroundColor('#14FFFFFF')
-        .borderRadius(12)
-        .margin({ left: 8 })
+        Text(`${this.todayDoneCount()}/${this.todayTotalCount()} 完成`)
+          .fontSize(12)
+          .fontColor(TEXT_MUTED)
+        Blank()
+        Text(`${focusStore.totalFocusMinutes()} 分钟`)
+          .fontSize(12)
+          .fontColor(TEXT_MUTED)
       }
       .width('100%')
+      .alignItems(VerticalAlign.Center)
       .margin({ top: 10 })
 
-      Row() {
-        this.DarkHeroStat('完成率', `${this.completedPercent()}%`)
-        Column()
-          .width(1)
-          .height(28)
-          .backgroundColor('#1AFFFFFF')
-        this.DarkHeroStat('专注 (分)', `${focusStore.totalFocusMinutes()}`)
-        Column()
-          .width(1)
-          .height(28)
-          .backgroundColor('#1AFFFFFF')
-        this.DarkHeroStat('连续 (天)', `${focusStore.streakDays()}`)
-      }
-      .width('100%')
-      .margin({ top: 18 })
-      .alignItems(VerticalAlign.Center)
+      Button('开始专注')
+        .height(42)
+        .width('100%')
+        .fontSize(14)
+        .fontWeight(FontWeight.Bold)
+        .backgroundColor(TEXT_MAIN)
+        .fontColor('#FFFFFF')
+        .borderRadius(14)
+        .margin({ top: 20 })
+        .onClick(() => {
+          this.selectTask(this.getSelectedTask().id);
+        })
     }
     .width('100%')
-    .padding(20)
+    .padding(22)
     .alignItems(HorizontalAlign.Start)
-    .borderRadius(20)
-    .linearGradient({
-      angle: 160,
-      colors: [[GRADIENT_HERO_1, 0.0], [GRADIENT_HERO_2, 0.5], [GRADIENT_HERO_3, 1.0]]
-    })
-    .shadow({ radius: 30, color: CARD_SHADOW_STRONG, offsetX: 0, offsetY: 14 })
-    .margin({ bottom: 12 })
-    .overlay(() => {
-      Column()
-        .width(120)
-        .height(120)
-        .borderRadius(60)
-        .backgroundColor(GLOW_PURPLE)
-        .position({ x: '65%', y: -30 })
-    })
+    .borderRadius(22)
+    .backgroundColor(CARD_GLASS)
+    .backdropBlur(CARD_GLASS_BLUR)
+    .border({ width: 1, color: BORDER_SOFT })
+    .shadow({ radius: SHADOW_FLOAT_RADIUS, color: SHADOW_FLOAT_COLOR, offsetX: SHADOW_FLOAT_OFFSET_X, offsetY: SHADOW_FLOAT_OFFSET_Y })
+    .margin({ bottom: 14 })
   }
 
   @Builder
@@ -1466,99 +1469,6 @@ struct Index {
     .layoutWeight(1)
     .alignItems(HorizontalAlign.Start)
     .padding({ left: 4, right: 4 })
-  }
-
-  @Builder
-  ProgressCard() {
-    Column() {
-      Row() {
-        Column() {
-          Text('今日进度')
-            .fontSize(15)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(TEXT_MAIN)
-          Text('已完成 / 全部')
-            .fontSize(11)
-            .fontColor(TEXT_MUTED)
-            .margin({ top: 2 })
-        }
-        .alignItems(HorizontalAlign.Start)
-        Blank()
-        Text(`${this.completedPercent()}%`)
-          .fontSize(12)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(ACCENT)
-      }
-      .width('100%')
-      Stack() {
-        Progress({
-          value: this.todayDoneCount(),
-          total: Math.max(1, this.todayTotalCount()),
-          type: ProgressType.Ring
-        })
-          .width(132)
-          .height(132)
-          .color(GRADIENT_PRIMARY_START)
-          .backgroundColor(TRACK)
-          .style({ strokeWidth: 10 })
-        Column() {
-          Text(`${this.todayDoneCount()}/${this.todayTotalCount()}`)
-            .fontSize(26)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(TEXT_MAIN)
-          Text(`${focusStore.totalFocusMinutes()} 分钟`)
-            .fontSize(11)
-            .fontColor(TEXT_MUTED)
-            .margin({ top: 2 })
-        }
-      }
-      .width('100%')
-      .height(150)
-      .margin({ top: 8 })
-
-      Row() {
-        this.MiniStat('待办', `${this.activeTodoCount()}`, '项')
-        Column()
-          .width(1)
-          .height(28)
-          .backgroundColor(BORDER)
-        this.MiniStat('完成', `${this.todayDoneCount()}`, '项')
-        Column()
-          .width(1)
-          .height(28)
-          .backgroundColor(BORDER)
-        this.MiniStat('番茄', `${focusStore.completedPomodoros()}`, '个')
-      }
-      .width('100%')
-      .margin({ top: 4 })
-      .alignItems(VerticalAlign.Center)
-    }
-    .cardStyle()
-  }
-
-  @Builder
-  MiniStat(label: string, value: string, unit: string) {
-    Column() {
-      Row() {
-        Text(value)
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(TEXT_MAIN)
-        Text(unit)
-          .fontSize(10)
-          .fontColor(TEXT_MUTED)
-          .margin({ left: 2, bottom: 2 })
-      }
-      .alignItems(VerticalAlign.Bottom)
-      Text(label)
-        .fontSize(10)
-        .fontColor(TEXT_MUTED)
-        .margin({ top: 2 })
-    }
-    .layoutWeight(1)
-    .height(46)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
   }
 
   @Builder
@@ -1830,24 +1740,17 @@ struct Index {
   TodayTaskList() {
     Column() {
       Row() {
-        Column() {
-          Text('今日待办')
-            .fontSize(16)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(TEXT_MAIN)
-          Text('按优先级与截止时间排序')
-            .fontSize(11)
-            .fontColor(TEXT_MUTED)
-            .margin({ top: 2 })
-        }
-        .alignItems(HorizontalAlign.Start)
+        Text('今日待办')
+          .fontSize(15)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
         Blank()
         Text(`${focusStore.getTodayTasks().length} 项`)
           .fontSize(11)
           .fontColor(TEXT_MUTED)
       }
       .width('100%')
-      .margin({ bottom: 12 })
+      .margin({ bottom: 8 })
 
       if (focusStore.getTodayTasks().length === 0) {
         this.EmptyState('今天没有待办', '可以先添加一个 25 分钟内能完成的小任务。', 'inbox')
@@ -1857,9 +1760,13 @@ struct Index {
         }, (task: FocusTask) => task.id.toString())
       }
     }
-    .cardStyle()
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 16, bottom: 12 })
+    .backgroundColor(CARD_GLASS)
+    .borderRadius(20)
+    .border({ width: 1, color: BORDER_SOFT })
+    .shadow({ radius: SHADOW_CARD_RADIUS, color: SHADOW_CARD_COLOR, offsetX: SHADOW_CARD_OFFSET_X, offsetY: SHADOW_CARD_OFFSET_Y })
     .alignItems(HorizontalAlign.Start)
-    .margin({ top: 12 })
   }
 
   @Builder
@@ -1938,6 +1845,40 @@ struct Index {
       Image($r('app.media.focus_ui_empty_inbox'))
         .microAssetStyle(size)
     }
+  }
+
+  @Builder
+  SoftIconBadge(variant: string, size: number, fill: string) {
+    Stack() {
+      Column()
+        .width(size)
+        .height(size)
+        .borderRadius(Math.round(size / 3))
+        .backgroundColor(fill)
+        .border({ width: 1, color: BORDER_SOFT })
+      this.SmallUiAsset(variant, Math.max(18, Math.round(size * 0.64)))
+    }
+    .width(size)
+    .height(size)
+  }
+
+  @Builder
+  LoginFeaturePill(variant: string, title: string) {
+    Row() {
+      this.SoftIconBadge(variant, 28, '#FFFFFF')
+      Text(title)
+        .fontSize(11)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(TEXT_SUB)
+        .margin({ left: 6 })
+    }
+    .layoutWeight(1)
+    .height(42)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor(CARD_GLASS)
+    .border({ width: 1, color: BORDER_SOFT })
+    .borderRadius(14)
   }
 
   @Builder
@@ -2295,6 +2236,7 @@ struct Index {
       Column() {
         this.ResourceHeroCard()
         this.ResourceWorkspaceTabs()
+        this.ResourceFlowHint()
         if (this.resourceWorkspace === 'memo') {
           this.ResourceQuickAddCard()
         } else if (this.resourceWorkspace === 'upload') {
@@ -2320,6 +2262,52 @@ struct Index {
     }
     .width('100%')
     .height('100%')
+  }
+
+  @Builder
+  ResourceFlowHint() {
+    Row() {
+      this.SmallUiAsset(this.resourceWorkspaceIcon(), 36)
+      Column() {
+        Text(this.resourceWorkspaceName(this.resourceWorkspace))
+          .fontSize(14)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
+        Text(this.resourceWorkspaceHint())
+          .fontSize(11)
+          .fontColor(TEXT_MUTED)
+          .lineHeight(16)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 3 })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+      .margin({ left: 10, right: 8 })
+      Column() {
+        Text(this.selectedResourceStatusText())
+          .fontSize(10)
+          .fontColor(this.selectedResource() === undefined ? TEXT_MUTED : ACCENT)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.resourceAiStatusText())
+          .fontSize(10)
+          .fontColor(this.isRemoteAiReady() ? SUCCESS : TEXT_MUTED)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 3 })
+      }
+      .width(112)
+      .alignItems(HorizontalAlign.End)
+    }
+    .width('100%')
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .backgroundColor(CARD_GLASS)
+    .border({ width: 1, color: '#CCFFFFFF' })
+    .borderRadius(16)
+    .shadow({ radius: SHADOW_CARD_RADIUS, color: SHADOW_CARD_COLOR, offsetX: SHADOW_CARD_OFFSET_X, offsetY: SHADOW_CARD_OFFSET_Y })
+    .alignItems(VerticalAlign.Center)
+    .margin({ bottom: 12 })
   }
 
   @Builder
@@ -2739,6 +2727,10 @@ struct Index {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .margin({ top: 6 })
+          Text(this.resourceAiStatusText())
+            .fontSize(11)
+            .fontColor(this.isRemoteAiReady() ? SUCCESS : TEXT_MUTED)
+            .margin({ top: 4 })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
@@ -2792,21 +2784,17 @@ struct Index {
           .layoutWeight(1)
           .fontSize(12)
           .fontWeight(FontWeight.Bold)
-          .backgroundColor(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? GRADIENT_PRIMARY_START : ACCENT_SOFT)
-          .linearGradient(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? {
+          .backgroundColor(this.isRemoteAiReady() ? GRADIENT_PRIMARY_START : ACCENT_SOFT)
+          .linearGradient(this.isRemoteAiReady() ? {
             angle: 90,
             colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
           } : undefined)
-          .fontColor(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? '#FFFFFF' : ACCENT)
+          .fontColor(this.isRemoteAiReady() ? '#FFFFFF' : ACCENT)
           .borderRadius(10)
-          .shadow(this.aiSettings.enabled && this.aiSettings.apiKey.length > 0 ? {
+          .shadow(this.isRemoteAiReady() ? {
             radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2
           } : { radius: 0 })
           .onClick(() => {
-            if (!this.aiSettings.enabled || this.aiSettings.apiKey.length === 0) {
-              this.resourceMessage = '请先在设置中配置 API Key';
-              return;
-            }
             this.extractResource(this.selectedResourceId);
           })
         Button('生成任务')
@@ -3303,14 +3291,14 @@ struct Index {
             .fontSize(15)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
-          Text('本地建议始终可用，远程模型按需启用')
+          Text('启用远程模型后生成学习建议')
             .fontSize(11)
             .fontColor(TEXT_MUTED)
             .margin({ top: 2 })
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
-        Text(this.aiSettings.enabled ? '远程开' : '本地')
+        Text(this.aiSettings.enabled ? '远程开' : '未启用')
           .fontSize(11)
           .fontColor(this.aiSettings.enabled ? VIOLET : TEXT_MUTED)
           .padding({ left: 9, right: 9, top: 5, bottom: 5 })
@@ -4125,51 +4113,45 @@ struct Index {
   ProfileHeaderCard() {
     Column() {
       Row() {
+        this.SoftIconBadge('local', 54, SUCCESS_SOFT)
         Column() {
           Text(this.currentNickname.length === 0 ? '本地学习者' : this.currentNickname)
             .fontSize(22)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
+            .fontColor(TEXT_MAIN)
           Text(this.currentModeText)
             .fontSize(12)
-            .fontColor('#B0FFFFFF')
+            .fontColor(TEXT_MUTED)
             .margin({ top: 4 })
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
+        .margin({ left: 12 })
 
         Column() {
-          Text('🔥')
-            .fontSize(24)
+          this.SoftIconBadge('heatmap', 34, '#FFFFFF')
           Text(`${focusStore.streakDays()} 天`)
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
-            .margin({ top: 4 })
+            .fontColor(TEXT_MAIN)
+            .margin({ top: 5 })
         }
         .alignItems(HorizontalAlign.Center)
-        .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-        .backgroundColor('#1AFFFFFF')
+        .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+        .backgroundColor(CARD_SOFT)
+        .border({ width: 1, color: BORDER_SOFT })
         .borderRadius(16)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
 
       Row() {
-        this.DarkHeroStat('总专注', `${focusStore.totalFocusMinutes()} 分`)
-        Column()
-          .width(1)
-          .height(28)
-          .backgroundColor('#1AFFFFFF')
-        this.DarkHeroStat('完成番茄', `${focusStore.completedPomodoros()} 个`)
-        Column()
-          .width(1)
-          .height(28)
-          .backgroundColor('#1AFFFFFF')
-        this.DarkHeroStat('完成率', `${Math.round(focusStore.completedPomodoros() * 100 / Math.max(1, this.records.length))}%`)
+        this.ProfileSoftStat('总专注', `${focusStore.totalFocusMinutes()} 分`, 'timer')
+        this.ProfileSoftStat('番茄', `${focusStore.completedPomodoros()} 个`, 'medal')
+        this.ProfileSoftStat('完成率', `${Math.round(focusStore.completedPomodoros() * 100 / Math.max(1, this.records.length))}%`, 'bars')
       }
       .width('100%')
-      .margin({ top: 20 })
+      .margin({ top: 18 })
       .alignItems(VerticalAlign.Center)
 
       Button('退出登录')
@@ -4177,10 +4159,10 @@ struct Index {
         .height(40)
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
-        .backgroundColor('#1AFFFFFF')
-        .fontColor('#CCFFFFFF')
+        .backgroundColor(SURFACE_ALT)
+        .fontColor(TEXT_SUB)
         .borderRadius(12)
-        .margin({ top: 16 })
+        .margin({ top: 14 })
         .onClick(() => {
           this.logout();
         })
@@ -4189,17 +4171,44 @@ struct Index {
     .padding(20)
     .alignItems(HorizontalAlign.Start)
     .borderRadius(20)
-    .linearGradient({
-      angle: 160,
-      colors: [[GRADIENT_HERO_1, 0.0], [GRADIENT_HERO_2, 0.5], [GRADIENT_HERO_3, 1.0]]
-    })
-    .shadow({ radius: 30, color: CARD_SHADOW_STRONG, offsetX: 0, offsetY: 14 })
+    .backgroundColor(CARD_GLASS)
+    .backdropBlur(CARD_GLASS_BLUR)
+    .border({ width: 1, color: BORDER_SOFT })
+    .shadow({ radius: SHADOW_FLOAT_RADIUS, color: SHADOW_FLOAT_COLOR, offsetX: SHADOW_FLOAT_OFFSET_X, offsetY: SHADOW_FLOAT_OFFSET_Y })
+  }
+
+  @Builder
+  ProfileSoftStat(label: string, value: string, icon: string) {
+    Row() {
+      this.SoftIconBadge(icon, 30, '#FFFFFF')
+      Column() {
+        Text(value)
+          .fontSize(14)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(label)
+          .fontSize(10)
+          .fontColor(TEXT_MUTED)
+          .margin({ top: 2 })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .margin({ left: 7 })
+    }
+    .layoutWeight(1)
+    .height(52)
+    .padding({ left: 8, right: 8 })
+    .backgroundColor('#F8FAFF')
+    .border({ width: 1, color: BORDER_SOFT })
+    .borderRadius(14)
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
   ProfileMenuCard(title: string, subtitle: string, icon: string) {
     Row() {
-      this.SmallUiAsset(icon, 44)
+      this.SoftIconBadge(icon, 46, title === '学习资源库' ? SUCCESS_SOFT : title === '设置' ? ACCENT_SOFT : VIOLET_SOFT)
       Column() {
         Text(title)
           .fontSize(16)
@@ -4220,11 +4229,11 @@ struct Index {
         .opacity(0.4)
     }
     .width('100%')
-    .padding(SPACING_XL)
+    .padding({ left: SPACING_XL, right: SPACING_LG, top: SPACING_LG, bottom: SPACING_LG })
     .backgroundColor(CARD_GLASS)
     .backdropBlur(CARD_GLASS_BLUR)
     .borderRadius(RADIUS_LG)
-    .border({ width: 1, color: '#CCFFFFFF' })
+    .border({ width: 1, color: BORDER_SOFT })
     .shadow({ radius: SHADOW_CARD_RADIUS, color: SHADOW_CARD_COLOR, offsetX: SHADOW_CARD_OFFSET_X, offsetY: SHADOW_CARD_OFFSET_Y })
     .onClick(() => {
       if (title === '复盘统计') {
@@ -4829,7 +4838,7 @@ function cardStyle() {
   .backgroundColor(CARD_GLASS)
   .backdropBlur(CARD_GLASS_BLUR)
   .borderRadius(RADIUS_XL)
-  .border({ width: 1, color: '#CCFFFFFF' })
+  .border({ width: 1, color: BORDER_SOFT })
   .shadow({ radius: SHADOW_FLOAT_RADIUS, color: SHADOW_FLOAT_COLOR, offsetX: SHADOW_FLOAT_OFFSET_X, offsetY: SHADOW_FLOAT_OFFSET_Y })
 }
 
@@ -4840,7 +4849,7 @@ function cardStyleTight() {
   .backgroundColor(CARD_GLASS)
   .backdropBlur(CARD_GLASS_BLUR)
   .borderRadius(RADIUS_LG)
-  .border({ width: 1, color: '#CCFFFFFF' })
+  .border({ width: 1, color: BORDER_SOFT })
   .shadow({ radius: SHADOW_CARD_RADIUS, color: SHADOW_CARD_COLOR, offsetX: SHADOW_CARD_OFFSET_X, offsetY: SHADOW_CARD_OFFSET_Y })
 }
 

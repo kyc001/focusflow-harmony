@@ -98,8 +98,8 @@ export class FocusStore {
       projectId: projectId,
       linkedTaskId: 0,
       content: content,
-      summary: '待 AI 或本地规则提炼摘要',
-      keyPoints: this.initialKeyPoints(content),
+      summary: '待 AI 提炼摘要',
+      keyPoints: [],
       tags: this.initialTags(sourceType, content),
       status: StudyResourceStatus.ACTIVE,
       createdAt: now,
@@ -299,7 +299,8 @@ export class FocusStore {
 
   extractedResourceCount(): number {
     return this.resources.filter((resource: StudyResource) => {
-      return resource.summary.length > 0 && resource.summary !== '待 AI 或本地规则提炼摘要';
+      const isPendingSummary: boolean = resource.summary.indexOf('待 AI') === 0 && resource.summary.indexOf('提炼摘要') >= 0;
+      return resource.summary.length > 0 && !isPendingSummary;
     }).length;
   }
 
@@ -325,22 +326,6 @@ export class FocusStore {
     };
     await focusDatabase.updateStudyResource(updated);
     await this.refresh();
-  }
-
-  private initialKeyPoints(content: string): string[] {
-    const trimmed: string = content.trim();
-    if (trimmed.length === 0) {
-      return ['补充资料正文'];
-    }
-    const normalized: string = trimmed.replace(/\n/g, '。');
-    const parts: string[] = normalized
-      .split('。')
-      .map((item: string) => item.trim())
-      .filter((item: string) => item.length > 0);
-    if (parts.length === 0) {
-      return [trimmed.substring(0, Math.min(24, trimmed.length))];
-    }
-    return parts.slice(0, 3).map((item: string) => item.substring(0, Math.min(36, item.length)));
   }
 
   private initialTags(sourceType: string, content: string): string[] {

@@ -169,7 +169,7 @@ const uris: Array<string> = await documentPicker.select(options);
 - File import stores a URI reference plus user notes in `StudyResource.content`; it does not copy binary files or parse document bodies in this iteration.
 - Resource AI extraction updates `summary` and `keyPoints` only after the resource exists locally.
 - Creating a task from a resource must create a normal RDB-backed `FocusTask` and then update `linkedTaskId` on the resource.
-- Empty remote AI settings or request failures must fall back to local resource insight.
+- Empty remote AI settings or request failures must return an explicit remote AI status and must not generate local replacement insight.
 
 ### 4. Validation & Error Matrix
 
@@ -180,20 +180,20 @@ const uris: Array<string> = await documentPicker.select(options);
 | User cancels the document picker | Keep the page usable and show a non-blocking "no file selected" message. |
 | Document picker is unsupported in preview/device | Keep memo/text resource creation usable and show fallback guidance. |
 | Resource title/content is empty | Do not write; show a validation message. |
-| Remote AI disabled or unavailable | Generate local resource insight. |
+| Remote AI disabled or unavailable | Show a remote AI configuration/service status; do not save generated summary/key points. |
 
 ### 5. Good / Base / Bad Cases
 
 Good:
 
 - User writes a memo in Resources -> `focusStore.addStudyResource()` -> RDB row persists -> list refreshes.
-- User selects a file -> URI is saved as a `file` resource with notes -> AI/local extraction can still generate a task from the notes and URI context.
+- User selects a file -> URI is saved as a `file` resource with notes -> remote AI extraction can turn the notes and URI context into task-ready insight.
 - User taps "生成任务" -> a `FocusTask` is created locally and `linkedTaskId` is updated.
 
 Base:
 
 - No picker support: text memo and pasted-link workflows still work.
-- No AI key/network: local resource summary and task suggestion still work.
+- No AI key: resource storage and manual review still work; AI extraction prompts the user to configure the remote service.
 
 Bad:
 
@@ -376,7 +376,7 @@ onNewWant(want: Want): void {
 ### 1. Scope / Trigger
 
 - Trigger: Any change touching AI coach advice, runtime AI settings, remote model calls, generated media resources, or review/reward visual assets.
-- Product contract: AI must remain an enhancement layer. Tasks, projects, and Pomodoro records stay usable without network, API keys, or AI preferences.
+- Product contract: AI must remain an enhancement layer. Tasks, projects, and Pomodoro records stay usable without API keys or AI preferences; AI cards should show explicit remote-service configuration/status messages instead of local AI suggestions.
 
 ### 2. Signatures
 
@@ -412,8 +412,8 @@ AI service:
 focusAiCoachService.init(context: common.UIAbilityContext): Promise<void>
 focusAiCoachService.loadSettings(): Promise<AiCoachSettings>
 focusAiCoachService.saveSettings(settings: AiCoachSettings): Promise<AiCoachSettings>
-focusAiCoachService.generateLocalAdvice(...): AiCoachAdvice
 focusAiCoachService.requestAdvice(...): Promise<AiCoachAdvice>
+focusAiCoachService.requestResourceInsight(settings: AiCoachSettings, resource: StudyResource): Promise<ResourceInsight>
 ```
 
 Harmony resources:
@@ -458,7 +458,7 @@ $r('app.media.focus_ui_sync_bridge')
 - Defaults must be non-secret: endpoint `https://api.openai.com/v1`, model `gpt-4o-mini`, empty API key, disabled remote mode.
 - API keys are runtime input only. Never commit a provided key, test key, bearer token, or `sk-` value into source, docs, task files, or generated scripts.
 - Empty API key input in the settings UI means "keep the saved key"; the UI must not echo the saved key back into a text field.
-- `requestAdvice()` must fall back to `generateLocalAdvice()` when remote mode is disabled, the key is empty, the HTTP request fails, the response is non-2xx, or the response is empty/unparseable.
+- `requestAdvice()` and `requestResourceInsight()` must call the remote chat-completions endpoint when enabled and keyed. When remote mode is disabled, the key is empty, the HTTP request fails, the response is non-2xx, or the response is empty/unparseable, they must return explicit status objects and must not generate local replacement advice/insight.
 - AI reads `FocusStore` snapshots and returns display advice only; it must not write tasks, projects, Pomodoro records, or RDB schema.
 - Hero/card visuals can be generated concept imagery. Repeated reward assets must be reusable sprites or independent icon PNGs, not one-off concept scenes.
 - Paid related UI asset generation should prefer one grid spritesheet request, followed by local crop/validation into named PNG resources. Wire cropped sprites into real product states before considering the asset work complete.
@@ -469,9 +469,9 @@ $r('app.media.focus_ui_sync_bridge')
 | Condition | Required behavior |
 | --- | --- |
 | Preferences init/load/save fails | Use defaults or normalized in-memory settings; keep the app usable. |
-| Remote AI disabled or missing key | Return local advice and show local/fallback status. |
-| Remote endpoint returns non-2xx | Return local advice with visible fallback source/status. |
-| Remote response is empty or unparseable | Return local advice. |
+| Remote AI disabled or missing key | Return explicit "configure remote AI" status; do not generate local advice. |
+| Remote endpoint returns non-2xx | Return explicit remote-service status with the response code when available. |
+| Remote response is empty or unparseable | Return explicit empty/unparseable response status. |
 | User leaves API key input blank while saving | Preserve previously saved key. |
 | Generated reward visual is a concept scene | Replace with spritesheet/individual icon assets before wiring to repeated UI. |
 | Paid spritesheet is generated | Crop to stable resource names, validate PNGs, then reference selected assets in UI cards/states. |
@@ -481,14 +481,14 @@ $r('app.media.focus_ui_sync_bridge')
 
 Good:
 
-- Today/Focus can show local advice immediately after `focusStore.refresh()`.
+- Today/Focus can show the AI card immediately after `focusStore.refresh()`, with a clear remote AI configuration prompt until the service is ready.
 - The AI card updates after task mutations and Pomodoro completion/interruption.
 - Review forest uses independent plant and reward icon resources for unlock states.
 - A single generated UI spritesheet is cropped into `focus_ui_*` resources and reused across Today hero chips, empty states, task rows, timer status, AI settings, and Review cards.
 
 Base:
 
-- No API key or no network: local advice still recommends a task, plan, next step, and risk note.
+- No API key: tasks, resources, focus, and review still work; AI cards show remote configuration guidance instead of local suggestions.
 - Generated API is unavailable: keep existing workspace assets and do not keep retrying paid calls.
 - If a spritesheet is good but not transparent, crop it into fixed square PNGs and use ArkUI containers/rounding consistently; do not attempt fragile ad hoc alpha removal unless the prompt was designed for chroma key.
 
@@ -510,7 +510,7 @@ rg "sk-" .
 ```
 
 - Manually inspect generated or local asset sheets before wiring them into repeated UI.
-- On emulator/device, verify remote AI disabled mode, blank-key save behavior, local recompute, and remote failure fallback when possible.
+- On emulator/device, verify remote AI disabled mode, blank-key save behavior, successful remote response, and remote failure status when possible.
 
 ### 7. Wrong vs Correct
 

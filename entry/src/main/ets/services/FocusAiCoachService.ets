@@ -22,7 +22,7 @@ interface ChatRequestPayload {
   model: string;
   messages: ChatMessage[];
   temperature: number;
-  max_tokens: number;
+  max_tokens?: number;
 }
 
 interface ChatCompletionMessage {
@@ -40,7 +40,7 @@ interface ChatCompletionResponse {
 
 const PREF_NAME: string = 'focus_ai';
 const DEFAULT_ENDPOINT: string = 'https://token-plan-cn.xiaomimimo.com/v1';
-const DEFAULT_MODEL: string = 'mimo-v2.5-pro';
+const DEFAULT_MODEL: string = 'mimo-v2.5';
 
 export class FocusAiCoachService {
   private pref?: preferences.Preferences;
@@ -70,10 +70,15 @@ export class FocusAiCoachService {
       return this.defaultSettings();
     }
     try {
+      let model: string = (await this.pref.get('ai.model', DEFAULT_MODEL)) as string;
+      if (model === 'mimo-v2.5-pro') {
+        model = 'mimo-v2.5';
+        await this.pref.put('ai.model', model);
+      }
       return {
         enabled: (await this.pref.get('ai.enabled', false)) as boolean,
         endpoint: (await this.pref.get('ai.endpoint', DEFAULT_ENDPOINT)) as string,
-        model: (await this.pref.get('ai.model', DEFAULT_MODEL)) as string,
+        model: model,
         apiKey: (await this.pref.get('ai.apiKey', '')) as string
       };
     } catch (err) {
@@ -103,36 +108,6 @@ export class FocusAiCoachService {
     return normalized;
   }
 
-  generateLocalAdvice(
-    tasks: FocusTask[],
-    projects: FocusProject[],
-    records: PomodoroRecord[],
-    settings: FocusSettings,
-    selectedTaskId: number
-  ): AiCoachAdvice {
-    const nextTask: FocusTask = this.pickNextTask(tasks, selectedTaskId);
-    const completed: number = records.filter((record: PomodoroRecord) => record.completed === 1).length;
-    const interrupted: number = records.filter((record: PomodoroRecord) => record.completed === 0).length;
-    const recentInterruptions: number = this.recentInterruptions(records);
-    const project: FocusProject = this.findProject(projects, nextTask.projectId);
-    const minutes: number = this.estimateMinutes(nextTask, settings, recentInterruptions);
-    const subtask: string = nextTask.subtasks.length > 0 ? nextTask.subtasks[0] : '先写下可验收的小结果';
-    const risk: string = recentInterruptions > 0
-      ? `近 7 天有 ${recentInterruptions} 次中断，开始前先关掉消息入口。`
-      : '最近中断压力较低，可以直接进入一段完整番茄。';
-
-    return {
-      source: '本地规则',
-      headline: `建议先推进「${nextTask.title}」`,
-      nextAction: `下一步：${subtask}`,
-      sessionPlan: `${project.name} · ${minutes} 分钟专注 + ${settings.shortBreakMinutes} 分钟短休`,
-      risk: `${risk} 已完成 ${completed} 个番茄，中断 ${interrupted} 次。`,
-      estimatedMinutes: minutes,
-      confidence: recentInterruptions > 0 ? 72 : 82,
-      generatedAt: Date.now()
-    };
-  }
-
   async requestAdvice(
     settings: AiCoachSettings,
     tasks: FocusTask[],
@@ -141,9 +116,8 @@ export class FocusAiCoachService {
     focusSettings: FocusSettings,
     selectedTaskId: number
   ): Promise<AiCoachAdvice> {
-    const fallback: AiCoachAdvice = this.generateLocalAdvice(tasks, projects, records, focusSettings, selectedTaskId);
     if (!settings.enabled || settings.apiKey.trim().length === 0) {
-      return fallback;
+      return this.remoteAdviceStatus('请先在 AI 设置中启用远程模型并填写 API Key');
     }
 
     const request: http.HttpRequest = http.createHttp();
@@ -160,8 +134,7 @@ export class FocusAiCoachService {
             content: this.buildPrompt(tasks, projects, records, focusSettings, selectedTaskId)
           }
         ],
-        temperature: 0.4,
-        max_tokens: 220
+        temperature: 0.4
       };
       const response: http.HttpResponse = await request.request(this.chatCompletionsUrl(settings.endpoint), {
         method: http.RequestMethod.POST,
@@ -176,43 +149,28 @@ export class FocusAiCoachService {
       });
       const responseCode: number = Number(response.responseCode);
       if (responseCode < 200 || responseCode >= 300) {
-        return this.withFallbackStatus(fallback, `远程 AI 返回 ${responseCode}，已使用本地建议`);
+        return this.remoteAdviceStatus(`远程 AI 返回 ${responseCode}，请检查服务配置`);
       }
       const content: string = this.extractContent(`${response.result}`);
       if (content.length === 0) {
-        return this.withFallbackStatus(fallback, '远程 AI 返回为空，已使用本地建议');
+        return this.remoteAdviceStatus('远程 AI 返回为空，请稍后重试');
       }
-      return this.parseRemoteAdvice(content, fallback);
+      return this.parseRemoteAdvice(content);
     } catch (err) {
-      return this.withFallbackStatus(fallback, '远程 AI 暂不可用，已使用本地建议');
+      return this.remoteAdviceStatus('远程 AI 请求失败，请检查接口地址或服务状态');
     } finally {
       request.destroy();
     }
   }
 
-  generateLocalResourceInsight(resource: StudyResource): ResourceInsight {
-    const sentences: string[] = this.extractSentences(resource.content);
-    const keyPoints: string[] = this.pickResourceKeyPoints(resource, sentences);
-    const summaryBase: string = sentences.length > 0 ? sentences[0] : resource.title;
-    const summary: string = summaryBase.length > 72 ? `${summaryBase.substring(0, 72)}...` : summaryBase;
-    return {
-      source: '本地规则',
-      summary: summary.length > 0 ? summary : `围绕「${resource.title}」整理学习资料。`,
-      keyPoints: keyPoints,
-      nextTaskTitle: `整理「${resource.title}」复习卡片`,
-      estimatedMinutes: this.estimateResourceMinutes(resource),
-      generatedAt: Date.now()
-    };
-  }
-
   async requestResourceInsight(settings: AiCoachSettings, resource: StudyResource): Promise<ResourceInsight> {
-    const fallback: ResourceInsight = this.generateLocalResourceInsight(resource);
     if (!settings.enabled || settings.apiKey.trim().length === 0) {
-      return fallback;
+      return this.remoteResourceStatus('请先在 AI 设置中启用远程模型并填写 API Key', resource);
     }
 
     const request: http.HttpRequest = http.createHttp();
     try {
+      const url: string = this.chatCompletionsUrl(settings.endpoint);
       const payload: ChatRequestPayload = {
         model: this.cleanOrDefault(settings.model, DEFAULT_MODEL),
         messages: [
@@ -225,10 +183,9 @@ export class FocusAiCoachService {
             content: this.buildResourcePrompt(resource)
           }
         ],
-        temperature: 0.35,
-        max_tokens: 260
+        temperature: 0.35
       };
-      const response: http.HttpResponse = await request.request(this.chatCompletionsUrl(settings.endpoint), {
+      const response: http.HttpResponse = await request.request(url, {
         method: http.RequestMethod.POST,
         expectDataType: http.HttpDataType.STRING,
         connectTimeout: 12000,
@@ -241,15 +198,15 @@ export class FocusAiCoachService {
       });
       const responseCode: number = Number(response.responseCode);
       if (responseCode < 200 || responseCode >= 300) {
-        return this.withResourceFallbackStatus(fallback, `远程 AI 返回 ${responseCode}，已使用本地提炼`);
+        return this.remoteResourceStatus(`远程 AI 返回 ${responseCode}，请检查服务配置`, resource);
       }
       const content: string = this.extractContent(`${response.result}`);
       if (content.length === 0) {
-        return this.withResourceFallbackStatus(fallback, '远程 AI 返回为空，已使用本地提炼');
+        return this.remoteResourceStatus('远程 AI 返回为空，请稍后重试', resource);
       }
-      return this.parseRemoteResourceInsight(content, fallback);
+      return this.parseRemoteResourceInsight(content, resource);
     } catch (err) {
-      return this.withResourceFallbackStatus(fallback, '远程 AI 暂不可用，已使用本地提炼');
+      return this.remoteResourceStatus('远程 AI 请求失败，请检查接口地址或服务状态', resource);
     } finally {
       request.destroy();
     }
@@ -309,24 +266,6 @@ export class FocusAiCoachService {
     };
   }
 
-  private estimateMinutes(task: FocusTask, settings: FocusSettings, recentInterruptions: number): number {
-    const hoursLeft: number = Math.ceil((task.dueAt - Date.now()) / (60 * 60 * 1000));
-    if (recentInterruptions >= 2) {
-      return Math.max(15, settings.focusMinutes - 5);
-    }
-    if (task.priority === 0 || hoursLeft <= 6) {
-      return Math.min(45, settings.focusMinutes + 10);
-    }
-    return settings.focusMinutes;
-  }
-
-  private recentInterruptions(records: PomodoroRecord[]): number {
-    const weekAgo: number = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    return records.filter((record: PomodoroRecord) => {
-      return record.completed === 0 && record.startAt >= weekAgo;
-    }).length;
-  }
-
   private buildPrompt(
     tasks: FocusTask[],
     projects: FocusProject[],
@@ -375,35 +314,33 @@ export class FocusAiCoachService {
     ].join('\n');
   }
 
-  private parseRemoteAdvice(content: string, fallback: AiCoachAdvice): AiCoachAdvice {
-    const headline: string = this.pickLine(content, '标题', fallback.headline);
-    const nextAction: string = this.pickLine(content, '下一步', fallback.nextAction);
-    const sessionPlan: string = this.pickLine(content, '安排', fallback.sessionPlan);
-    const risk: string = this.pickLine(content, '风险', fallback.risk);
+  private parseRemoteAdvice(content: string): AiCoachAdvice {
+    const headline: string = this.pickLine(content, '标题', '远程 AI 已返回学习建议');
+    const nextAction: string = this.pickLine(content, '下一步', '查看建议内容并选择下一段任务');
+    const sessionPlan: string = this.pickLine(content, '安排', '按远程 AI 建议安排下一段专注');
+    const risk: string = this.pickLine(content, '风险', '开始前确认资料、任务和时间安排');
     return {
       source: '远程 AI',
       headline: headline,
       nextAction: nextAction,
       sessionPlan: sessionPlan,
       risk: risk,
-      estimatedMinutes: fallback.estimatedMinutes,
+      estimatedMinutes: this.parseMinutes(this.pickLine(content, '分钟', '25'), 25),
       confidence: 88,
       generatedAt: Date.now()
     };
   }
 
-  private parseRemoteResourceInsight(content: string, fallback: ResourceInsight): ResourceInsight {
-    const summary: string = this.pickLine(content, '摘要', fallback.summary);
-    const keyPointLine: string = this.pickLine(content, '要点', fallback.keyPoints.join(' / '));
-    const nextTaskTitle: string = this.pickLine(content, '任务', fallback.nextTaskTitle);
-    const minutesText: string = this.pickLine(content, '分钟', `${fallback.estimatedMinutes}`);
-    const parsedMinutes: number = Number(minutesText.replace('分钟', '').trim());
+  private parseRemoteResourceInsight(content: string, resource: StudyResource): ResourceInsight {
+    const summary: string = this.pickLine(content, '摘要', '远程 AI 已完成资料摘要，请查看原文确认。');
+    const keyPointLine: string = this.pickLine(content, '要点', '查看原文 / 整理关键概念 / 形成复习任务');
+    const nextTaskTitle: string = this.pickLine(content, '任务', `整理「${resource.title}」学习任务`);
     return {
       source: '远程 AI',
       summary: summary,
-      keyPoints: this.parseKeyPointLine(keyPointLine, fallback.keyPoints),
+      keyPoints: this.parseKeyPointLine(keyPointLine),
       nextTaskTitle: nextTaskTitle,
-      estimatedMinutes: parsedMinutes !== parsedMinutes ? fallback.estimatedMinutes : Math.max(15, Math.min(60, Math.round(parsedMinutes))),
+      estimatedMinutes: this.parseMinutes(this.pickLine(content, '分钟', '25'), 25),
       generatedAt: Date.now()
     };
   }
@@ -433,68 +370,30 @@ export class FocusAiCoachService {
       }
       return '';
     } catch (err) {
-      return raw.trim();
+      return '';
     }
   }
 
-  private extractSentences(content: string): string[] {
-    const normalized: string = content
-      .replace(/\r/g, '\n')
-      .replace(/\n/g, '。')
-      .replace(/；/g, '。')
-      .replace(/;/g, '。');
-    return normalized
-      .split('。')
-      .map((item: string) => item.trim())
-      .filter((item: string) => item.length > 0);
-  }
-
-  private pickResourceKeyPoints(resource: StudyResource, sentences: string[]): string[] {
-    const points: string[] = [];
-    for (const sentence of sentences) {
-      if (points.length >= 3) {
-        break;
-      }
-      const point: string = sentence.length > 42 ? sentence.substring(0, 42) : sentence;
-      if (points.indexOf(point) < 0) {
-        points.push(point);
-      }
-    }
-    if (points.length === 0) {
-      points.push(`阅读「${resource.title}」原文`);
-    }
-    while (points.length < 3) {
-      if (points.length === 1) {
-        points.push('提炼概念与例子');
-      } else {
-        points.push('转成 25 分钟内可完成的小任务');
-      }
-    }
-    return points;
-  }
-
-  private parseKeyPointLine(line: string, fallback: string[]): string[] {
+  private parseKeyPointLine(line: string): string[] {
     const normalized: string = line.replace(/，/g, '/').replace(/、/g, '/').replace(/;/g, '/').replace(/；/g, '/');
     const points: string[] = normalized
       .split('/')
       .map((item: string) => item.trim())
       .filter((item: string) => item.length > 0)
       .slice(0, 3);
-    return points.length > 0 ? points : fallback;
+    return points.length > 0 ? points : ['查看原文', '整理关键概念', '形成复习任务'];
   }
 
-  private estimateResourceMinutes(resource: StudyResource): number {
-    if (resource.sourceType === 'pdf' || resource.content.length > 700) {
-      return 40;
-    }
-    if (resource.sourceType === 'courseware' || resource.content.length > 300) {
-      return 30;
-    }
-    return 25;
+  private parseMinutes(value: string, fallback: number): number {
+    const parsedMinutes: number = Number(value.replace('分钟', '').trim());
+    return parsedMinutes !== parsedMinutes ? fallback : Math.max(15, Math.min(60, Math.round(parsedMinutes)));
   }
 
   private chatCompletionsUrl(endpoint: string): string {
     const clean: string = this.cleanOrDefault(endpoint, DEFAULT_ENDPOINT).replace(/\/+$/, '');
+    if (clean.endsWith('/chat/completions')) {
+      return clean;
+    }
     if (clean.endsWith('/v1')) {
       return `${clean}/chat/completions`;
     }
@@ -506,26 +405,26 @@ export class FocusAiCoachService {
     return cleaned.length === 0 ? fallback : cleaned;
   }
 
-  private withFallbackStatus(fallback: AiCoachAdvice, message: string): AiCoachAdvice {
+  private remoteAdviceStatus(message: string): AiCoachAdvice {
     return {
       source: message,
-      headline: fallback.headline,
-      nextAction: fallback.nextAction,
-      sessionPlan: fallback.sessionPlan,
-      risk: fallback.risk,
-      estimatedMinutes: fallback.estimatedMinutes,
-      confidence: fallback.confidence,
+      headline: message,
+      nextAction: '打开 AI 设置，确认 endpoint、model 和 API Key 后再刷新。',
+      sessionPlan: '远程 AI 未返回建议',
+      risk: '当前不生成替代建议，请配置远程 AI 后使用。',
+      estimatedMinutes: 0,
+      confidence: 0,
       generatedAt: Date.now()
     };
   }
 
-  private withResourceFallbackStatus(fallback: ResourceInsight, message: string): ResourceInsight {
+  private remoteResourceStatus(message: string, resource: StudyResource): ResourceInsight {
     return {
       source: message,
-      summary: fallback.summary,
-      keyPoints: fallback.keyPoints,
-      nextTaskTitle: fallback.nextTaskTitle,
-      estimatedMinutes: fallback.estimatedMinutes,
+      summary: message,
+      keyPoints: ['配置远程 AI', '确认接口可用', '重新提炼资料'],
+      nextTaskTitle: `提炼「${resource.title}」`,
+      estimatedMinutes: 25,
       generatedAt: Date.now()
     };
   }

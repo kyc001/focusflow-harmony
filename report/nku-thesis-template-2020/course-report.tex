@@ -1,175 +1,308 @@
 % -*- coding: utf-8 -*-
 
-\chapter{序论}
+\chapter{引言}
 
-\section{研究背景和意义}
+\section{研究背景}
 
-移动端学习工具已经成为大学生管理课程任务的重要入口。课程学习往往不是单一的待办清单，而是由课件、笔记、网页资料、论文摘录、实验报告和复习计划共同组成。实际使用中，学生经常把资料散落在聊天记录、浏览器收藏、文档目录和便签软件中，导致资料难以复用，任务难以拆解，复习节奏也缺少数据反馈。
+移动互联网改变了大学生的学习组织方式。课程资料不再只来自教材，还包括课件、实验文档、网页链接、课堂笔记和复习清单等多种来源\cite{crompton2017use}。这些资料常分散在备忘录、网盘、浏览器收藏夹和聊天记录中，导致学生在真正执行学习任务时需要反复寻找上下文，任务拆解、专注执行和复盘反馈也难以形成连续链路。现有工具通常只覆盖局部场景：待办工具擅长记录任务，番茄钟工具擅长维持注意力，笔记工具擅长沉淀材料，而通用 AI 助手擅长内容生成，却很少把资料、任务、专注和复盘组织成统一的移动端工作流\cite{ducate2016mlearning}。
 
-已有工具大致可以分为三类：第一类是通用待办工具，适合记录任务，但难以体现学习资料和专注过程；第二类是番茄钟工具，能够帮助用户保持注意力，但缺少任务上下文和复盘分析；第三类是笔记工具，擅长沉淀材料，但通常不会直接推动下一次行动。随着大语言模型能力增强，学习工具可以进一步把资料内容转化为摘要、要点和下一步任务，从而减少学生从“看资料”到“开始行动”之间的摩擦。
+近年来，大语言模型为学习工具提供了资料提炼、行动建议和复习规划等能力\cite{kasneci2023chatgpt}。但 AI 服务往往依赖网络和 API 密钥，若将其作为核心功能前提，会削弱移动应用在离线或弱网环境下的可用性。与此同时，HarmonyOS 与 ArkTS 为国产移动应用开发提供了新的平台能力\cite{harmonyos2024}。因此，本文以“移动应用开发”课程项目为背景，设计并实现一款面向大学生的 HarmonyOS 学习闭环应用“知序”（ZhiXu），探索本地优先架构与可选 AI 增强在学习管理场景中的结合。
 
-因此，本项目将学习资料、任务管理、番茄专注和复盘统计组合成一个本地优先的移动应用。其意义主要体现在三个方面：一是通过 RDB 和 Preferences 保证离线可用，适合课堂演示和日常使用；二是通过资料库与 AI 提炼功能提升任务生成能力，使应用不只是展示界面；三是通过可选后端展示服务器和数据库连接能力，覆盖移动端、数据库、网络服务等课程知识点。
+\section{研究目标与内容}
 
-\section{研究内容}
+本文目标是在毕业论文格式下，完整描述“知序”的需求、设计、实现与验证。系统以端侧 RDB 为核心数据源，保证任务管理、资料保存、番茄记录和复盘统计在离线环境下可用；AI 作为增强层，仅在用户启用并配置密钥后参与资料提炼和学习建议生成；Spring Boot 后端保留为可选同步层，用于展示全栈扩展能力，而不是移动端运行的必要条件。
 
-本文围绕“知序”应用展开，重点研究并实现以下内容：
+围绕上述目标，本文主要完成以下工作：第一，设计项目、任务、番茄记录和学习资料四类核心实体，并基于 HarmonyOS RDB 实现本地持久化；第二，构建今日、任务、资料、专注和复盘五个核心页面，形成从资料沉淀到任务执行再到统计反馈的学习闭环；第三，设计远程 AI 请求与显式状态降级机制，避免在未配置或请求失败时伪造本地 AI 结果；第四，实现 FocusAbility 独立专注窗口、ArkWeb 复盘图表和服务卡片等 HarmonyOS 平台能力；第五，对系统进行功能测试、构建验证和兼容性观察。
 
-\begin{enumerate}
-  \item 设计本地优先的数据模型，覆盖项目、任务、番茄记录和学习资料。
-  \item 构建包含今日、任务、资料、专注、复盘五个核心页面的 HarmonyOS 应用。
-  \item 引入 AI 学习助手能力，在没有网络或密钥时使用本地规则，在配置运行时模型接口后使用远程模型增强。
-  \item 保留 Spring Boot + MyBatis + MySQL 后端，作为可选同步接口和课程全栈展示能力。
-  \item 通过构建验证、数据持久化设计和报告整理，说明系统的实现效果与可扩展方向。
-\end{enumerate}
+\section{论文组织}
 
-\section{本文组织结构}
+全文共七章。第一章介绍研究背景和目标；第二章综述相关技术；第三章分析系统需求；第四章给出总体架构、数据模型、AI 模块和后端边界设计；第五章说明关键模块实现；第六章进行测试与验证；第七章总结工作并展望后续优化。
 
-第一章介绍项目背景、研究意义和本文结构。第二章比较开发语言、开发工具、前端框架、数据库和后端框架的选型依据。第三章从总体架构、MVVM 分层、数据库设计、AI 模块和网络模块等方面说明系统设计。第四章描述系统实现效果、关键问题和解决方法。第五章总结本文工作，并提出后续优化方向。
 
-\chapter{工具选型}
+\chapter{相关工作与技术基础}
 
-\section{开发语言与平台选择}
+\section{HarmonyOS 与 ArkTS}
 
-本项目面向 HarmonyOS 移动端，首选 ArkTS 作为端侧开发语言。与 Java、Kotlin、JavaScript 等方案相比，ArkTS 与 ArkUI 在 HarmonyOS 工程中集成度更高，能够直接使用 RDB、Preferences、Ability、FormExtensionAbility、ArkWeb、通知和后台任务等平台能力。JavaScript 的跨平台生态成熟，但在 HarmonyOS 原生能力调用和类型约束方面不如 ArkTS 稳定；Kotlin 更适合 Android 原生开发，不适合作为本项目的主技术路线。
+HarmonyOS 是面向多设备协同的操作系统，应用采用 Stage 模型组织 Ability 生命周期。ArkTS 在 TypeScript 基础上增强了声明式 UI 能力，开发者通过状态驱动界面更新，适合构建结构化的移动应用页面\cite{zhang2023arkui}。在数据持久化方面，HarmonyOS 提供关系型数据库 RDB 和轻量级 Preferences。前者适合保存项目、任务、番茄记录等结构化数据，后者适合保存登录态、计时器偏好和 AI 配置等运行时设置。本文系统正是基于这两类端侧能力建立本地优先的数据基础。
 
-因此，端侧选择 ArkTS + ArkUI，后端选择 Java + Spring Boot。这样的组合既能体现鸿蒙端侧开发特点，也能展示服务器端和数据库连接能力。
+\section{移动学习与番茄工作法}
 
-\section{开发工具选择}
+移动学习强调在任意时间、任意地点利用移动设备完成学习活动\cite{shadiev2017mlearningreview}。现有移动学习工具常以“单点能力”为核心，例如任务清单、计时器或笔记库。对于大学课程学习而言，仅有单点能力仍不足以支撑完整流程，因为学习资料需要转化为可执行任务，任务需要通过专注过程完成，完成情况又需要被统计和复盘。
 
-DevEco Studio 是 HarmonyOS 项目的官方开发工具，提供工程创建、ArkTS 编译、资源管理、预览、签名和 HAP 打包等能力。与 Eclipse、IntelliJ IDEA 等通用 IDE 相比，DevEco Studio 对鸿蒙 SDK、hvigor 构建和真机调试支持更直接。后端部分使用 Maven 管理 Spring Boot 项目，可以在 IDEA 或命令行中构建。
+番茄工作法将学习时间切分为固定长度的专注区间，并在区间之间安排休息\cite{cirillo2018pomodoro}。该方法适合课程复习、实验编程和论文阅读等需要持续注意力的任务。本文没有把番茄钟设计为孤立计时器，而是将每次完成或中断都写入本地数据库，使专注过程能够反向支撑复盘统计。
 
-本项目使用 DevEco Studio 工程结构进行端侧开发，并通过命令行 hvigor 完成 HAP 构建验证；报告使用本 LaTeX 模板生成，答辩材料使用 Typst 生成，便于自动目录和 PDF 输出。
+\section{AI 辅助学习与本地优先思想}
 
-\section{框架与数据库选择}
+AI 辅助学习可以帮助学生从资料中提取摘要、要点和下一步行动\cite{wang2024aitutor}。但移动端应用需要处理网络波动、密钥缺失和生成内容不稳定等问题。本地优先思想主张核心数据和关键操作应优先在端侧完成，远程服务只作为增强或同步能力存在\cite{turnbull2023localfirst}。因此，“知序”将任务、资料、番茄和复盘均放在本地闭环中，远程 AI 只在可用时生成建议，并在不可用时返回明确状态提示。
 
-前端框架选择 ArkUI 声明式 UI。ArkUI 能够以组件化方式描述页面结构，适合构建多页面、多状态的移动端应用。本地数据库选择 HarmonyOS RDB，用于保存结构化学习数据；轻量配置选择 Preferences，用于保存登录态、计时设置和 AI 运行时配置。服务端选择 Spring Boot + MyBatis + MySQL，原因是其工程结构清晰、接口开发效率高、数据库映射直观，适合课程项目演示。
+\section{本章小结}
+
+本章介绍了 HarmonyOS、ArkTS、移动学习、番茄工作法和 AI 辅助学习的相关基础。上述技术共同决定了本文系统的设计方向：以端侧能力保证确定性流程，以 AI 增强提升资料处理效率，以移动端交互整合学习闭环。
+
+
+\chapter{系统需求分析}
+
+\section{系统概述}
+
+“知序”面向使用 HarmonyOS 设备的大学生，典型场景包括课堂笔记整理、实验任务拆解、考试复习和课程项目推进。系统定位为本地优先的 AI 学习工作流工具，核心目标不是替代所有学习软件，而是将“资料整理、任务分解、番茄执行、复盘反馈”集中到一个轻量但连续的移动端流程中。
+
+\section{功能需求}
+
+系统包含五个核心页面，其功能定位如表 \ref{tab:core-pages} 所示。今日页负责呈现当日学习状态和快速添加任务；任务页提供搜索、筛选、完成、软删除和恢复；资料页支持笔记、链接、课件和文件引用等资料类型，并可通过 AI 提炼摘要和要点；专注页提供番茄计时、完成记录和中断原因记录；复盘页展示本周专注时长、项目占比、完成率、中断率和连续打卡等统计结果。
 
 \begin{table}[htbp]
 \centering
-\caption{工具与框架选型对比}
-\begin{tabularx}{\textwidth}{p{2.2cm}p{2.6cm}Xp{3.0cm}p{1.8cm}}
+\small
+\caption{核心页面与功能定位}
+\label{tab:core-pages}
+\begin{tabularx}{\textwidth}{p{1.6cm}p{2.7cm}X}
 \toprule
-方向 & 可选方案 & 优点 & 不足 & 本项目选择 \\
+页面 & 功能定位 & 主要功能 \\
 \midrule
-端侧语言 & ArkTS & 原生适配 HarmonyOS，类型约束较强 & 生态资料相对新 & 采用 \\
-端侧 UI & ArkUI & 声明式、组件化、适合多状态页面 & 需要注意 ArkUI 特有语法 & 采用 \\
-本地存储 & RDB & 结构化、可查询、可持久化 & 需要设计表结构和迁移 & 采用 \\
-轻量配置 & Preferences & 适合用户设置和密钥配置 & 不适合复杂关系数据 & 采用 \\
-后端框架 & Spring Boot & 快速构建 REST 接口，生态成熟 & 需要额外运行环境 & 可选同步层 \\
-数据库 & MySQL & 关系型数据库成熟，便于课程展示 & 需要本地服务 & 后端使用 \\
+今日 & 学习工作台 & 进度展示、快速添加、AI 建议、今日任务列表 \\
+任务 & 任务管理 & 搜索筛选、四象限排序、完成、软删除、恢复 \\
+资料 & 学习资料库 & 多类型录入、文件引用、AI 提炼、生成任务 \\
+专注 & 番茄执行 & 计时、暂停、完成、中断记录、通知提醒 \\
+复盘 & 数据分析 & 时长统计、项目占比、完成率、学习森林 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+\section{非功能需求}
+
+系统需满足以下非功能要求：离线可用，核心功能不依赖后端和 AI；数据持久化，应用重启后任务、资料和番茄记录不丢失；安全性，API 密钥只作为运行时配置保存在 Preferences 中，不写入源码或报告；可维护性，页面不直接操作数据库，统一通过 Store 和服务层完成；兼容性，面向 HarmonyOS 6.0 及以上设备，并为手机、平板和二合一设备保留响应式布局空间。
+
+\section{典型用例分析}
+
+从用户视角看，系统最重要的用例是“从资料到行动”。学生在资料页录入课堂笔记、课程链接或本地文件 URI，系统先将其作为 StudyResource 写入本地数据库；若用户配置了远程 AI，则可以进一步生成摘要和关键要点；随后用户可将资料提炼结果转化为专注任务，任务进入今日页和任务页，并在番茄专注完成后形成可复盘的时间记录。该用例贯穿资料、任务、专注和复盘四个模块，是本文系统区别于普通待办或普通笔记应用的核心链路。
+
+另一个重要用例是“离线学习记录”。当用户没有网络、后端未启动或 AI 未配置时，系统仍应允许创建任务、保存资料、开始番茄、记录中断原因和查看本地统计。此时远程 AI 卡片只提供配置状态提示，后端同步入口也不阻断本地写入。该用例约束了后续架构设计：所有核心数据必须以端侧 RDB 为可信来源，远程能力只能在本地成功之后补充，而不能反向决定本地流程是否成立。
+
+\section{本章小结}
+
+本章明确了系统的目标用户、核心功能和非功能约束。需求分析表明，“知序”的关键不是堆叠页面数量，而是保证资料、任务、专注和复盘之间的数据链路稳定、可解释且可离线运行。
+
+
 \chapter{系统设计}
 
-\section{总体设计}
+\section{总体架构设计}
 
-“知序”采用本地优先的移动应用架构。应用启动后先初始化本地数据库和偏好设置，所有核心学习数据先写入端侧 RDB，再由页面状态读取并展示。后端同步作为可选能力存在，不作为用户正常使用的前提。这样即使没有网络、没有服务器或没有配置 AI 密钥，用户仍然可以完成任务记录、番茄专注和复盘统计。
+“知序”采用本地优先的分层架构，如图 \ref{fig:architecture} 所示。Ability 层负责入口、独立专注窗口和服务卡片生命周期；页面层负责 ArkUI 交互；FocusStore 作为 UI 面向的状态门面；服务层封装 RDB、Preferences、AI、通知和后台保护能力；数据层保存核心业务数据和运行时配置；ArkWeb 用于复盘图表展示；Spring Boot 后端作为可选同步层存在。
 
-系统采用 MVVM 思路组织。模型层负责定义项目、任务、番茄记录、学习资料、AI 建议和设置等数据结构，并通过 RDB 表进行持久化。视图层负责展示今日、任务、资料、专注、复盘等页面，处理表单输入、筛选、按钮动作和状态提示。控制层负责连接视图和模型，包括本地数据仓库、状态门面、AI 服务、设置服务、通知和后台任务服务。页面不直接操作数据库，而是通过统一的 Store 写入数据，再刷新本地快照。
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  layer/.style={rectangle, draw, minimum width=9.5cm, minimum height=0.68cm, align=center, font=\small},
+  arrow/.style={->, thick}
+]
+  \node[layer, fill=blue!10] (ability) at (0, 3.0) {Ability：EntryAbility / FocusAbility / EntryFormAbility};
+  \node[layer, fill=green!10] (page) at (0, 2.1) {ArkUI 页面：Index / FocusSolo / FocusCard};
+  \node[layer, fill=yellow!10] (store) at (0, 1.2) {状态门面：FocusStore};
+  \node[layer, fill=orange!10] (service) at (0, 0.3) {服务：FocusDatabase / Settings / AiCoach / NativeServices};
+  \node[layer, fill=red!10] (data) at (0, -0.6) {端侧数据：RDB + Preferences};
+  \node[layer, fill=gray!10] (extra) at (0, -1.5) {扩展：ArkWeb 图表 + Spring Boot 可选同步};
+  \draw[arrow] (ability) -- (page);
+  \draw[arrow] (page) -- (store);
+  \draw[arrow] (store) -- (service);
+  \draw[arrow] (service) -- (data);
+  \draw[arrow] (data) -- (extra);
+\end{tikzpicture}
+\caption{系统总体架构}
+\label{fig:architecture}
+\end{figure}
 
-\section{功能模块设计}
+该架构与强后端依赖式移动应用不同。页面层不直接访问后端接口，也不直接拼接 SQL；后端同步和远程 AI 都不会参与本地任务完成、番茄记录或复盘统计的判定。这样，当网络、服务器或模型服务不可用时，系统只损失增强能力，不损失核心学习闭环。
 
-系统包含五个核心页面。新增“资料”页面后，系统形成了更完整的学习闭环：用户先沉淀资料，再提炼摘要和要点，然后生成任务，最后进入专注并在复盘页面查看结果。
+\section{本地数据流设计}
+
+系统数据流遵循“页面操作 - Store 写入 - RDB 持久化 - Store 刷新 - 页面状态复制”的单向流程。Index 页面在启动时初始化 RDB、设置服务、FocusStore、登录仓库和 AI 配置，随后通过 syncFromStore() 将 Store 快照复制到 @State 状态。任务完成、软删除、恢复、番茄记录、资料归档和资料生成任务均遵循同一约束。表 \ref{tab:data-flow-contract} 总结了主要写入路径。
 
 \begin{table}[htbp]
 \centering
-\caption{核心页面与功能}
-\begin{tabularx}{\textwidth}{p{1.6cm}p{2.6cm}X}
+\small
+\caption{核心写入路径与一致性约束}
+\label{tab:data-flow-contract}
+\begin{tabularx}{\textwidth}{p{2.2cm}p{3.0cm}X}
 \toprule
-页面 & 功能定位 & 主要功能 \\
+业务动作 & Store 入口 & 一致性约束 \\
 \midrule
-今日 & 学习工作台 & 展示今日进度、下一段专注、AI 建议和今日任务 \\
-任务 & 任务管理 & 搜索、筛选、完成、删除、恢复任务 \\
-资料 & 多文档学习资料库 & 新增资料、项目关联、AI 摘要、要点提炼、生成任务、归档恢复 \\
-专注 & 番茄执行 & 计时、暂停、完成、中断记录、通知和后台守护 \\
-复盘 & 数据分析 & 本周时长、项目占比、完成与中断、热力图、学习森林 \\
+添加任务 & addTask & 写入 tasks 后刷新 Store 与页面状态 \\
+完成/恢复 & toggle / restore & 通过 status 三态机更新，不物理删除 \\
+记录番茄 & recordPomodoro & 写入 pomodoros；完成时递增任务番茄数 \\
+新增资料 & addResource & 写入 study\_resources，初始化摘要和状态 \\
+资料生成任务 & createTask & 创建普通任务，再回写 linked\_task\_id \\
+保存设置 & saveSettings & 写入 Preferences，并返回归一化结果 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \section{数据库设计}
 
-端侧 RDB 是系统运行时的数据源。数据库保存四类核心表：
+端侧数据库名为 focus.db，版本为 3，维护四张核心表，如表 \ref{tab:db-schema} 所示。项目、任务、番茄记录和学习资料分别对应学习组织、行动执行、专注过程和资料沉淀四类实体。其中任务 status 采用 TODO(0)、DONE(1)、DELETED(2) 三态模型；资料 status 采用 active 与 archived；番茄 duration 单位为秒，其他时间字段统一使用 Unix 毫秒时间戳\cite{kwon2024mobiledb}。
 
 \begin{table}[htbp]
 \centering
-\caption{本地数据库主要表}
-\begin{tabularx}{\textwidth}{p{2.6cm}Xp{3.4cm}}
+\small
+\caption{本地数据库表结构}
+\label{tab:db-schema}
+\begin{tabularx}{\textwidth}{p{2.1cm}p{4.7cm}X}
 \toprule
-表 & 存储内容 & 说明 \\
+表名 & 核心字段 & 设计说明 \\
 \midrule
-projects & 项目名称、颜色、图标、更新时间、删除标记 & 用于组织课程或学习方向 \\
-tasks & 任务标题、备注、项目、优先级、截止时间、状态、番茄数、标签、子任务 & 支持待办、完成和软删除 \\
-pomodoros & 任务编号、开始时间、时长、是否完成、中断原因 & 用于复盘统计和趋势分析 \\
-study\_resources & 资料标题、类型、项目、关联任务、正文、摘要、要点、标签、状态、复习时间 & 新增资料库核心表 \\
+projects & id, name, color, icon, updated\_at & 项目组织单元，支持软删除标记 \\
+tasks & id, title, project\_id, priority, due\_at, status & 任务主体，标签和子任务以 JSON 列保存 \\
+pomodoros & id, task\_id, start\_at, duration, completed & 专注记录，区分完成与中断 \\
+\makebox[2.1cm][l]{\footnotesize study\_resources} & id, title, source\_type, content, summary, status & 资料库记录，保存摘要、要点和关联任务 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-所有时间字段使用 Unix 毫秒，番茄时长使用秒。数组类型在应用模型中表现为字符串数组，在 RDB 中以 JSON 字符串保存。资料表是增量新增，不破坏原有任务和番茄记录。
+半结构化字段如 tags、subtasks、keyPoints 在 ArkTS 模型中表现为数组，在 RDB 中以 JSON 字符串保存。该策略减少了课程项目阶段的关联表复杂度，同时保留了后续扩展空间。FocusDatabase 在查询 ResultSet 时使用 try-finally 关闭结果集，并通过辅助方法处理空列和默认值，降低移动端长期运行时的资源泄漏和空值风险。
 
 \section{AI 模块设计}
 
-AI 模块被设计为增强层，而不是系统运行的前提。其输入来自本地任务、项目、番茄记录或资料内容，输出为学习建议、摘要、要点和下一步任务建议。AI 模块包含两种模式。
+AI 模块采用远程增强与显式状态降级策略。AI 设置保存在 focus\_ai Preferences 中，包含 enabled、endpoint、model 和 apiKey。用户保存设置时，系统归一化 endpoint 和 model；若输入框中的密钥为空，则保留已保存密钥，且页面不回显明文密钥。远程请求兼容 Chat Completions 风格接口，服务层将响应解析为 AiCoachAdvice 或 ResourceInsight。
 
-本地规则模式不依赖网络和密钥。系统根据任务优先级、截止时间、中断次数、资料长度和资料类型生成建议，保证任何情况下都有可用结果。远程模型模式读取用户在运行时输入的接口地址、模型名和 API Key。系统不会把用户提供的密钥写入源码或报告。远程请求失败、返回为空或格式不符合要求时，系统自动回退到本地规则。
+算法 \ref{alg:remote-ai} 描述了 AI 请求的核心流程。若远程模式关闭、密钥缺失、HTTP 状态异常、响应为空或格式不可解析，系统返回配置或服务状态提示，不生成本地替代结果，也不写回资料摘要。这样可以保证用户清楚地区分“远程模型生成内容”和“本地状态提示”。
 
-\section{网络与后端设计}
+\begin{algorithm}[htbp]
+\caption{远程 AI 请求与状态降级算法}
+\label{alg:remote-ai}
+\begin{algorithmic}[1]
+\Require AI 设置 $settings$，本地上下文 $context$
+\Ensure AI 结果 $result$ 或状态提示 $status$
+\If{$settings.enabled = false$ \textbf{or} $settings.apiKey$ 为空}
+  \State \Return 配置状态提示
+\EndIf
+\State $response \leftarrow \text{HTTP\_POST}(endpoint, context, apiKey)$
+\If{$response.code < 200$ \textbf{or} $response.code \geq 300$}
+  \State \Return 远程服务状态提示
+\EndIf
+\State $content \leftarrow \text{extractChoiceContent}(response)$
+\If{$content$ 为空或不可解析}
+  \State \Return 响应解析状态提示
+\EndIf
+\State \Return $\text{parseStructuredLines}(content)$
+\end{algorithmic}
+\end{algorithm}
 
-后端目录保留 Spring Boot 服务，包含用户、项目、任务、番茄、统计和同步接口。后端通过 MyBatis 映射 MySQL 数据表，适合演示“服务器连接数据库”的课程要求。端侧仍然坚持本地优先原则：本地写入成功是核心路径，后端同步是附加路径。这样既能满足离线使用，也能在答辩时展示前后端联调与数据库设计能力。
+\section{后端与同步边界}
 
-\section{代码规范与可维护性设计}
+后端使用 Spring Boot 3.2.0、MyBatis 和 MySQL 风格 schema，提供用户、项目、任务、番茄和同步接口。同步设计采用 updated\_at 时间戳进行增量 pull/push，番茄记录通过 client\_request\_id 实现幂等插入。需要说明的是，当前移动端尚未将同步 UI 完全产品化，因此本文将后端定位为课程全栈展示和未来多端备份基础，而非已完成的实时多端同步系统。
 
-系统在实现上遵循以下规范：页面状态不直接修改数据库；所有核心写操作通过 Store 完成；ResultSet 使用后及时关闭；密钥仅作为运行时配置保存，不出现在源码、报告和任务文档中；新增功能尽量复用现有模型、服务和 UI 样式，避免大范围重命名造成风险。内部类名保留 Focus 前缀，用户可见产品名统一为“知序”，兼顾稳定性和产品表达。
+\section{本章小结}
+
+本章给出了“知序”的总体架构和关键设计。端侧 RDB 保证核心闭环，Preferences 保存运行时配置，FocusStore 统一页面写入路径，远程 AI 和后端同步均作为可选增强存在。这些设计共同支撑了系统的离线可用性和可维护性。
+
 
 \chapter{系统实现}
 
-\section{运行效果}
+\section{开发环境与工程结构}
 
-应用完成后形成五个真实页面，每个页面都有可操作功能。今日页展示学习状态、快速添加任务和 AI 建议；任务页支持搜索、筛选、删除和恢复；资料页支持新增资料、提炼摘要、生成任务和归档；专注页支持番茄计时、中断记录和通知；复盘页展示本地统计、ArkWeb 图表和学习森林。
+系统由 HarmonyOS 客户端和 Spring Boot 后端组成，主要环境如表 \ref{tab:dev-env} 所示。客户端代码集中在 entry/src/main/ets 目录，模型位于 models，数据库、设置、AI 和系统服务位于 services，主页面和独立专注页面位于 pages，FocusAbility 位于 focusability。后端位于 focus-server，采用 Controller--Mapper--XML 分层组织接口和 SQL。
 
-本次迭代将产品名称调整为“知序”，副标题定位为“AI Study Flow”。可见界面包括主登录页、今日页标题、服务卡片和独立专注页面均使用新的产品表达。内部文件和类名保持不变，避免破坏 Ability 路由和构建配置。
+\begin{table}[htbp]
+\centering
+\small
+\caption{开发环境与工具}
+\label{tab:dev-env}
+\begin{tabularx}{\textwidth}{p{2.2cm}p{3.5cm}X}
+\toprule
+类别 & 工具/环境 & 说明 \\
+\midrule
+客户端 & DevEco Studio / ArkTS & HarmonyOS API 22，ArkUI 声明式开发 \\
+本地存储 & RDB / Preferences & 业务数据与运行时配置分离 \\
+后端 & Spring Boot / MyBatis & REST 接口与可选同步服务 \\
+数据库 & MySQL / SQLite 思路 & 后端 schema 与端侧 RDB 分别维护 \\
+报告 & LaTeX & 使用南开本科论文模板组织课程论文 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{核心页面实现}
+
+Index 页面承载今日、任务、资料、专注和复盘五个工作区。页面通过 @State 保存任务、资料、计时器、AI 配置和当前选中项；aboutToAppear() 中按顺序初始化本地数据库、设置服务、Store、登录仓库和 AI 设置，随后调用 syncFromStore() 同步页面状态。今日页的快速添加任务只调用 focusStore.addTask()，不直接修改 this.tasks，因此离线状态下仍能正常新增任务并在重启后保留。
+
+任务管理模块实现了搜索、筛选、四象限视图和回收站。filteredTasks() 会按项目、优先级、关键词和回收站状态组合过滤，关键词覆盖标题、备注和标签。toggleTask()、deleteTask() 和 restoreTask() 均通过 Store 修改 RDB，再刷新页面状态。三态状态机避免了误删数据，也为后续同步保留了软删除语义。
 
 \section{学习资料库实现}
 
-资料库是本次成熟化迭代的重点。用户可以录入笔记、网页链接说明、课件摘录和 PDF/论文摘录，并将资料关联到具体项目。资料保存后写入本地 RDB，页面从 Store 刷新数据并展示列表。资料卡片展示类型、所属项目、摘要、要点和关联任务状态，用户可以选择资料、提炼资料、归档资料或恢复资料。
+资料库是系统的主要特色。StudyResource 模型包含 title、sourceType、projectId、linkedTaskId、content、summary、keyPoints、tags、status、createdAt、updatedAt 和 reviewDueAt 等字段。手动录入时，页面校验标题和正文后调用 addStudyResource() 写入本地表；文件导入时，DocumentViewPicker 只保存文件 URI 和用户备注，不复制二进制文件，也不解析 PDF、DOCX 或 PPTX 全文。这样既展示了 HarmonyOS 文件选择能力，又控制了课程项目阶段的权限和依赖复杂度。
 
-资料页不是静态展示页，而是参与任务闭环的功能页。用户完成资料提炼后，可以一键生成专注任务。生成的任务会带有资料摘要和要点，进入任务页与专注页后继续使用原有番茄闭环。
+AI 提炼由 extractResource() 触发。页面先检查远程 AI 是否启用且存在密钥；不满足条件时只显示状态，不写入摘要。远程返回成功后，FocusAiCoachService 将响应解析为 ResourceInsight，Store 再更新 summary 和 keyPoints。用户可基于提炼结果调用 createTaskFromResource() 创建普通 FocusTask，并把资料的 linked\_task\_id 回写为新任务 id，从而建立资料与任务的闭环关系。
 
-\section{AI 提炼实现}
+\section{番茄专注与原生能力实现}
 
-系统为资料库增加了本地提炼和远程提炼两条路径。本地提炼会根据资料内容切分句子，生成摘要、三个要点、建议任务和预计专注分钟数。远程提炼复用已有 AI 设置，读取运行时保存的接口地址、模型和密钥，要求模型返回摘要、要点、任务和分钟数。若远程模式未启用、密钥为空、网络失败或响应不可解析，系统会显示本地兜底结果。
+番茄专注支持内嵌模式和独立窗口模式。内嵌模式在 Index 中以 Overlay 展示计时器；独立模式通过 FocusAbility 启动 FocusSolo 页面。Index 将 taskId 和 taskTitle 放入 Want parameters，FocusAbility 在 onCreate() 和 onNewWant() 中均解析参数并写入 AppStorage，FocusSolo 通过 @StorageProp 读取当前任务。这样即使 FocusAbility 以 singleton 方式热启动，也能切换到新的专注对象。
 
-这种设计使 AI 功能既能用于演示创新点，又不会让应用依赖外部服务。对课程项目而言，AI 是加分项，本地可用性仍然是主线。
+计时器使用 setInterval 每秒更新剩余时间，完成时通过 FocusNativeServices 发送本地通知，并调用 focusStore.recordPomodoro() 写入 pomodoros 表。后台运行时，系统尽量请求 suspend delay 保护专注过程；若平台能力不可用，计时器仍保持本地可用。FocusSolo 会从 Preferences 读取用户保存的专注时长，失败时退回默认 25 分钟。
 
-\section{本地持久化实现}
+\section{复盘统计与扩展能力实现}
 
-系统数据库版本升级后新增学习资料表。启动时应用创建或迁移表结构，并在空表时写入示例资料。任务、项目、番茄和资料均通过统一数据库服务读取和写入。页面通过 Store 获取快照，写操作完成后刷新 Store，再同步到 ArkUI 状态。
+复盘统计数据全部来自 FocusStore，而不是来自种子数据或 H5 页面假数据。Store 根据 tasks 和 pomodoros 快照计算 completedPomodoros()、interruptedPomodoros()、totalFocusMinutes()、weekFocusPoints()、projectFocusPoints() 和 streakDays()。ArkWeb 加载 rawfile/charts/index.html，通过 nativeBridge 接收统计 JSON 并使用 Canvas 绘制图表；当桥接不可用时，H5 页面提供 fallbackStats() 便于预览。
 
-这一实现解决了只在内存中展示数据的问题。用户新增任务、完成番茄或保存资料后，数据能够在应用重启后保留，复盘统计也来自本地记录，而不是静态样例。
+项目还实现了 EntryFormAbility 与 FocusCard 服务卡片，用于展示今日概览和番茄进度。当前卡片采用静态演示数据，主要体现 ExtensionAbility 与卡片布局能力，后续可进一步接入真实 Store 快照。
 
-\section{关键问题与解决方法}
+\section{关键技术问题}
 
-第一个问题是资料库跨越模型、数据库、状态和页面四层，容易出现某层遗漏。解决方法是先定义 StudyResource 模型，再新增 RDB 表和数据库方法，随后补 Store 方法，最后接入 ArkUI 页面，保持数据流单向清晰。
+实现过程中主要处理了四类问题。第一，跨层数据一致性：所有核心写操作统一走 FocusStore，避免页面数组与 RDB 分裂。第二，AI 不稳定性：失败时返回明确状态，不伪造本地 AI 结果。第三，产品更名控制：用户可见名称统一为“知序”，内部 Focus 前缀类名保持稳定，减少重命名风险。第四，文件导入范围控制：当前只保存 URI 和备注，文档正文解析、OCR 和权限扩展留作后续工作。
 
-第二个问题是 AI 远程请求具有不稳定性。解决方法是把本地规则作为默认结果，远程请求只负责增强；无密钥、失败或响应异常时都回退到本地结果，并在页面显示来源。
+\section{本章小结}
 
-第三个问题是产品改名可能牵动 Ability、资源和已有代码。解决方法是只更新用户可见文案，内部类名、文件名和路由保持稳定。这样既能让产品名称更成熟，又不会引入大范围重构风险。
+本章说明了“知序”的主要实现过程。系统在页面、Store、RDB、Preferences、Ability 和 ArkWeb 之间建立了稳定的数据协作方式，并围绕资料库、番茄专注和复盘统计完成了课程项目要求的核心功能。
 
-第四个问题是报告要求第三章和第四章不能贴代码。本文在这两章使用文字、表格和结构说明描述实现，不展示源码片段，保证读者按系统设计和实现效果理解项目。
 
-\section{验证结果}
+\chapter{系统测试与验证}
 
-应用端已经使用 hvigor 执行 HAP 构建，ArkTS 编译、资源处理、打包和签名流程均通过。构建过程中存在若干历史警告，例如 getContext 弃用提示、后台任务能力兼容性提示和已有 Preferences 异常处理提示，但没有阻塞本次功能构建。报告使用南开大学本科生毕业论文 LaTeX 模板生成，答辩 slides 使用 Typst 编译为 PDF，便于提交和展示。
+\section{测试策略}
+
+系统测试采用功能测试、构建验证和兼容性观察相结合的方式。功能测试覆盖五个核心页面的主要路径，重点检查本地写入、页面刷新、AI 状态提示和资料任务关联；构建验证用于确认客户端 HAP 与后端 JAR 可正常生成；兼容性观察关注 ArkWeb、DocumentViewPicker、服务卡片和通知等平台能力在真机或模拟器中的表现。
+
+\section{功能测试}
+
+表 \ref{tab:test-cases} 列出了主要测试用例。测试结果显示，核心流程均能按预期完成，尤其是离线任务写入、番茄记录持久化和 AI 未配置时的状态提示，符合本地优先设计目标。
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{功能测试用例与结果}
+\label{tab:test-cases}
+\begin{tabularx}{\textwidth}{p{2.0cm}p{4.8cm}p{2.0cm}X}
+\toprule
+模块 & 测试用例 & 预期结果 & 结果 \\
+\midrule
+今日 & 快速添加任务并刷新列表 & 新任务写入 RDB & 通过 \\
+任务 & 完成、软删除、恢复任务 & status 正确变化 & 通过 \\
+资料 & 创建资料并重启应用 & 资料仍存在 & 通过 \\
+资料 & 未配置 AI 时提炼资料 & 显示配置状态 & 通过 \\
+资料 & 基于资料生成任务 & 任务页可见新任务 & 通过 \\
+专注 & 完成番茄计时 & pomodoros 新增记录 & 通过 \\
+专注 & 中断并填写原因 & 中断记录保存 & 通过 \\
+复盘 & 查看本周统计图表 & 数据来自 Store & 通过 \\
+设置 & 修改计时器时长 & 重启后设置保留 & 通过 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{构建验证与兼容性观察}
+
+客户端使用 hvigor 执行 HAP 构建验证，后端使用 Maven 执行 JAR 构建验证。构建过程无阻塞性错误，说明客户端 ArkTS 代码、资源配置和后端 Java 工程均可完成基本打包。性能观察中，页面切换和本地数据库查询没有明显卡顿；AI 请求耗时主要取决于网络和远程服务。需要进一步在真机环境验证的能力包括 ArkWeb 桥接、DocumentViewPicker 文件选择、服务卡片添加和后台通知可靠性。
+
+\section{本章小结}
+
+本章通过功能测试、构建验证和兼容性观察验证了系统实现效果。测试结果表明，“知序”已完成课程项目所需的主要功能，并能保持核心学习数据的本地持久化与离线可用。
+
 
 \chapter{总结与展望}
 
-\section{总结}
+\section{工作总结}
 
-本文完成了“知序”学习管理应用的设计与实现。系统以 HarmonyOS 端侧能力为基础，完成今日、任务、资料、专注、复盘五个真实页面，使用 RDB 和 Preferences 实现本地优先的数据闭环，并保留 Spring Boot + MyBatis + MySQL 作为可选同步层。本次迭代新增学习资料库和 AI 提炼能力，使应用从简单番茄任务工具升级为能够处理学习资料、生成任务、执行专注和复盘结果的完整学习工作流。
+本文完成了 HarmonyOS 本地优先学习闭环应用“知序”的设计与实现。系统以 RDB 保存项目、任务、番茄记录和学习资料，以 Preferences 保存设置、登录态和 AI 配置，通过 FocusStore 统一本地写入路径，完成了今日、任务、资料、专注和复盘五个核心页面。AI 模块采用远程增强和显式状态降级设计，在配置可用时提供学习建议和资料提炼，在不可用时不影响本地流程。后端保留为可选同步层，体现了全栈扩展能力。
 
-\section{展望}
+\section{主要特色}
 
-后续可以从四个方向继续优化。第一，增加文件选择与 OCR 能力，让 PDF、图片和课件可以自动导入。第二，完善后端同步 UI，加入同步状态、冲突处理和多端备份。第三，增强 AI 功能，支持复习计划生成、错题整理、资料问答和周报生成。第四，补充真机测试、无障碍适配、通知可靠性和主题定制，使应用更接近可长期使用的成熟产品。
+本项目的特色主要体现在三个方面：第一，本地优先架构使核心学习流程不依赖网络、后端或 AI；第二，资料库与任务系统打通，使学习资料能够转化为可执行的专注任务；第三，HarmonyOS 平台能力被用于独立专注窗口、服务卡片、原生通知、后台保护和 ArkWeb 图表展示，增强了课程项目的移动端完整性。
+
+\section{不足与展望}
+
+系统仍存在不足：文件导入目前只保存 URI 和备注，尚未实现 OCR 与文档正文解析；后端同步 UI 尚未产品化，冲突处理和同步状态提示仍需完善；AI 功能依赖外部 API 服务，缺少本地模型或缓存策略。后续可继续扩展文档解析、错题整理、学习周报、多端备份、真机兼容性测试和无障碍适配，使应用更接近可长期使用的成熟学习工具。

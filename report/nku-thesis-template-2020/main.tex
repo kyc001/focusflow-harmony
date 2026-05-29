@@ -11,6 +11,8 @@
 \usepackage{geometry}
 \usepackage[emptydoublepage]{NKThesis}   % 中文
 %\usepackage[emptydoublepage,English]{NKThesis} % 英文
+\usepackage[backend=biber,style=nkthesis]{biblatex}
+\addbibresource{nkthesis.bib}
 \usepackage{amssymb}
 % \usepackage{cite}
 \hypersetup{colorlinks=true,
@@ -18,6 +20,8 @@
             citecolor=black,
             linkcolor=black}
 %\usepackage{tikz}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning}
 
 \usepackage{amsmath}
 \usepackage{booktabs}
@@ -111,5 +115,8 @@
 \begin{spacing}{1.5}
 \include{course-report}
 \end{spacing}
+
+\include{references}
+\include{acknowledgements}
 
 \end{document}

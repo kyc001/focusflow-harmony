@@ -137,3 +137,37 @@ Added local-first AI Focus Coach, generated/cropped visual assets, runtime focus
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: Polish FocusSolo and Harmony specs
+
+**Date**: 2026-05-29
+**Task**: Polish FocusSolo and Harmony specs
+**Branch**: `master`
+
+### Summary
+
+Redesigned the standalone FocusSolo page with local assets, saved focus settings support, and clearer timer hierarchy. Updated Trellis spec entry points to reflect the HarmonyOS ArkTS local-first app instead of stale Electron/React guidance.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f39d8e9` | (see git log) |
+| `ea9f8bd` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

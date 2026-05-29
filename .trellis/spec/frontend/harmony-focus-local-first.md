@@ -109,6 +109,8 @@ focusSettingsService.defaultSettings(): FocusSettings
 - Runtime settings must be normalized on load/save. Focus minutes clamp to 10-60, short break to 3-15, and long break to 10-30.
 - UI changes to timer length, white noise, or notification preference must save through `focusSettingsService.saveSettings()`, then copy the normalized result back into `focusStore.settings` and page state.
 - Preferences failures for runtime settings must degrade to defaults or normalized in-memory settings and must not block startup, task writes, or Pomodoro writes.
+- Standalone `FocusAbility` / `FocusSolo` must load timer length through `focusSettingsService` when a `UIAbilityContext` is available, and must degrade to the default 25-minute timer if Preferences fail.
+- Focus page visual polish must not introduce a runtime network dependency. Reuse `FocusDesignTokens` and semantic local media resources first; newly generated raster assets must be saved under `entry/src/main/resources/base/media/` before being referenced by ArkUI.
 
 ## Scenario: Study Resources and Document Import
 
@@ -254,6 +256,7 @@ await focusStore.addStudyResource(title, 'file', projectId, content);
 | ArkWeb unavailable in previewer | Keep native review summary usable and document device/emulator requirement. |
 | Background task API unsupported | Keep timer usable and show best-effort message. |
 | Runtime settings Preferences init/load/save fails | Keep app usable with default or normalized in-memory settings and show a non-blocking settings message. |
+| Focus visual assets are missing or generation is unavailable | Keep the timer usable with existing local PNG resources and ArkUI shapes. |
 
 ### 5. Good / Base / Bad Cases
 
@@ -308,6 +311,7 @@ mvn -q -DskipTests package
   - ArkWeb review page loads from `rawfile/charts/index.html`.
   - Service card can be added and rendered.
   - Timer durations, notification preference, and white noise survive app restart when Preferences are available.
+  - Standalone `FocusAbility` opens with the selected task, uses saved focus minutes when available, and still starts/resets/completes with default settings when Preferences are unavailable.
 
 ### 7. Wrong vs Correct
 
@@ -463,6 +467,7 @@ $r('app.media.focus_ui_sync_bridge')
 - Hero/card visuals can be generated concept imagery. Repeated reward assets must be reusable sprites or independent icon PNGs, not one-off concept scenes.
 - Paid related UI asset generation should prefer one grid spritesheet request, followed by local crop/validation into named PNG resources. Wire cropped sprites into real product states before considering the asset work complete.
 - Keep generated UI micro-assets text-free: no readable text, letters, numbers, logos, watermarks, or large concept scenes. Use app text rendered by ArkUI instead of in-image labels.
+- Image-generation API keys, custom endpoints, and local proxy ports are session/runtime inputs only. Use environment variables for one-off generation commands, never source files, spec files, task artifacts, reports, or scripts.
 
 ### 4. Validation & Error Matrix
 

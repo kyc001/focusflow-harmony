@@ -1,6 +1,6 @@
 # Shared Development Guidelines
 
-> These guidelines apply to all Electron applications using this architecture.
+These guidelines apply to this HarmonyOS ArkTS app unless a package-specific spec says otherwise. Older Electron-oriented files are retained only as archival references.
 
 ---
 
@@ -12,7 +12,7 @@
 | [typescript.md](./typescript.md)                   | TypeScript best practices         | Type-related decisions |
 | [git-conventions.md](./git-conventions.md)         | Git commit and branch conventions | Before committing      |
 | [timestamp.md](./timestamp.md)                     | Timestamp format specification    | Date/time handling     |
-| [pnpm-electron-setup.md](./pnpm-electron-setup.md) | pnpm + Electron project setup     | Project initialization |
+| [pnpm-electron-setup.md](./pnpm-electron-setup.md) | Legacy pnpm + Electron setup notes | Archive/reference only |
 
 ---
 
@@ -41,8 +41,8 @@
 
 ## Before Every Commit
 
-- [ ] `npm run lint` - 0 errors
-- [ ] `npm run typecheck` - 0 errors
+- [ ] Harmony frontend build passes when ArkTS/resources changed
+- [ ] `git diff --check` passes
 - [ ] No non-null assertions (`!`)
 - [ ] Commit message follows format
 - [ ] Tests pass (if applicable)

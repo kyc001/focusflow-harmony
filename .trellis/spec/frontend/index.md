@@ -1,127 +1,54 @@
 # Frontend Development Guidelines
 
-> Project note: this repository is a HarmonyOS ArkTS app. Read the Focus-specific Harmony spec first; the older Electron/React notes below are retained only as generic quality references.
+This repository is a HarmonyOS ArkTS app. The frontend implementation path is ArkUI + Ability lifecycle + local-first services, not Electron/React.
 
 ## Project-Specific Must Read
 
 | File | Description | Priority |
 | --- | --- | --- |
-| [harmony-focus-local-first.md](./harmony-focus-local-first.md) | HarmonyOS ArkTS, RDB, FocusStore, FocusAbility, ArkWeb, and local-first product contracts | **Must Read** |
+| [harmony-focus-local-first.md](./harmony-focus-local-first.md) | ArkTS, RDB, FocusStore, FocusAbility, ArkWeb, runtime settings, resources, AI, and visual asset contracts | **Must Read** |
+| ../shared/[code-quality.md](../shared/code-quality.md) | Mandatory quality rules shared across layers | **Must Read** |
+| ../shared/[typescript.md](../shared/typescript.md) | ArkTS/TypeScript typing expectations | Reference |
 
----
+## Current Tech Stack
 
-# Legacy Electron + React Frontend Development Guidelines
+- Platform: HarmonyOS Stage model
+- UI: ArkUI declarative components in `entry/src/main/ets/pages/`
+- Language: ArkTS / TypeScript-style syntax
+- Local data: RDB through `FocusDatabase`, surfaced to pages through `FocusStore`
+- Runtime preferences: Preferences services such as `focusSettingsService` and `focusAiCoachService`
+- Visual assets: PNG resources under `entry/src/main/resources/base/media/`
 
-> Universal frontend development guidelines for Electron applications with React + Vite + TypeScript. Use only when the guidance is framework-neutral enough to apply to ArkTS.
+## Pre-Development Checklist
 
-## Tech Stack
+- Read [harmony-focus-local-first.md](./harmony-focus-local-first.md) before changing Today, Focus, Review, Resources, settings, AI, or Ability handoff behavior.
+- Search for existing page builders, design tokens, image resources, and store mutations before adding new components or constants.
+- Keep UI mutations local-first: write through `FocusStore` or the relevant Preferences service, refresh/copy state back, and never require the backend for core flows.
+- Use ArkUI alpha colors in `#AARRGGBB` form. Do not add web-style `#RRGGBBAA` alpha colors.
+- Prefer semantic existing media resources over generating new images. If generating assets, crop/save final PNGs under `entry/src/main/resources/base/media/` and wire them by semantic resource name.
+- Treat any API key or proxy endpoint provided during a session as runtime-only. Do not write secrets into source, docs, task files, scripts, or generated assets.
 
-- **Framework**: Electron + React 18+
-- **Build Tool**: Vite
-- **Language**: TypeScript (strict mode)
-- **Styling**: Tailwind CSS + CSS Modules (optional)
-- **State**: React Context + React Query (optional)
+## Quality Check
 
----
+- Run the Harmony frontend build after ArkUI, media, model, or service changes:
 
-## Documentation Files
-
-| File                                                                           | Description                                     | Priority      |
-| ------------------------------------------------------------------------------ | ----------------------------------------------- | ------------- |
-| [ipc-electron.md](./ipc-electron.md)                                           | IPC patterns, context isolation, title bar      | **Must Read** |
-| [electron-browser-api-restrictions.md](./electron-browser-api-restrictions.md) | Browser APIs that don't work in Electron        | **Must Read** |
-| [react-pitfalls.md](./react-pitfalls.md)                                       | Critical React patterns and common mistakes     | **Must Read** |
-| [state-management.md](./state-management.md)                                   | Auth context, layout, navigation patterns       | Reference     |
-| [components.md](./components.md)                                               | Semantic HTML, empty states, scrollbar patterns | Reference     |
-| [hooks.md](./hooks.md)                                                         | Query and mutation hook patterns                | Reference     |
-| [type-safety.md](./type-safety.md)                                             | Types, import paths, module constants           | Reference     |
-| [directory-structure.md](./directory-structure.md)                             | Project structure conventions                   | Reference     |
-| [css-design.md](./css-design.md)                                               | CSS organization and design tokens              | Reference     |
-| [quality.md](./quality.md)                                                     | Code quality and performance standards          | Reference     |
-
----
-
-## Quick Navigation by Task
-
-### Before Starting Development
-
-| Task                         | Document                                                                       |
-| ---------------------------- | ------------------------------------------------------------------------------ |
-| Understand IPC patterns      | [ipc-electron.md](./ipc-electron.md)                                           |
-| Know browser API limitations | [electron-browser-api-restrictions.md](./electron-browser-api-restrictions.md) |
-| Avoid common React mistakes  | [react-pitfalls.md](./react-pitfalls.md)                                       |
-
-### During Development
-
-| Task                     | Document                                     |
-| ------------------------ | -------------------------------------------- |
-| Create custom hooks      | [hooks.md](./hooks.md)                       |
-| Manage application state | [state-management.md](./state-management.md) |
-| Build UI components      | [components.md](./components.md)             |
-| Ensure type safety       | [type-safety.md](./type-safety.md)           |
-
-### Before Committing
-
-| Task                    | Document                         |
-| ----------------------- | -------------------------------- |
-| Check code quality      | [quality.md](./quality.md)       |
-| Verify CSS organization | [css-design.md](./css-design.md) |
-
----
-
-## Core Rules Summary
-
-| Rule                                                         | Reference                                                                      |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| **Native APIs require IPC**                                  | [ipc-electron.md](./ipc-electron.md)                                           |
-| **NEVER use prompt/alert/confirm**                           | [electron-browser-api-restrictions.md](./electron-browser-api-restrictions.md) |
-| **Wrap functions with `() =>`** when storing in useState     | [react-pitfalls.md](./react-pitfalls.md)                                       |
-| **Use `useMemo`** for objects/Date passed to hooks           | [react-pitfalls.md](./react-pitfalls.md)                                       |
-| **Distinguish initial load vs refetch**                      | [react-pitfalls.md](./react-pitfalls.md)                                       |
-| **No non-null assertions `!`**                               | [quality.md](./quality.md)                                                     |
-| **Use `scrollbar-gutter: stable`** for scrollable containers | [components.md](./components.md)                                               |
-
----
-
-## Architecture Overview
-
-```
-+----------------------------------------------------------+
-|                    Main Process                           |
-|  +--------------+  +--------------+  +-----------------+  |
-|  |   IPC        |  |   Native     |  |   Database      |  |
-|  |   Handlers   |  |   APIs       |  |   (SQLite)      |  |
-|  +------+-------+  +--------------+  +-----------------+  |
-+---------|-------------------------------------------------+
-          | ipcMain.handle / ipcRenderer.invoke
-          |
-+---------|-------------------------------------------------+
-|         |              Preload Script                     |
-|  +------+-------+                                         |
-|  | contextBridge.exposeInMainWorld('api', {...})         |
-|  +------+-------+                                         |
-+---------|-------------------------------------------------+
-          | window.api
-          |
-+---------|-------------------------------------------------+
-|         v              Renderer Process                   |
-|  +--------------+  +--------------+  +-----------------+  |
-|  |   React      |  |   Context    |  |   Components    |  |
-|  |   App        |  |   Providers  |  |   & Hooks       |  |
-|  +--------------+  +--------------+  +-----------------+  |
-+----------------------------------------------------------+
+```powershell
+$env:JAVA_HOME='D:\Tools\java\jdk-21'
+$env:Path="$env:JAVA_HOME\bin;$env:Path"
+$env:DEVECO_SDK_HOME='C:\Program Files\Huawei\DevEco Studio\sdk'
+$env:OHOS_SDK_HOME='C:\Program Files\Huawei\DevEco Studio\sdk\default\openharmony'
+& 'C:\Program Files\Huawei\DevEco Studio\tools\hvigor\bin\hvigorw.bat' --mode module -p module=entry assembleHap
 ```
 
----
+- Run `git diff --check`.
+- Run a secret scan before reporting completion:
 
-## Getting Started
+```powershell
+rg "sk-" .
+```
 
-1. **Read the Must-Read documents** - Especially IPC patterns and browser API restrictions
-2. **Set up your project structure** - Follow [directory-structure.md](./directory-structure.md)
-3. **Configure TypeScript paths** - See [type-safety.md](./type-safety.md)
-4. **Implement IPC layer** - Use patterns from [ipc-electron.md](./ipc-electron.md)
-5. **Build components** - Follow [components.md](./components.md) and [react-pitfalls.md](./react-pitfalls.md)
+## Legacy Notes
 
----
+Older Electron/React spec files in this folder are archival generic references only. Do not use them as the primary implementation guide for this project, and do not follow Electron IPC, React hook, Vite, or CSS-module instructions when editing ArkTS code.
 
-**Language**: All documentation is written in **English**.
+**Language**: All documentation should be written in English.

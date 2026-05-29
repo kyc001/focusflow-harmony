@@ -1,168 +1,110 @@
-# Thinking Flows for Electron + React + SQLite Projects
+# Thinking Flows for HarmonyOS ArkTS Focus Apps
 
 > **Purpose**: Systematic thinking guides to catch issues before they become bugs.
 >
 > **Core Philosophy**: 30 minutes of thinking saves 3 hours of debugging.
 
----
-
-## Why Thinking Flows?
-
-**Most bugs and tech debt come from "didn't think of that"**, not from lack of skill:
-
-- Didn't think about what happens at layer boundaries -> cross-layer bugs
-- Didn't think about code patterns repeating -> duplicated code everywhere
-- Didn't think about edge cases -> runtime errors
-- Didn't think about future maintainers -> unreadable code
-
-These guides help you **ask the right questions before coding**.
+This project is a HarmonyOS ArkTS app. Some deeper guide files still contain Electron examples from the original template; use them only for the general thinking pattern, and translate layer names to the ArkTS/local-first architecture below.
 
 ---
 
 ## Available Thinking Guides
 
-| Guide                                                             | Purpose                                                      | When to Use                                          |
-| ----------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------- |
-| [Cross-Layer Thinking](./cross-layer-thinking-guide.md)           | Think through data flow across layers                        | Before implementing features that span 3+ layers     |
-| [Pre-Implementation Checklist](./pre-implementation-checklist.md) | Verify readiness before coding                               | Before starting any feature implementation           |
-| [Bug Root Cause Analysis](./bug-root-cause-thinking-guide.md)     | Analyze bugs to understand preventability                    | After fixing any non-trivial bug                     |
-| [Code Reuse Thinking](./code-reuse-thinking-guide.md)             | Identify patterns and reduce duplication                     | When you notice repeated code patterns               |
-| [DB Schema Change](./db-schema-change-guide.md)                   | Ensure schema changes are fully deployed                     | When modifying database schema                       |
-| [Semantic Change Checklist](./semantic-change-checklist.md)       | Ensure all code is updated when changing data interpretation | When changing how the system interprets a field/type |
-| [Transaction Consistency](./transaction-consistency-guide.md)     | Ensure data consistency across write paths                   | When implementing multi-table writes                 |
+| Guide | Purpose | When to Use |
+| --- | --- | --- |
+| [Cross-Layer Thinking](./cross-layer-thinking-guide.md) | Think through data flow across layers | Features spanning UI, service, storage, Ability, or remote AI |
+| [Pre-Implementation Checklist](./pre-implementation-checklist.md) | Verify readiness before coding | Before adding constants, logic, types, or UI builders |
+| [Bug Root Cause Analysis](./bug-root-cause-thinking-guide.md) | Analyze bugs to understand preventability | After fixing any non-trivial bug |
+| [Code Reuse Thinking](./code-reuse-thinking-guide.md) | Identify patterns and reduce duplication | When repeated ArkUI builders/tokens/helpers appear |
+| [DB Schema Change](./db-schema-change-guide.md) | Ensure schema changes are fully deployed | When modifying RDB schema or data interpretation |
+| [Semantic Change Checklist](./semantic-change-checklist.md) | Ensure all code is updated when changing meaning | Status values, timestamp units, settings, enums |
+| [Transaction Consistency](./transaction-consistency-guide.md) | Ensure data consistency across write paths | Multi-table writes or local-first mutations |
 
 ---
 
-## Quick Reference: When to Use Which Guide
+## Harmony-Specific Layer Map
 
-### Cross-Layer Issues
+Use this map when a legacy guide says "renderer", "IPC", or "main process":
 
-Use [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md) when:
+```
+ArkUI Pages / Builders
+        |
+        v
+Page State and AppStorage
+        |
+        v
+FocusStore / Preferences Services
+        |
+        v
+FocusDatabase / RDB and Preferences
+        |
+        v
+Ability lifecycle, ArkWeb, native notifications, optional remote AI
+```
 
-- [ ] Feature touches 3+ layers (Main Process, Renderer, IPC, Database)
-- [ ] Data format changes between layers
-- [ ] Multiple consumers need the same data
-- [ ] You're not sure where to put some logic
-- [ ] Integrates with external systems
+Read flow examples:
 
-### Before Writing Code
+- RDB -> `FocusStore.refresh()` -> page state copy -> ArkUI builders.
+- Preferences -> settings service -> `focusStore.settings` -> page state.
+- Ability Want params -> AppStorage keys -> `FocusSolo`.
 
-Use [Pre-Implementation Checklist](./pre-implementation-checklist.md) when:
+Write flow examples:
 
-- [ ] About to add a constant or config value
-- [ ] About to implement new logic
-- [ ] About to define a type
-- [ ] About to create a component
-- [ ] Feels like you've seen similar code before
-
-### After Fixing Bugs
-
-Use [Bug Root Cause Analysis](./bug-root-cause-thinking-guide.md) when:
-
-- [ ] Just fixed a bug that took >30 minutes to debug
-- [ ] Bug involved unexpected library behavior
-- [ ] Bug involved assumptions about function behavior
-- [ ] Similar bugs have occurred before
-
-### Code Organization
-
-Use [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md) when:
-
-- [ ] You're writing similar code to something that exists
-- [ ] You see the same pattern repeated 3+ times
-- [ ] You're adding a new field to multiple places
-- [ ] **You're creating a new utility/helper function** (search first!)
-
-### Database Changes
-
-Use [DB Schema Change Guide](./db-schema-change-guide.md) when:
-
-- [ ] Modifying database schema
-- [ ] Changing column types
-- [ ] Adding/removing columns
-- [ ] Deployed code expects different data format than DB has
-
-### Semantic Changes
-
-Use [Semantic Change Checklist](./semantic-change-checklist.md) when:
-
-- [ ] Changing what a field value **means** (not just adding new values)
-- [ ] Changing timestamp units (seconds vs milliseconds)
-- [ ] Removing or redefining enum values
-- [ ] Changing how null/undefined/default is interpreted
-
-### Data Consistency
-
-Use [Transaction Consistency Guide](./transaction-consistency-guide.md) when:
-
-- [ ] Implementing writes that touch multiple tables
-- [ ] Data appears in database but not in UI
-- [ ] Building event-sourced or CQRS patterns
+- ArkUI action -> `FocusStore` mutation -> RDB write -> refresh -> page state copy.
+- ArkUI settings change -> Preferences service save -> normalized result -> store/page state.
+- Remote AI action -> explicit remote status/advice -> no local task writes unless the user triggers a local `FocusStore` mutation.
 
 ---
 
-## The Pre-Modification Rule (CRITICAL)
+## Quick Reference
 
-> **Before changing ANY value, ALWAYS search first!**
+Use cross-layer thinking when:
 
-```bash
-# Search for the value you're about to change
-rg "value_to_change" --type ts
+- A feature touches 3+ layers, such as ArkUI + `FocusStore` + RDB.
+- Data format changes between RDB JSON strings and ArkTS arrays.
+- Want/AppStorage handoff changes for `FocusAbility`.
+- Runtime settings, AI settings, or notification/background behavior changes.
 
-# Check how many files define this value
-rg "CONFIG_NAME" --type ts -c
-```
+Use the pre-implementation checklist when:
 
-This single habit prevents most "forgot to update X" bugs.
+- Adding constants or design tokens.
+- Creating a new ArkUI builder or reusable style helper.
+- Changing task/resource/Pomodoro status handling.
+- Adding generated or cropped media resources.
+
+Use code reuse thinking when:
+
+- Similar ArkUI cards, chips, metrics, or image styles repeat.
+- The same colors, spacing, or text formatting appear in multiple files.
+- A formatter can move into `FocusFormatters.ets` or a design value into `FocusDesignTokens.ets`.
+
+Use DB/semantic/transaction guides when:
+
+- RDB schema, task status, Pomodoro duration, resource content, or timestamp meaning changes.
+- A write touches both a task/resource row and a Pomodoro/resource insight update.
 
 ---
 
-## Electron-Specific Layers
+## Pre-Modification Rule
 
-In Electron + React + SQLite projects, these are the typical layers:
+Before changing any value or pattern, search first:
 
-```
-UI Layer (React Components)
-        |
-        v
-State Layer (React Hooks, Context, Store)
-        |
-        v
-IPC Layer (preload scripts, contextBridge)
-        |
-        v
-Main Process (Electron main, handlers)
-        |
-        v
-Database Layer (SQLite, ORM like Drizzle/Prisma)
+```powershell
+rg "value_to_change" entry/src/main/ets
+rg "builder_or_token_name" entry/src/main/ets
 ```
 
-Each boundary is a potential source of bugs due to:
-
-- **Type mismatches** - Types may not match across IPC
-- **Format differences** - Dates, IDs, nulls handled differently
-- **Async timing** - IPC is async, state updates are async
-- **Serialization** - Only serializable data crosses IPC boundary
+This prevents split-brain UI behavior, duplicated constants, and missed local-first write paths.
 
 ---
 
 ## Core Principles
 
-1. **Search Before Write** - Always search for existing patterns before creating new ones
-2. **Think Before Code** - 5 minutes of checklist saves 50 minutes of debugging
-3. **Document Assumptions** - Make implicit assumptions explicit
-4. **Verify All Layers** - Changes often need updates in multiple places
-5. **Learn From Bugs** - Add lessons to these guides after fixing non-trivial bugs
-
----
-
-## Contributing
-
-Found a new "didn't think of that" moment? Add it:
-
-1. If it's a **general thinking pattern** -> Add to existing guide or create new one
-2. If it caused a bug -> Add to "Lessons Learned" section in the relevant guide
-3. If it's **project-specific** -> Create a separate project-specific guide
+1. **Search Before Write** - prefer existing ArkUI builders, tokens, services, and media resources.
+2. **Think Before Code** - decide which layers read/write the value before editing.
+3. **Preserve Local-First** - backend and remote AI must not block tasks, Pomodoros, resources, or settings.
+4. **Verify All Layers** - changes often require ArkUI, service, RDB/Preferences, and Ability checks.
+5. **Capture Learnings** - update `.trellis/spec/` when a new project-specific rule appears.
 
 ---
 

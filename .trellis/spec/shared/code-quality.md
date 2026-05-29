@@ -1,6 +1,6 @@
 # Code Quality Guidelines
 
-> Mandatory code quality rules for all Electron applications.
+Mandatory code quality rules for this HarmonyOS ArkTS app. Legacy Electron examples below are generic TypeScript examples only; project-specific build and UI rules live in `frontend/harmony-focus-local-first.md`.
 
 ---
 
@@ -51,15 +51,13 @@ function parseJSON(input: string): unknown {
 
 ---
 
-## Lint and Type Check Before Commit
+## Build and Check Before Commit
 
-```bash
-# MUST pass before every commit
-npm run lint
-npm run typecheck
+For ArkTS/resource changes, run the Harmony build command documented in `.trellis/spec/frontend/index.md`, plus `git diff --check`.
 
-# Or combined
-npm run lint && npm run typecheck
+```powershell
+& 'C:\Program Files\Huawei\DevEco Studio\tools\hvigor\bin\hvigorw.bat' --mode module -p module=entry assembleHap
+git diff --check
 ```
 
 ---
@@ -70,12 +68,12 @@ npm run lint && npm run typecheck
 
 | Type            | Convention                  | Example                     |
 | --------------- | --------------------------- | --------------------------- |
-| React Component | PascalCase                  | `UserProfile.tsx`           |
-| Hook            | camelCase with `use` prefix | `useProject.ts`             |
-| Utility         | kebab-case                  | `date-utils.ts`             |
-| Type file       | kebab-case or `types.ts`    | `types.ts`, `user-types.ts` |
-| Test file       | Same name + `.test`         | `date-utils.test.ts`        |
-| Directory       | kebab-case                  | `user-profile/`             |
+| ArkUI page/component | PascalCase `.ets`          | `FocusSolo.ets`             |
+| Service/repository   | PascalCase `.ets`          | `FocusStore.ets`            |
+| Utility              | PascalCase or domain name  | `FocusFormatters.ets`       |
+| Model file           | PascalCase domain name     | `FocusModels.ets`           |
+| Test file            | Same name + `.test`        | `LocalUnit.test.ets`        |
+| Directory            | Existing Harmony structure | `pages/`, `services/`       |
 
 ### Variables and Functions
 
@@ -225,8 +223,8 @@ it('should create a project', async () => {
 | ----------------------- | ------------------- |
 | No `!` assertions       | Runtime errors      |
 | No `any` type           | Type safety         |
-| Lint before commit      | Consistent code     |
-| Typecheck before commit | Catch type errors   |
+| Build before completion | Catch ArkTS/resource errors |
+| Diff check before commit | Catch whitespace issues |
 | Semantic naming         | Readability         |
 | Structured errors       | Consistent handling |
 | Never swallow errors    | Debuggability       |

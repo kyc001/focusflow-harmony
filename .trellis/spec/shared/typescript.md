@@ -1,6 +1,6 @@
-# TypeScript Best Practices
+# ArkTS / TypeScript Best Practices
 
-> TypeScript guidelines for Electron applications.
+TypeScript-style guidelines for this HarmonyOS ArkTS app. Prefer the codebase's existing ArkTS-compatible patterns over web/Electron-only TypeScript advice.
 
 ---
 
@@ -27,70 +27,49 @@ export async function getUser(id: string): Promise<User | undefined> {
 
 ---
 
-## Use `type` for Object Types
+## Object Types
 
 ```typescript
-// Use type for most cases
-type User = {
+// Use interface for project models and service contracts
+interface FocusTask {
   id: string;
-  name: string;
-  email: string;
-};
-
-// Use interface when you expect extension
-interface Plugin {
-  name: string;
-  init(): void;
+  title: string;
 }
 
-interface AdvancedPlugin extends Plugin {
-  cleanup(): void;
-}
+// Use type for local unions or aliases
+type SaveState = 'idle' | 'saving' | 'failed';
 ```
 
 ---
 
-## Type Imports
+## Imports
 
-Always use `import type` for type-only imports:
+Use imports that the ArkTS build accepts. When a file exports both runtime values and type declarations, a normal named import is acceptable and matches the current codebase.
 
 ```typescript
-// GOOD
-import type { User, Project } from './types';
-import { createUser } from './procedures';
+// Good in this project when ArkTS accepts it
+import { FocusSettings } from '../models/FocusModels';
+import { focusSettingsService } from '../services/FocusSettingsService';
 
-// Also acceptable
-import { type User, createUser } from './types';
-
-// BAD - Mixed imports without type annotation
-import { User, createUser } from './types';
+// Also fine when supported by the current ArkTS compiler
+import type { FocusSettings } from '../models/FocusModels';
 ```
+
+Do not introduce a new import style just for preference. Follow nearby files unless the build or linter requires a change.
 
 ---
 
-## Zod Schema for Runtime Validation
+## Runtime Validation
 
-Use Zod for all external data validation:
+Use the project's existing validation/fallback style for runtime data. Do not add Zod or another validation dependency unless the task explicitly introduces that dependency and the Harmony build supports it.
 
 ```typescript
-import { z } from 'zod';
-
-// Define schema
-const userInputSchema = z.object({
-  name: z.string().min(1).max(100),
-  email: z.string().email(),
-  age: z.number().int().min(0).optional(),
-});
-
-// Derive type from schema
-type UserInput = z.infer<typeof userInputSchema>;
-
-// Validate input
-const parseResult = userInputSchema.safeParse(rawInput);
-if (!parseResult.success) {
-  return { success: false, error: parseResult.error.issues[0].message };
+function normalizeFocusMinutes(value: number, fallback: number): number {
+  if (Number.isNaN(value)) {
+    return fallback;
+  }
+  return Math.max(10, Math.min(60, value));
 }
-const validInput = parseResult.data;
 ```
 
 ---
@@ -247,8 +226,8 @@ doSomething(validArg);
 | Practice              | Reason                      |
 | --------------------- | --------------------------- |
 | Explicit return types | Documentation, catch errors |
-| `import type`         | Clear separation            |
-| Zod for validation    | Runtime type safety         |
+| Import style follows ArkTS build | Avoid unsupported syntax |
+| Explicit validation/fallbacks | Runtime safety |
 | `=== true` for unions | Proper narrowing            |
 | Type guards           | Runtime checks              |
 | Generics              | Reusability                 |

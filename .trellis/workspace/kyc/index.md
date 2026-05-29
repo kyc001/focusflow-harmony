@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 5
-- **Last Active**: 2026-05-29
+- **Total Sessions**: 6
+- **Last Active**: 2026-05-30
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~173 | Active |
+| `journal-1.md` | ~209 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 6 | 2026-05-30 | Course thesis deep rewrite | `46c6ea5` | `master` |
 | 5 | 2026-05-29 | Polish FocusSolo and Harmony specs | `f39d8e9`, `ea9f8bd` | `master` |
 | 4 | 2026-05-27 | AI Focus Coach and asset polish | `cdb1a70` | `master` |
 | 3 | 2026-05-25 | Focus detailed design document | `c28be72` | `master` |

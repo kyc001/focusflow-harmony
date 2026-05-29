@@ -171,3 +171,39 @@ Redesigned the standalone FocusSolo page with local assets, saved focus settings
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: Course thesis deep rewrite
+
+**Date**: 2026-05-30
+**Task**: Course thesis deep rewrite
+**Branch**: `master`
+
+### Summary
+
+Rewrote the mobile app development course report into a fuller NKU thesis-style document and validated the LaTeX build.
+
+### Main Changes
+
+﻿- Rewrote the NKU-format course thesis in `report/nku-thesis-template-2020` with a fuller graduation-thesis-style structure while keeping the course context explicit.
+- Generated and checked the LaTeX output: `main.pdf` is 23 pages, with the PDF artifact intentionally left ignored.
+- Captured validation results for the xelatex/biber chain, word-count target, diff whitespace check, secret scan, and stale wording scan.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `46c6ea5` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

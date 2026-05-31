@@ -1,32 +1,23 @@
-CREATE DATABASE IF NOT EXISTS focus_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE focus_db;
-
-DROP TABLE IF EXISTS sync_changes;
-DROP TABLE IF EXISTS pomodoros;
-DROP TABLE IF EXISTS tasks;
-DROP TABLE IF EXISTS projects;
-DROP TABLE IF EXISTS users;
-
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(32) NOT NULL UNIQUE,
   password_hash VARCHAR(128) NOT NULL,
   nickname VARCHAR(32) NOT NULL,
   created_at BIGINT NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+);
 
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT NOT NULL,
   name VARCHAR(64) NOT NULL,
   color VARCHAR(16) NOT NULL,
   icon VARCHAR(16) NOT NULL,
   updated_at BIGINT NOT NULL,
-  is_deleted TINYINT NOT NULL DEFAULT 0,
-  INDEX idx_projects_user_updated (user_id, updated_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  is_deleted TINYINT NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_projects_user_updated ON projects (user_id, updated_at);
 
-CREATE TABLE tasks (
+CREATE TABLE IF NOT EXISTS tasks (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT NOT NULL,
   title VARCHAR(128) NOT NULL,
@@ -42,12 +33,12 @@ CREATE TABLE tasks (
   is_deleted TINYINT NOT NULL DEFAULT 0,
   client_request_id VARCHAR(64),
   tags_json TEXT,
-  subtasks_json TEXT,
-  INDEX idx_tasks_user_updated (user_id, updated_at),
-  INDEX idx_tasks_user_status (user_id, status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  subtasks_json TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_tasks_user_updated ON tasks (user_id, updated_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON tasks (user_id, status);
 
-CREATE TABLE pomodoros (
+CREATE TABLE IF NOT EXISTS pomodoros (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   user_id BIGINT NOT NULL,
   task_id BIGINT,
@@ -56,23 +47,34 @@ CREATE TABLE pomodoros (
   completed TINYINT NOT NULL,
   interrupt_reason VARCHAR(128),
   updated_at BIGINT NOT NULL,
-  client_request_id VARCHAR(64),
-  INDEX idx_pomodoros_user_start (user_id, start_at),
-  INDEX idx_pomodoros_user_updated (user_id, updated_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  client_request_id VARCHAR(64)
+);
+CREATE INDEX IF NOT EXISTS idx_pomodoros_user_start ON pomodoros (user_id, start_at);
+CREATE INDEX IF NOT EXISTS idx_pomodoros_user_updated ON pomodoros (user_id, updated_at);
 
-INSERT INTO users (username, password_hash, nickname, created_at)
-VALUES ('demo', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'Focus Demo', UNIX_TIMESTAMP() * 1000);
+INSERT INTO users (id, username, password_hash, nickname, created_at)
+SELECT 1, 'demo', '2bb80d537b1da3e38bd30361aa855686bde0eacd7162fef6a25fe97bf527a25b', 'Focus Demo', DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP())
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 1);
 
-INSERT INTO projects (user_id, name, color, icon, updated_at, is_deleted) VALUES
-(1, '数据库', '#4F7BFF', 'DB', UNIX_TIMESTAMP() * 1000, 0),
-(1, '科研', '#12A87D', 'R', UNIX_TIMESTAMP() * 1000, 0),
-(1, '协程演讲', '#F59E0B', 'P', UNIX_TIMESTAMP() * 1000, 0),
-(1, '移动开发', '#E4566E', 'A', UNIX_TIMESTAMP() * 1000, 0);
+INSERT INTO projects (id, user_id, name, color, icon, updated_at, is_deleted)
+SELECT 1, 1, '数据库', '#4F7BFF', 'DB', DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()), 0
+WHERE NOT EXISTS (SELECT 1 FROM projects WHERE id = 1);
+INSERT INTO projects (id, user_id, name, color, icon, updated_at, is_deleted)
+SELECT 2, 1, '科研', '#12A87D', 'R', DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()), 0
+WHERE NOT EXISTS (SELECT 1 FROM projects WHERE id = 2);
+INSERT INTO projects (id, user_id, name, color, icon, updated_at, is_deleted)
+SELECT 3, 1, '协程演讲', '#F59E0B', 'P', DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()), 0
+WHERE NOT EXISTS (SELECT 1 FROM projects WHERE id = 3);
+INSERT INTO projects (id, user_id, name, color, icon, updated_at, is_deleted)
+SELECT 4, 1, '移动开发', '#E4566E', 'A', DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()), 0
+WHERE NOT EXISTS (SELECT 1 FROM projects WHERE id = 4);
 
-INSERT INTO tasks (user_id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, is_deleted)
-VALUES
-(1, '完成 HW4 实验报告复盘', '整理接口、页面和测试截图。', 4, 0, UNIX_TIMESTAMP() * 1000 + 14400000, 0, 1, UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 0, 0),
-(1, '数据库索引章节总结', '复习 B+ 树和查询优化。', 1, 1, UNIX_TIMESTAMP() * 1000 + 86400000, 0, 2, UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 0, 0),
-(1, '协程演讲 Demo 排练', '控制在 6 分钟内。', 3, 2, UNIX_TIMESTAMP() * 1000 + 172800000, 0, 0, UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 0, 0);
-
+INSERT INTO tasks (id, user_id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, is_deleted, tags_json, subtasks_json)
+SELECT 1, 1, '完成 HW4 实验报告复盘', '整理接口、页面和测试截图。', 4, 0, DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()) + 14400000, 0, 1, DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()), DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()), 0, 0, '["报告","高优"]', '["补充架构图","标注关键代码"]'
+WHERE NOT EXISTS (SELECT 1 FROM tasks WHERE id = 1);
+INSERT INTO tasks (id, user_id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, is_deleted, tags_json, subtasks_json)
+SELECT 2, 1, '数据库索引章节总结', '复习 B+ 树和查询优化。', 1, 1, DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()) + 86400000, 0, 2, DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()), DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()), 0, 0, '["期末","笔记"]', '["画一张思维导图"]'
+WHERE NOT EXISTS (SELECT 1 FROM tasks WHERE id = 2);
+INSERT INTO tasks (id, user_id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, is_deleted, tags_json, subtasks_json)
+SELECT 3, 1, '协程演讲 Demo 排练', '控制在 6 分钟内。', 3, 2, DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()) + 172800000, 0, 0, DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()), DATEDIFF('MILLISECOND', TIMESTAMP '1970-01-01 00:00:00', CURRENT_TIMESTAMP()), 0, 0, '["展示"]', '["检查录屏","压缩 PPT"]'
+WHERE NOT EXISTS (SELECT 1 FROM tasks WHERE id = 3);

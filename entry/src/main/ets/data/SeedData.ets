@@ -117,9 +117,9 @@ export function createSeedStudyResources(): StudyResource[] {
       sourceType: 'note',
       projectId: 4,
       linkedTaskId: 1,
-      content: '老师要求课程项目一般要有 4-5 个页面，每个页面都要有实在功能。如果能连接服务器，服务器端再连接数据库，会更好。',
-      summary: '项目需要体现多页面、真实功能、本地数据库、可选服务器和课程知识点。',
-      keyPoints: ['4-5 个真实页面', '本地数据库闭环', '可选服务器加分'],
+      content: '老师要求课程项目一般要有 4-5 个页面，每个页面都要有实在功能，并展示前端、服务器、数据库的数据闭环。',
+      summary: '项目需要体现多页面、真实功能、本地数据库、后端数据库联调和课程知识点。',
+      keyPoints: ['4-5 个真实页面', '本地数据库闭环', '后端数据库联调'],
       tags: ['课程要求', '答辩'],
       status: StudyResourceStatus.ACTIVE,
       createdAt: now - 2 * ONE_DAY,
@@ -165,7 +165,7 @@ export function createDefaultSettings(): FocusSettings {
     shortBreakMinutes: 5,
     longBreakMinutes: 15,
     themeColor: '#2F6BFF',
-    noise: '雨声',
+    noise: 'ocean',
     notificationEnabled: true
   };
 }

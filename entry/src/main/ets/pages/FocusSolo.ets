@@ -1,5 +1,6 @@
 import { common } from '@kit.AbilityKit';
 import { FocusSettings } from '../models/FocusModels';
+import { ambientDisplayName, focusAmbientService, normalizeAmbientType } from '../services/FocusAmbientService';
 import { focusDatabase } from '../services/FocusDatabase';
 import { FocusBackgroundService, FocusNotificationService } from '../services/FocusNativeServices';
 import { focusSettingsService } from '../services/FocusSettingsService';
@@ -34,6 +35,7 @@ struct FocusSolo {
   @State remainingSeconds: number = DEFAULT_FOCUS_SECONDS;
   @State running: boolean = false;
   @State message: string = '独立 FocusAbility 已就绪';
+  @State ambientNoise: string = 'ocean';
   private timerId: number = -1;
 
   aboutToAppear() {
@@ -74,6 +76,9 @@ struct FocusSolo {
     }
     this.running = true;
     this.message = FocusBackgroundService.startPomodoroGuard();
+    focusAmbientService.play(this.ambientNoise, getContext(this) as common.UIAbilityContext).catch(() => {
+      this.message = `${ambientDisplayName(this.ambientNoise)} 启动失败，计时继续`;
+    });
     this.timerId = setInterval(() => {
       if (this.remainingSeconds <= 1) {
         this.finish();
@@ -94,6 +99,9 @@ struct FocusSolo {
   private stop(): void {
     this.pause();
     FocusBackgroundService.stopPomodoroGuard();
+    focusAmbientService.stop().catch(() => {
+      this.message = '白噪音停止失败，计时状态已结束';
+    });
   }
 
   private finish(): void {
@@ -127,6 +135,7 @@ struct FocusSolo {
   private applyFocusSettings(settings: FocusSettings): void {
     const focusMinutes: number = Math.max(10, Math.min(60, settings.focusMinutes));
     this.focusSeconds = focusMinutes * 60;
+    this.ambientNoise = normalizeAmbientType(settings.noise);
     if (!this.running) {
       this.remainingSeconds = this.focusSeconds;
     }
@@ -202,6 +211,7 @@ struct FocusSolo {
         Row() {
           this.InfoChip('本地番茄记录')
           this.InfoChip(`${Math.round(this.focusSeconds / 60)} 分钟节奏`)
+          this.InfoChip(ambientDisplayName(this.ambientNoise))
         }
         .width('100%')
         .margin({ top: 14 })

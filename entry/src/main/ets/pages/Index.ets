@@ -4,7 +4,13 @@ import http from '@ohos.net.http';
 import webview from '@ohos.web.webview';
 import { authRepository, LoginProfile } from '../repository/AuthRepository';
 import { focusAiCoachService } from '../services/FocusAiCoachService';
-import { focusAmbientService, AmbientType } from '../services/FocusAmbientService';
+import {
+  AMBIENT_OPTIONS,
+  AmbientOption,
+  ambientDisplayName,
+  focusAmbientService,
+  normalizeAmbientType
+} from '../services/FocusAmbientService';
 import { focusDatabase } from '../services/FocusDatabase';
 import { focusSettingsService } from '../services/FocusSettingsService';
 import { focusStore } from '../services/FocusStore';
@@ -136,11 +142,11 @@ struct Index {
   @State viewportWidth: number = 390;
   @State pulseOn: boolean = false;
   @State aiAdvice: AiCoachAdvice = {
-    source: '未配置 AI',
-    headline: '配置远程 AI 后获取学习建议',
-    nextAction: '打开 AI 设置，填写 endpoint、model 和 API Key。',
-    sessionPlan: '等待远程 AI 返回安排',
-    risk: '当前不会生成替代建议。',
+    source: '远程 AI',
+    headline: '联网 AI 已接入，刷新后生成学习建议',
+    nextAction: '选择一个任务并点击刷新建议。',
+    sessionPlan: '根据当前任务、番茄记录和资料状态生成安排',
+    risk: '若网络不可用会显示远程请求状态。',
     estimatedMinutes: 0,
     confidence: 0,
     generatedAt: Date.now()
@@ -150,7 +156,7 @@ struct Index {
   @State aiModelInput: string = '';
   @State aiApiKeyInput: string = '';
   @State aiLoading: boolean = false;
-  @State aiSettingsMessage: string = '配置远程 AI 后使用智能建议';
+  @State aiSettingsMessage: string = '远程 AI 默认联网接入';
   @State focusSettingsMessage: string = '时长与白噪音会自动保存到本机';
   @State newResourceTitle: string = '';
   @State newResourceContent: string = '';
@@ -162,7 +168,7 @@ struct Index {
   @State selectedResourceId: number = 0;
   @State resourceLoading: boolean = false;
   @State pickedFileUri: string = '';
-  @State resourceMessage: string = '资料会保存到本地 RDB，可选 AI 提炼';
+  @State resourceMessage: string = '资料保存到本地 RDB，并可直接联网 AI 提炼';
   @State latestResourceInsight: ResourceInsight = {
     source: '未提炼',
     summary: '选择一份资料后，可使用远程 AI 生成摘要、要点和下一步任务。',
@@ -219,7 +225,7 @@ struct Index {
   private applyProfile(profile: LoginProfile): void {
     this.isAuthed = true;
     this.currentNickname = profile.nickname;
-    this.currentModeText = profile.guest ? '游客模式 / 仅本地' : '本地账户 / 可选同步';
+    this.currentModeText = profile.guest ? '游客模式 / 本地演示' : '本地账户 / 后端同步';
     AppStorage.setOrCreate<string>('auth.nickname', profile.nickname);
     AppStorage.setOrCreate<boolean>('auth.guest', profile.guest);
   }
@@ -278,8 +284,15 @@ struct Index {
   }
 
   private updateNoiseSetting(noise: string): void {
-    this.settings.noise = noise;
-    this.persistFocusSettings(`白噪音已切换为 ${noise}`).catch(() => {
+    const normalizedNoise: string = normalizeAmbientType(noise);
+    this.settings.noise = normalizedNoise;
+    const displayName: string = ambientDisplayName(normalizedNoise);
+    if (this.timerStatus === PomodoroStatus.RUNNING) {
+      focusAmbientService.play(normalizedNoise, getContext(this) as common.UIAbilityContext).catch(() => {
+        this.focusSettingsMessage = `${displayName} 已保存，当前播放启动失败`;
+      });
+    }
+    this.persistFocusSettings(`白噪音已切换为 ${displayName}`).catch(() => {
       this.focusSettingsMessage = '白噪音已在本次会话生效，暂未写入本机';
     });
   }
@@ -290,7 +303,7 @@ struct Index {
     this.aiEndpointInput = settings.endpoint;
     this.aiModelInput = settings.model;
     this.aiApiKeyInput = '';
-    this.aiSettingsMessage = settings.apiKey.length > 0 ? 'AI 已配置' : '未配置 AI';
+    this.aiSettingsMessage = settings.apiKey.length > 0 ? 'AI 已配置' : 'AI Key 待确认';
   }
 
   private async refreshAiCoach(useRemote: boolean): Promise<void> {
@@ -310,7 +323,7 @@ struct Index {
         );
         this.aiSettingsMessage = 'AI 建议已更新';
       } else {
-        this.aiSettingsMessage = '请启用远程 AI 后刷新建议';
+        this.aiSettingsMessage = '远程 AI 已默认接入，请直接刷新建议';
       }
     } catch (err) {
       this.aiSettingsMessage = 'AI 请求失败，请检查接口地址或服务状态';
@@ -559,7 +572,7 @@ struct Index {
     if (this.aiSettings.enabled) {
       return '远程 AI 缺少 Key';
     }
-    return '远程 AI 未启用';
+    return '远程 AI 待开启';
   }
 
   private switchResourceWorkspace(mode: string): void {
@@ -803,7 +816,7 @@ struct Index {
     this.timerStatus = PomodoroStatus.RUNNING;
     this.serviceMessage = FocusBackgroundService.startPomodoroGuard();
     this.startTicker();
-    focusAmbientService.play(this.settings.noise as AmbientType, getContext(this) as common.UIAbilityContext).catch((err: Error) => {
+    focusAmbientService.play(this.settings.noise, getContext(this) as common.UIAbilityContext).catch((err: Error) => {
       console.error(`[Index] Failed to play ambient: ${JSON.stringify(err)}`);
     });
   }
@@ -1270,7 +1283,7 @@ struct Index {
               this.doGuestLogin();
             })
 
-          Text('核心数据保存在端侧 RDB / Preferences，后端同步是可选扩展。')
+          Text('核心数据保存在端侧 RDB / Preferences，并可与 Spring Boot 后端数据库同步。')
             .fontSize(11)
             .fontColor(TEXT_MUTED)
             .lineHeight(16)
@@ -3302,14 +3315,14 @@ struct Index {
             .fontSize(15)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
-          Text('启用远程模型后生成学习建议')
+          Text('默认联网模型生成学习建议')
             .fontSize(11)
             .fontColor(TEXT_MUTED)
             .margin({ top: 2 })
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
-        Text(this.aiSettings.enabled ? '远程开' : '未启用')
+        Text(this.aiSettings.enabled ? '远程开' : '待开启')
           .fontSize(11)
           .fontColor(this.aiSettings.enabled ? VIOLET : TEXT_MUTED)
           .padding({ left: 9, right: 9, top: 5, bottom: 5 })
@@ -3471,23 +3484,36 @@ struct Index {
         .margin({ top: 2 })
 
       Flex({ wrap: FlexWrap.Wrap }) {
-        ForEach(['雨声', '咖啡馆', '键盘', '白噪声'], (noise: string) => {
-          Text(noise)
-            .height(32)
-            .fontSize(12)
-            .fontWeight(this.settings.noise === noise ? FontWeight.Medium : FontWeight.Normal)
-            .fontColor(this.settings.noise === noise ? '#FFFFFF' : TEXT_SUB)
-            .backgroundColor(this.settings.noise === noise ? ACCENT : SURFACE_ALT)
-            .borderRadius(10)
-            .padding({ left: 14, right: 14 })
-            .margin({ right: 8, top: 12 })
-            .onClick(() => {
-              this.updateNoiseSetting(noise);
-            })
-        }, (noise: string) => noise)
+        ForEach(AMBIENT_OPTIONS, (option: AmbientOption) => {
+          Column() {
+            Text(option.label)
+              .fontSize(12)
+              .fontWeight(normalizeAmbientType(this.settings.noise) === option.id ? FontWeight.Bold : FontWeight.Medium)
+              .fontColor(normalizeAmbientType(this.settings.noise) === option.id ? '#FFFFFF' : TEXT_MAIN)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            Text(option.description)
+              .fontSize(10)
+              .fontColor(normalizeAmbientType(this.settings.noise) === option.id ? '#E6FFFFFF' : TEXT_MUTED)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .margin({ top: 2 })
+          }
+          .height(48)
+          .width(112)
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
+          .backgroundColor(normalizeAmbientType(this.settings.noise) === option.id ? ACCENT : SURFACE_ALT)
+          .borderRadius(10)
+          .padding({ left: 8, right: 8 })
+          .margin({ right: 8, top: 12 })
+          .onClick(() => {
+            this.updateNoiseSetting(option.id);
+          })
+        }, (option: AmbientOption) => option.id)
       }
       .width('100%')
-      Text('AVPlayer 集成入口已预留，演示时可解释为本地 rawfile 音频播放。')
+      Text(`当前音景：${ambientDisplayName(this.settings.noise)}。开始专注后使用 AVPlayer 循环播放 rawfile 本地音频。`)
         .fontSize(11)
         .fontColor(TEXT_MUTED)
         .lineHeight(16)

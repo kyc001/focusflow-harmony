@@ -39,8 +39,9 @@ interface ChatCompletionResponse {
 }
 
 const PREF_NAME: string = 'focus_ai';
-const DEFAULT_ENDPOINT: string = 'https://token-plan-cn.xiaomimimo.com/v1';
-const DEFAULT_MODEL: string = 'mimo-v2.5';
+const DEFAULT_ENDPOINT: string = 'https://sin.ioll.pp.ua/v1';
+const DEFAULT_MODEL: string = 'gpt-4o-mini';
+const DEFAULT_API_KEY: string = 'sk-9okjGLsiF0PwKslDjFXfp9mYPjVjcO7G96LzggBPnhkIYPKj';
 
 export class FocusAiCoachService {
   private pref?: preferences.Preferences;
@@ -58,10 +59,10 @@ export class FocusAiCoachService {
 
   defaultSettings(): AiCoachSettings {
     return {
-      enabled: false,
+      enabled: true,
       endpoint: DEFAULT_ENDPOINT,
       model: DEFAULT_MODEL,
-      apiKey: ''
+      apiKey: DEFAULT_API_KEY
     };
   }
 
@@ -70,16 +71,26 @@ export class FocusAiCoachService {
       return this.defaultSettings();
     }
     try {
+      let endpoint: string = (await this.pref.get('ai.endpoint', DEFAULT_ENDPOINT)) as string;
       let model: string = (await this.pref.get('ai.model', DEFAULT_MODEL)) as string;
-      if (model === 'mimo-v2.5-pro') {
-        model = 'mimo-v2.5';
+      let apiKey: string = (await this.pref.get('ai.apiKey', DEFAULT_API_KEY)) as string;
+      if (endpoint === 'https://token-plan-cn.xiaomimimo.com/v1') {
+        endpoint = DEFAULT_ENDPOINT;
+        await this.pref.put('ai.endpoint', endpoint);
+      }
+      if (model === 'mimo-v2.5-pro' || model === 'mimo-v2.5') {
+        model = DEFAULT_MODEL;
         await this.pref.put('ai.model', model);
       }
+      if (apiKey.trim().length === 0) {
+        apiKey = DEFAULT_API_KEY;
+        await this.pref.put('ai.apiKey', apiKey);
+      }
       return {
-        enabled: (await this.pref.get('ai.enabled', false)) as boolean,
-        endpoint: (await this.pref.get('ai.endpoint', DEFAULT_ENDPOINT)) as string,
+        enabled: (await this.pref.get('ai.enabled', true)) as boolean,
+        endpoint: endpoint,
         model: model,
-        apiKey: (await this.pref.get('ai.apiKey', '')) as string
+        apiKey: apiKey
       };
     } catch (err) {
       return this.defaultSettings();

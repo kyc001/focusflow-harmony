@@ -3,6 +3,12 @@ import { common } from '@kit.AbilityKit';
 
 export type AmbientType = 'none' | 'outdoor' | 'ocean' | 'cricket';
 
+export interface AmbientOption {
+  id: AmbientType;
+  label: string;
+  description: string;
+}
+
 interface AmbientFileMap {
   none: string;
   outdoor: string;
@@ -16,6 +22,32 @@ const AMBIENT_FILES: AmbientFileMap = {
   ocean: '海边.mp3',
   cricket: '虫鸣.mp3'
 };
+
+export const AMBIENT_OPTIONS: AmbientOption[] = [
+  { id: 'ocean', label: '海边', description: '稳定海浪声' },
+  { id: 'outdoor', label: '室外', description: '轻环境底噪' },
+  { id: 'cricket', label: '虫鸣', description: '夜间低频陪伴' },
+  { id: 'none', label: '关闭', description: '安静专注' }
+];
+
+export function normalizeAmbientType(value: string): AmbientType {
+  if (value === 'outdoor' || value === '室外' || value === '雨声' || value === '咖啡馆' || value === '白噪声') {
+    return 'outdoor';
+  }
+  if (value === 'ocean' || value === '海边') {
+    return 'ocean';
+  }
+  if (value === 'cricket' || value === '虫鸣' || value === '键盘') {
+    return 'cricket';
+  }
+  return 'none';
+}
+
+export function ambientDisplayName(value: string): string {
+  const type: AmbientType = normalizeAmbientType(value);
+  const option: AmbientOption | undefined = AMBIENT_OPTIONS.find((item: AmbientOption) => item.id === type);
+  return option === undefined ? '关闭' : option.label;
+}
 
 function ambientFileName(type: AmbientType): string {
   if (type === 'outdoor') {
@@ -35,17 +67,18 @@ export class FocusAmbientService {
   private currentType: AmbientType = 'none';
   private isPlaying: boolean = false;
 
-  async play(type: AmbientType, context: common.UIAbilityContext): Promise<void> {
-    if (type === 'none') {
+  async play(type: AmbientType | string, context: common.UIAbilityContext): Promise<void> {
+    const normalizedType: AmbientType = normalizeAmbientType(type);
+    if (normalizedType === 'none') {
       await this.stop();
       return;
     }
-    if (this.isPlaying && this.currentType === type) {
+    if (this.isPlaying && this.currentType === normalizedType) {
       return;
     }
     await this.stop();
-    this.currentType = type;
-    const fileName: string = ambientFileName(type);
+    this.currentType = normalizedType;
+    const fileName: string = ambientFileName(normalizedType);
     if (fileName.length === 0) {
       return;
     }

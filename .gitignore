@@ -10,3 +10,5 @@
 /.clang-tidy
 **/.test
 /.appanalyzer
+focus-server/data/
+focus-server/backend-smoke.*.log

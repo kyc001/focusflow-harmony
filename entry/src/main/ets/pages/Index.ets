@@ -4,9 +4,11 @@ import http from '@ohos.net.http';
 import webview from '@ohos.web.webview';
 import { authRepository, LoginProfile } from '../repository/AuthRepository';
 import { focusAiCoachService } from '../services/FocusAiCoachService';
+import { focusAmbientService, AmbientType } from '../services/FocusAmbientService';
 import { focusDatabase } from '../services/FocusDatabase';
 import { focusSettingsService } from '../services/FocusSettingsService';
 import { focusStore } from '../services/FocusStore';
+import { focusSyncService } from '../services/FocusSyncService';
 import { FocusBackgroundService, FocusNotificationService } from '../services/FocusNativeServices';
 import {
   focusStateText as formatFocusStateText,
@@ -173,8 +175,12 @@ struct Index {
   @State showResourceDetail: boolean = false;
   @State showReviewDetail: boolean = false;
   @State showSettingsDetail: boolean = false;
+  @State showSyncDetail: boolean = false;
   @State aiLastRefreshTime: number = 0;
   @State showAiSettingsDialog: boolean = false;
+  @State syncUsername: string = '';
+  @State syncPassword: string = '';
+  @State syncStatus: string = '';
   @State aiModelList: string[] = [];
   @State aiModelLoading: boolean = false;
   private timerId: number = -1;
@@ -797,6 +803,9 @@ struct Index {
     this.timerStatus = PomodoroStatus.RUNNING;
     this.serviceMessage = FocusBackgroundService.startPomodoroGuard();
     this.startTicker();
+    focusAmbientService.play(this.settings.noise as AmbientType, getContext(this) as common.UIAbilityContext).catch((err: Error) => {
+      console.error(`[Index] Failed to play ambient: ${JSON.stringify(err)}`);
+    });
   }
 
   private pausePomodoro(): void {
@@ -827,6 +836,7 @@ struct Index {
     this.elapsedSeconds = 0;
     this.serviceMessage = FocusBackgroundService.stopPomodoroGuard();
     FocusNotificationService.publishBasic('番茄完成', `${task.title} 已收获 1 个番茄`);
+    await focusAmbientService.stop();
   }
 
   private async interruptPomodoro(): Promise<void> {
@@ -841,6 +851,7 @@ struct Index {
     this.interruptionReason = '';
     this.showInterruptDialog = false;
     this.serviceMessage = FocusBackgroundService.stopPomodoroGuard();
+    await focusAmbientService.stop();
   }
 
   private startTicker(): void {
@@ -4087,6 +4098,7 @@ struct Index {
           this.ProfileHeaderCard()
           this.ProfileMenuCard('复盘统计', '查看学习数据、完成率、项目占比', 'bars')
           this.ProfileMenuCard('学习资源库', `${this.activeResourceCount()} 份活跃资料`, 'sync')
+          this.ProfileMenuCard('云同步', '登录后端服务器，同步任务与番茄记录', 'cloud')
           this.ProfileMenuCard('设置', '专注时长、白噪音、AI 配置', 'settings')
         }
         .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_XXL, bottom: SPACING_XXL })
@@ -4100,6 +4112,9 @@ struct Index {
       }
       if (this.showResourceDetail) {
         this.ResourceDetailOverlay()
+      }
+      if (this.showSyncDetail) {
+        this.SyncDetailOverlay()
       }
       if (this.showSettingsDetail) {
         this.SettingsDetailOverlay()
@@ -4208,7 +4223,7 @@ struct Index {
   @Builder
   ProfileMenuCard(title: string, subtitle: string, icon: string) {
     Row() {
-      this.SoftIconBadge(icon, 46, title === '学习资源库' ? SUCCESS_SOFT : title === '设置' ? ACCENT_SOFT : VIOLET_SOFT)
+      this.SoftIconBadge(icon, 46, title === '学习资源库' ? SUCCESS_SOFT : title === '云同步' ? '#E0F2FE' : title === '设置' ? ACCENT_SOFT : VIOLET_SOFT)
       Column() {
         Text(title)
           .fontSize(16)
@@ -4240,6 +4255,8 @@ struct Index {
         this.showReviewDetail = true;
       } else if (title === '学习资源库') {
         this.showResourceDetail = true;
+      } else if (title === '云同步') {
+        this.showSyncDetail = true;
       } else if (title === '设置') {
         this.showSettingsDetail = true;
       }
@@ -4584,6 +4601,177 @@ struct Index {
       Scroll() {
         Column() {
           this.SettingsSection()
+        }
+        .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_LG, bottom: SPACING_XXL })
+      }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(PAGE_BG)
+  }
+
+  @Builder
+  SyncDetailOverlay() {
+    Column() {
+      Row() {
+        Button('返回')
+          .height(32)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(SURFACE_ALT)
+          .fontColor(TEXT_SUB)
+          .borderRadius(10)
+          .padding({ left: 14, right: 14 })
+          .onClick(() => {
+            this.showSyncDetail = false;
+          })
+        Blank()
+        Text('云同步')
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
+        Blank()
+        Text('')
+          .width(60)
+      }
+      .width('100%')
+      .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_XXL })
+
+      Scroll() {
+        Column({ space: SPACING_LG }) {
+          Column() {
+            Row() {
+              this.SmallUiAsset('cloud', 42)
+              Column() {
+                Text('云端数据同步')
+                  .fontSize(16)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor(TEXT_MAIN)
+                Text('登录后端服务器，同步任务与番茄记录')
+                  .fontSize(11)
+                  .fontColor(TEXT_MUTED)
+                  .margin({ top: 2 })
+              }
+              .alignItems(HorizontalAlign.Start)
+              .margin({ left: 10 })
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Center)
+            .margin({ bottom: 14 })
+
+            if (!focusSyncService.isLoggedIn()) {
+              Text('用户名')
+                .fontSize(12)
+                .fontColor(TEXT_SUB)
+                .alignSelf(ItemAlign.Start)
+              TextInput({ placeholder: '输入用户名', text: this.syncUsername })
+                .height(42)
+                .backgroundColor(SURFACE_ALT)
+                .borderRadius(10)
+                .padding({ left: 12, right: 12 })
+                .fontSize(13)
+                .margin({ top: 6, bottom: 10 })
+                .onChange((value: string) => {
+                  this.syncUsername = value;
+                })
+
+              Text('密码')
+                .fontSize(12)
+                .fontColor(TEXT_SUB)
+                .alignSelf(ItemAlign.Start)
+              TextInput({ placeholder: '输入密码', text: this.syncPassword })
+                .height(42)
+                .type(InputType.Password)
+                .backgroundColor(SURFACE_ALT)
+                .borderRadius(10)
+                .padding({ left: 12, right: 12 })
+                .fontSize(13)
+                .margin({ top: 6, bottom: 14 })
+                .onChange((value: string) => {
+                  this.syncPassword = value;
+                })
+
+              Button('登录')
+                .width('100%')
+                .height(44)
+                .fontSize(14)
+                .fontWeight(FontWeight.Bold)
+                .backgroundColor(ACCENT)
+                .fontColor('#FFFFFF')
+                .borderRadius(12)
+                .onClick(async () => {
+                  if (this.syncUsername.length === 0 || this.syncPassword.length === 0) {
+                    this.syncStatus = '请填写用户名和密码';
+                    return;
+                  }
+                  this.syncStatus = '登录中...';
+                  await focusSyncService.init(getContext(this) as common.UIAbilityContext);
+                  const result = await focusSyncService.login(this.syncUsername, this.syncPassword);
+                  this.syncStatus = result.message;
+                  if (result.success) {
+                    this.syncPassword = '';
+                  }
+                })
+            } else {
+              Text('已登录')
+                .fontSize(14)
+                .fontColor(SUCCESS)
+                .fontWeight(FontWeight.Medium)
+                .alignSelf(ItemAlign.Start)
+                .margin({ bottom: 10 })
+
+              Button('同步数据')
+                .width('100%')
+                .height(44)
+                .fontSize(14)
+                .fontWeight(FontWeight.Bold)
+                .backgroundColor(SUCCESS)
+                .fontColor('#FFFFFF')
+                .borderRadius(12)
+                .margin({ bottom: 10 })
+                .onClick(async () => {
+                  this.syncStatus = '同步中...';
+                  await focusSyncService.init(getContext(this) as common.UIAbilityContext);
+                  const result = await focusSyncService.syncBidirectional();
+                  this.syncStatus = result.message;
+                  if (result.success) {
+                    await focusStore.refresh();
+                    this.syncFromStore();
+                  }
+                })
+
+              Button('退出登录')
+                .width('100%')
+                .height(40)
+                .fontSize(13)
+                .fontWeight(FontWeight.Medium)
+                .backgroundColor(SURFACE_ALT)
+                .fontColor(TEXT_SUB)
+                .borderRadius(12)
+                .onClick(async () => {
+                  await focusSyncService.logout();
+                  this.syncStatus = '已退出登录';
+                })
+            }
+
+            if (this.syncStatus.length > 0) {
+              Text(this.syncStatus)
+                .fontSize(12)
+                .fontColor(this.syncStatus.includes('成功') || this.syncStatus.includes('欢迎') ? SUCCESS : this.syncStatus.includes('失败') || this.syncStatus.includes('错误') ? DANGER : TEXT_MUTED)
+                .margin({ top: 10 })
+                .textAlign(TextAlign.Center)
+                .width('100%')
+            }
+          }
+          .width('100%')
+          .padding(SPACING_LG)
+          .backgroundColor(CARD_GLASS)
+          .backdropBlur(CARD_GLASS_BLUR)
+          .borderRadius(RADIUS_LG)
+          .border({ width: 1, color: BORDER_SOFT })
+          .alignItems(HorizontalAlign.Start)
         }
         .padding({ left: SPACING_LG, right: SPACING_LG, top: SPACING_LG, bottom: SPACING_XXL })
       }

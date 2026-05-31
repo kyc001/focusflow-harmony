@@ -41,6 +41,8 @@ CREATE TABLE tasks (
   completed_at BIGINT NOT NULL DEFAULT 0,
   is_deleted TINYINT NOT NULL DEFAULT 0,
   client_request_id VARCHAR(64),
+  tags_json TEXT,
+  subtasks_json TEXT,
   INDEX idx_tasks_user_updated (user_id, updated_at),
   INDEX idx_tasks_user_status (user_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

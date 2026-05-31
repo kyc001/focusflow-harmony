@@ -22,5 +22,7 @@ public class Task {
     private Long completedAt;
     private Integer isDeleted;
     private String clientRequestId;
+    private String tagsJson;
+    private String subtasksJson;
 }
 

@@ -78,6 +78,13 @@
 \renewcommand*{\songti}{\CJKfamily{zhsong}} %宋体加粗
 \algnewcommand{\LeftComment}[1]{\Statex \(\triangleright\) #1}
 \floatname{algorithm}{算法}
+
+% 运行截图占位宏：缺图时显示占位框；获得真机截图后替换为 \includegraphics 即可
+\newcommand{\shotPlaceholder}[2]{%
+  \begin{center}
+  \fbox{\parbox[c][3.4cm][c]{0.62\textwidth}{\centering{\ttfamily #1}\\[6pt]{\small（运行截图占位：#2）}}}
+  \end{center}}
+
 \begin{document}
 % \captionsetup{font={\small}}
 
@@ -86,20 +93,20 @@
 %
 
 \NKTsetup{%
-  论文题目(中文) = 知序：HarmonyOS 学习闭环应用设计与实现,
+  论文题目(中文) = 知序：基于 HarmonyOS 的本地优先学习管理应用,
   %论文题目(中文)(第二行) =第二行中文题目，填无则不显示本行,
-  论文题目(中文)(第二行) = 面向大学生的 AI Study Flow,
+  论文题目(中文)(第二行) = 面向大学生的资料·任务·专注·复盘学习闭环,
   论文题目(英文) =  {Design and Implementation of ZhiXu},
-  论文题目(英文)(第二行) = A HarmonyOS AI Study Flow App,
+  论文题目(英文)(第二行) = A Local-First Study-Management App on HarmonyOS,
   % 论文题目(英文)(第二行) =无,
-  学号           = 191xxxx,
-  姓名          = kyc,
-  年级          = 2026,
+  学号           = 2413575,
+  姓名          = 柯云超,
+  年级          = 2024,
   级            = 级,
   专业           = 计算机科学与技术,
   系别          = 计算机科学与技术,
   学院          = 计算机学院,
-  指导教师       = 课程教师,
+  指导教师       = {刘嘉欣，董前琨，张彪},
   % 如果有校外导师则填写校外导师。没有填无
   校外导师      =无,
   %校外导师     = 罗翔\quad 教授（张三大学）,

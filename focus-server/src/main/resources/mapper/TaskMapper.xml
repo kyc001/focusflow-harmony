@@ -17,6 +17,8 @@
         <result column="completed_at" property="completedAt"/>
         <result column="is_deleted" property="isDeleted"/>
         <result column="client_request_id" property="clientRequestId"/>
+        <result column="tags_json" property="tagsJson"/>
+        <result column="subtasks_json" property="subtasksJson"/>
     </resultMap>
 
     <sql id="TaskFilter">
@@ -57,9 +59,9 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tasks (user_id, title, note, project_id, priority, due_at, status, pomodoro_count,
-                           created_at, updated_at, completed_at, is_deleted, client_request_id)
+                           created_at, updated_at, completed_at, is_deleted, client_request_id, tags_json, subtasks_json)
         VALUES (#{userId}, #{title}, #{note}, #{projectId}, #{priority}, #{dueAt}, #{status}, #{pomodoroCount},
-                #{createdAt}, #{updatedAt}, #{completedAt}, #{isDeleted}, #{clientRequestId})
+                #{createdAt}, #{updatedAt}, #{completedAt}, #{isDeleted}, #{clientRequestId}, #{tagsJson}, #{subtasksJson})
     </insert>
 
     <update id="update">
@@ -67,7 +69,7 @@
         SET title = #{title}, note = #{note}, project_id = #{projectId}, priority = #{priority},
             due_at = #{dueAt}, status = #{status}, pomodoro_count = #{pomodoroCount},
             updated_at = #{updatedAt}, completed_at = #{completedAt}, is_deleted = #{isDeleted},
-            client_request_id = #{clientRequestId}
+            client_request_id = #{clientRequestId}, tags_json = #{tagsJson}, subtasks_json = #{subtasksJson}
         WHERE id = #{id} AND user_id = #{userId}
     </update>
 

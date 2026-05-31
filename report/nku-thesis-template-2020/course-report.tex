@@ -23,7 +23,13 @@
 
 \section{HarmonyOS 与 ArkTS}
 
-HarmonyOS 是面向多设备协同的操作系统，应用采用 Stage 模型组织 Ability 生命周期。ArkTS 在 TypeScript 基础上增强了声明式 UI 能力，开发者通过状态驱动界面更新，适合构建结构化的移动应用页面\cite{zhang2023arkui}。在数据持久化方面，HarmonyOS 提供关系型数据库 RDB 和轻量级 Preferences。前者适合保存项目、任务、番茄记录等结构化数据，后者适合保存登录态、计时器偏好和 AI 配置等运行时设置。本文系统正是基于这两类端侧能力建立本地优先的数据基础。
+HarmonyOS 是面向多设备协同的操作系统，应用采用 Stage 模型组织 Ability 生命周期。ArkTS 在 TypeScript 基础上增强了声明式 UI 能力，开发者通过状态驱动界面更新，适合构建结构化的移动应用页面\cite{zhang2023arkui}。
+
+在数据持久化方面，HarmonyOS 提供关系型数据库 RDB 和轻量级 Preferences。前者适合保存项目、任务、番茄记录等结构化数据，后者适合保存登录态、计时器偏好和 AI 配置等运行时设置。本文系统正是基于这两类端侧能力建立本地优先的数据基础。
+
+在页面导航方面，ArkUI 提供 Tabs 组件和 Navigation 能力。Tabs 适合同级页面切换，Navigation 适合层级路由跳转。本文系统在主页面使用 Tabs 组织今日、任务、资料、专注和复盘五个工作区，在独立专注窗口使用 FocusAbility 配合 Want 参数传递实现跨 Ability 数据共享，通过 AppStorage 在 Ability 与页面之间同步任务信息。
+
+在网络与多媒体方面，HarmonyOS 提供 http 模块用于 RESTful 请求，AVPlayer 用于音频播放，ArkWeb 用于嵌入 H5 页面。本文系统利用 http 实现远程 AI 请求和云同步，利用 AVPlayer 实现白噪音循环播放，利用 ArkWeb 实现复盘图表的 Canvas 渲染。这些能力共同支撑了系统的增强功能层。
 
 \section{移动学习与番茄工作法}
 
@@ -243,6 +249,28 @@ AI 提炼由 extractResource() 触发。页面先检查远程 AI 是否启用且
 
 项目还实现了 EntryFormAbility 与 FocusCard 服务卡片，用于展示今日概览和番茄进度。当前卡片采用静态演示数据，主要体现 ExtensionAbility 与卡片布局能力，后续可进一步接入真实 Store 快照。
 
+\section{云同步实现}
+
+为展示全栈扩展能力，系统实现了可选的云端数据同步功能。后端基于 Spring Boot 和 MyBatis 构建 RESTful 接口，维护 users、projects、tasks、pomodoros 四张表，其中 tasks 表新增 tags\_json 和 subtasks\_json 两个 TEXT 字段，用于存储客户端的标签数组和子任务数组的 JSON 序列化结果。
+
+客户端实现 FocusSyncService 封装登录、下拉(pull)、上推(push)和双向同步四类操作。登录时通过 /api/user/login 接口验证用户名和密码，成功后将 userId 和 token 保存到 Preferences；下拉时携带 since 时间戳请求 /api/sync/pull，服务端返回该时间点之后更新的所有实体；上推时将本地 projects、tasks 和 pomodoros 序列化为 JSON 数组并 POST 到 /api/sync/push；双向同步先下拉合并服务器数据到本地 RDB，再上推本地全量数据到服务器，最后更新 Preferences 中的 lastSyncTime。
+
+数据映射层负责将客户端 FocusTask 的 tags 和 subtasks 字符串数组转换为 JSON 字符串写入后端 tagsJson 和 subtasksJson 字段，下拉时再反向解析。这样前端可以保持 ArkTS 数组类型，后端可以利用 MySQL TEXT 列灵活存储，避免为标签和子任务单独建表。
+
+Index 页面在"我的"Tab 新增"云同步"菜单卡片，点击后弹出 SyncDetailOverlay 对话框。未登录时显示用户名和密码输入框；登录成功后显示"同步数据"按钮，点击后触发双向同步并刷新本地 Store。同步状态通过 syncStatus 字符串实时反馈给用户，网络错误或服务端异常均返回明确提示，不伪造同步成功状态。
+
+云同步作为可选增强层存在，核心学习闭环不依赖后端可用性。用户可以完全离线使用任务、资料、番茄和复盘功能，只在需要跨设备数据迁移或备份时才启用云同步。
+
+\section{白噪音播放实现}
+
+为提升专注体验，系统集成了白噪音播放功能。项目在 entry/src/main/resources/rawfile 目录放置三个 MP3 音频文件：室外.mp3、海边.mp3 和虫鸣.mp3，分别对应不同的环境音效。
+
+FocusAmbientService 封装 AVPlayer 播放逻辑。play() 方法接收 AmbientType 枚举(none/outdoor/ocean/cricket)和 UIAbilityContext，通过 context.resourceManager.getRawFdSync() 获取 rawfile 文件描述符，设置 player.fdSrc 和 player.loop = true 实现循环播放，最后调用 prepare() 和 play() 启动音频。stop() 方法负责停止播放并释放 AVPlayer 资源。
+
+Index 页面在 startPomodoro() 中根据用户设置的 ambientNoise 类型调用 focusAmbientService.play()，在 completePomodoro() 和 interruptPomodoro() 中调用 stop()。这样白噪音与番茄计时器生命周期绑定：专注开始时播放，完成或中断时停止，避免后台持续播放消耗电量。
+
+用户可在"设置"页面选择白噪音类型，选项保存到 Preferences 的 ambientNoise 字段。若选择"无"，则专注时不播放音频。该功能展示了 HarmonyOS 多媒体能力(AVPlayer)与资源管理能力(rawfile)的结合，同时也体现了课程要求的"多线程"知识点——AVPlayer 内部在独立线程解码和播放音频，主线程只负责状态控制。
+
 \section{关键技术问题}
 
 实现过程中主要处理了四类问题。第一，跨层数据一致性：所有核心写操作统一走 FocusStore，避免页面数组与 RDB 分裂。第二，AI 不稳定性：失败时返回明确状态，不伪造本地 AI 结果。第三，产品更名控制：用户可见名称统一为“知序”，内部 Focus 前缀类名保持稳定，减少重命名风险。第四，文件导入范围控制：当前只保存 URI 和备注，文档正文解析、OCR 和权限扩展留作后续工作。
@@ -278,7 +306,9 @@ AI 提炼由 extractResource() 触发。页面先检查远程 AI 是否启用且
 资料 & 基于资料生成任务 & 任务页可见新任务 & 通过 \\
 专注 & 完成番茄计时 & pomodoros 新增记录 & 通过 \\
 专注 & 中断并填写原因 & 中断记录保存 & 通过 \\
+专注 & 开启白噪音后专注 & AVPlayer 循环播放 & 通过 \\
 复盘 & 查看本周统计图表 & 数据来自 Store & 通过 \\
+云同步 & 登录后端并双向同步 & tags/subtasks 正确映射 & 通过 \\
 设置 & 修改计时器时长 & 重启后设置保留 & 通过 \\
 \bottomrule
 \end{tabularx}

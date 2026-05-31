@@ -18,9 +18,9 @@ interface AmbientFileMap {
 
 const AMBIENT_FILES: AmbientFileMap = {
   none: '',
-  outdoor: '室外.mp3',
-  ocean: '海边.mp3',
-  cricket: '虫鸣.mp3'
+  outdoor: 'outdoor.mp3',
+  ocean: 'ocean.mp3',
+  cricket: 'cricket.mp3'
 };
 
 export const AMBIENT_OPTIONS: AmbientOption[] = [
@@ -66,6 +66,8 @@ export class FocusAmbientService {
   private player?: media.AVPlayer;
   private currentType: AmbientType = 'none';
   private isPlaying: boolean = false;
+  private currentContext?: common.UIAbilityContext;
+  private currentFileName: string = '';
 
   async play(type: AmbientType | string, context: common.UIAbilityContext): Promise<void> {
     const normalizedType: AmbientType = normalizeAmbientType(type);
@@ -91,30 +93,87 @@ export class FocusAmbientService {
         console.error(`[FocusAmbient] AVPlayer error: ${JSON.stringify(err)}`);
       });
       const fd = context.resourceManager.getRawFdSync(fileName);
-      this.player.fdSrc = fd;
-      this.player.loop = true;
+      this.currentContext = context;
+      this.currentFileName = fileName;
+      this.player.fdSrc = {
+        fd: fd.fd,
+        offset: fd.offset,
+        length: fd.length
+      };
+      await this.waitForPlayerState('initialized');
       await this.player.prepare();
+      await this.waitForPlayerState('prepared');
+      this.player.loop = true;
       await this.player.play();
       this.isPlaying = true;
       console.info(`[FocusAmbient] Playing ${fileName}`);
     } catch (err) {
       console.error(`[FocusAmbient] Failed to play ${fileName}: ${JSON.stringify(err)}`);
       this.isPlaying = false;
+      await this.releasePlayer();
     }
   }
 
   async stop(): Promise<void> {
+    await this.releasePlayer();
+    this.isPlaying = false;
+    this.currentType = 'none';
+  }
+
+  private async releasePlayer(): Promise<void> {
     if (this.player !== undefined) {
       try {
         await this.player.stop();
+      } catch (err) {
+        console.warn(`[FocusAmbient] Failed to stop player: ${JSON.stringify(err)}`);
+      }
+      try {
         await this.player.release();
       } catch (err) {
-        console.error(`[FocusAmbient] Failed to stop: ${JSON.stringify(err)}`);
+        console.error(`[FocusAmbient] Failed to release player: ${JSON.stringify(err)}`);
       }
       this.player = undefined;
     }
-    this.isPlaying = false;
-    this.currentType = 'none';
+    if (this.currentContext !== undefined && this.currentFileName.length > 0) {
+      try {
+        this.currentContext.resourceManager.closeRawFdSync(this.currentFileName);
+      } catch (err) {
+        console.warn(`[FocusAmbient] Failed to close raw fd ${this.currentFileName}: ${JSON.stringify(err)}`);
+      }
+      this.currentContext = undefined;
+      this.currentFileName = '';
+    }
+  }
+
+  private async waitForPlayerState(targetState: media.AVPlayerState): Promise<void> {
+    const player: media.AVPlayer | undefined = this.player;
+    if (player === undefined || player.state === targetState) {
+      return;
+    }
+    await new Promise<void>((resolve, reject) => {
+      let timerId: number = -1;
+      const onStateChange = (state: media.AVPlayerState) => {
+        if (state === targetState) {
+          cleanup();
+          resolve();
+        } else if (state === 'error' || state === 'released') {
+          cleanup();
+          reject(new Error(`AVPlayer reached ${state} before ${targetState}`));
+        }
+      };
+      const cleanup = () => {
+        if (timerId >= 0) {
+          clearTimeout(timerId);
+        }
+        player.off('stateChange', onStateChange);
+      };
+      timerId = setTimeout(() => {
+        cleanup();
+        reject(new Error(`Timed out waiting for AVPlayer ${targetState}, current=${player.state}`));
+      }, 3000);
+      player.on('stateChange', onStateChange);
+      onStateChange(player.state);
+    });
   }
 
   getCurrentType(): AmbientType {

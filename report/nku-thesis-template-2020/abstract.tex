@@ -1,39 +1,31 @@
 % -*- coding: utf-8 -*-
 
-
 \begin{zhaiyao}
 \begin{spacing}{1.5}
 {
+随着移动互联网、智能终端和生成式人工智能的普及，大学生的学习活动越来越依赖移动设备完成。课程资料、实验任务、网页链接、课堂笔记和复习计划通常分散在多个工具中，导致学生在学习前需要反复寻找资料，在学习中难以维持专注，在学习后缺少稳定的复盘依据。现有待办、笔记和番茄钟工具多聚焦单点能力，难以把资料整理、任务分解、专注执行和学习复盘组织为连续流程。因此，如何在弱网甚至离线条件下构建一个稳定、可解释、可扩展的移动学习闭环，是本文关注的主要问题。
 
-在移动互联网与智能终端深度普及的背景下，大学生的学习材料日益分散在聊天记录、网盘、浏览器收藏与便签之中，使得从“查找资料”到“开始学习”的认知路径被不断拉长。与此同时，现有移动学习工具大多停留在单点能力：待办工具长于记录任务却无法关联资料，番茄钟工具能维持专注却缺少任务上下文与复盘分析，笔记工具善于沉淀材料却很少驱动下一步行动，通用 AI 助手擅长生成内容却未与本地学习数据打通。如何在弱网乃至离线条件下，将资料、任务、专注与复盘组织为一条连续且可解释的移动学习闭环，是本文要解决的核心问题。
+针对上述问题，本文设计并实现了一款名为“知序”的 HarmonyOS 学习管理应用。系统采用本地优先架构，以端侧关系型数据库 RDB 作为核心数据源，以 Preferences 保存运行时配置，并按照 MVVM 模式组织模型、视图和控制逻辑。应用提供今日看板、任务管理、资料库、番茄专注、复盘统计和云同步等功能：学习资料可被保存到本地并在远程 AI 可用时提炼为摘要和要点，资料提炼结果可进一步生成任务，任务完成过程通过番茄记录写入本地数据库，并最终反映到复盘统计中。后端采用 Spring Boot、MyBatis 与 MySQL/H2 数据库实现用户、项目、任务、番茄记录和同步接口，为跨设备备份和全栈展示提供支撑。
 
-针对上述问题，本文设计并实现了一款名为“知序”（ZhiXu）的 HarmonyOS 学习管理应用。系统遵循本地优先（local-first）的架构思想，以端侧关系型数据库 RDB 作为可信数据源，保证任务、资料、番茄记录与复盘统计在离线环境下完整可用；客户端采用 ArkTS 语言与 ArkUI 声明式框架，按 MVVM 模式划分模型、视图与控制三层，并以 Preferences 分命名空间保存计时、AI 与登录等运行时配置。系统将今日、任务、资料、专注与复盘五项功能组织为统一闭环：学习资料可经远程 AI 提炼为摘要与要点并一键生成专注任务，专注完成后写入本地记录并反哺复盘统计。远程 AI 仅作为增强层，在未配置或服务不可用时给出显式状态提示而不伪造结果；项目另保留基于 Spring Boot、MyBatis 与 MySQL 的可选后端，提供增量同步与幂等写入接口以展示全栈扩展能力。
-
-实现结果表明，该应用能够在纯离线状态下完成“资料整理—任务分解—番茄执行—复盘反馈”的完整学习闭环，客户端 HAP 与后端 JAR 均通过构建验证。系统涵盖 HarmonyOS 端侧开发、本地数据库设计、原生能力调用、AI 能力集成与 RESTful 接口设计等课程知识要点，具有较好的实践价值与可扩展性。
+测试结果表明，系统能够在离线状态下完成资料保存、任务创建、番茄专注和复盘统计等核心操作；在后端服务可用时，可完成登录、数据拉取和数据上推。通过补充前端快速添加入口、同步连接提示、白噪音资源加载和构建脚本，系统的可用性和演示稳定性得到提升。客户端 HAP 构建、后端 Maven 测试和论文模板编译均可作为项目交付验证依据。
 }
 \end{spacing}
 \end{zhaiyao}
 
-
-
-
 \begin{guanjianci}
-HarmonyOS；本地优先架构；学习资料库；AI 学习助手；番茄工作法
+HarmonyOS；ArkTS；MVVM；本地优先；学习管理
 \end{guanjianci}
-
-
 
 \begin{abstract}
 \begin{spacing}{1.5}
-In the context of ubiquitous mobile Internet and smart devices, college students' learning materials are increasingly scattered across chat logs, cloud drives, browser bookmarks and sticky notes, which lengthens the cognitive path from ``finding materials'' to ``starting to study''. Meanwhile, existing mobile learning tools remain single-purpose: to-do apps record tasks but cannot associate materials, Pomodoro timers sustain focus but lack task context and review analytics, note apps accumulate materials yet rarely drive the next action, and general-purpose AI assistants generate content without connecting to local study data. The core problem addressed in this thesis is how to organize materials, tasks, focus and review into a continuous and explainable mobile learning loop that remains usable under weak-network or even offline conditions.
+With the widespread use of mobile Internet, smart devices and generative artificial intelligence, college students increasingly organize learning activities on mobile devices. Course materials, experiment tasks, web links, classroom notes and review plans are often scattered across different tools, which increases the cost of finding materials, maintaining focus and reviewing learning outcomes. Existing to-do, note-taking and Pomodoro applications usually provide isolated functions, but they rarely connect material organization, task decomposition, focused execution and review analytics into a continuous workflow. This thesis therefore focuses on building a stable, explainable and extensible mobile learning loop that remains usable under weak-network or offline conditions.
 
-To address this problem, this thesis designs and implements ZhiXu, a HarmonyOS study-management application that follows a local-first architecture. It uses the on-device relational database (RDB) as the single source of truth, so that tasks, resources, Pomodoro records and review statistics remain fully available offline. The client is built with the ArkTS language and the ArkUI declarative framework, organized into model, view and control layers under the MVVM pattern, while Preferences stores timer, AI and login runtime configurations in separate namespaces. Five functions---Today, Tasks, Resources, Focus and Review---are unified into one loop: a study resource can be distilled by a remote AI into a summary and key points and turned into a focus task with a single tap; once the Pomodoro session completes, it is written locally and feeds back into review statistics. The remote AI serves only as an enhancement layer, returning explicit status messages instead of fabricated results when it is unconfigured or unavailable; an optional backend based on Spring Boot, MyBatis and MySQL provides incremental synchronization and idempotent writes to demonstrate full-stack extensibility.
+To address this problem, this thesis designs and implements ZhiXu, a HarmonyOS study-management application. The system follows a local-first architecture, uses the on-device relational database RDB as the core data source, stores runtime configurations with Preferences, and organizes model, view and control logic under the MVVM pattern. The application provides Today dashboard, task management, resource library, Pomodoro focus, review statistics and cloud synchronization. Study resources can be stored locally and, when remote AI is available, distilled into summaries and key points; the distilled result can be converted into tasks; completed Pomodoro sessions are persisted locally and then reflected in review statistics. The backend is implemented with Spring Boot, MyBatis and MySQL/H2 to provide user, project, task, Pomodoro and synchronization APIs.
 
-Experimental results show that the application completes the full ``organize--decompose--focus--review'' learning loop in a purely offline state, and that both the client HAP and the backend JAR pass build verification. The system covers key course topics including HarmonyOS on-device development, local database design, native capability invocation, AI integration and RESTful API design, offering practical value and good extensibility.
+The test results show that the system can complete core operations such as resource storage, task creation, Pomodoro focus and review statistics in an offline state. When the backend service is available, it supports login, data pulling and data pushing. By improving quick task creation, synchronization hints, white-noise resource loading and build scripts, the system achieves better usability and demonstration stability. Client HAP build, backend Maven tests and thesis-template compilation are used as delivery verification evidence.
 \end{spacing}
 \end{abstract}
 
-
 \begin{keywords}
-HarmonyOS; local-first architecture; study resource library; AI learning assistant; Pomodoro technique
+HarmonyOS; ArkTS; MVVM; local-first; study management
 \end{keywords}

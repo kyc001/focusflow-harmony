@@ -44,8 +44,15 @@ public class UserController {
 
     @PostMapping("/login")
     public Result<AuthResponse> login(@RequestBody LoginRequest request) {
-        User user = userMapper.findByUsername(request.getUsername());
-        if (user == null || !user.getPasswordHash().equals(HashUtil.sha256(request.getPassword()))) {
+        return loginByCredential(request.getUsername(), request.getPassword());
+    }
+
+    private Result<AuthResponse> loginByCredential(String username, String password) {
+        if (username == null || password == null) {
+            return Result.fail("username and password required");
+        }
+        User user = userMapper.findByUsername(username);
+        if (user == null || !user.getPasswordHash().equals(HashUtil.sha256(password))) {
             return Result.fail("invalid username or password");
         }
         return Result.ok(toAuth(user));
@@ -55,4 +62,3 @@ public class UserController {
         return new AuthResponse(user.getId(), user.getUsername(), user.getNickname(), tokenPrefix + user.getId() + "-" + System.currentTimeMillis());
     }
 }
-

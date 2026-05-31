@@ -1,3 +1,10 @@
+param(
+  [ValidateSet("mysql", "h2")]
+  [string]$DbProfile = "mysql"
+)
+
+$activeProfile = if ($DbProfile -eq "h2") { "" } else { $DbProfile }
+
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $javaHome = Join-Path $projectRoot "tools\jdk-21"
 $mavenHome = Join-Path $projectRoot "tools\maven"
@@ -17,9 +24,15 @@ try {
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
   }
+  $profileText = if ($activeProfile.Length -gt 0) { $activeProfile } else { "h2" }
   Write-Host "Starting Focus Server at http://localhost:8080" -ForegroundColor Cyan
+  Write-Host "Spring profile: $profileText" -ForegroundColor Cyan
   Write-Host "Demo account: demo / secret" -ForegroundColor Cyan
-  & java -jar "target\focus-server-0.0.1-SNAPSHOT.jar"
+  if ($activeProfile.Length -gt 0) {
+    & java -jar "target\focus-server-0.0.1-SNAPSHOT.jar" "--spring.profiles.active=$activeProfile"
+  } else {
+    & java -jar "target\focus-server-0.0.1-SNAPSHOT.jar"
+  }
   exit $LASTEXITCODE
 } finally {
   Pop-Location

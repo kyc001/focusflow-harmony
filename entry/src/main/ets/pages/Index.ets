@@ -77,7 +77,8 @@ import {
   TEXT_SUB,
   TRACK,
   VIOLET,
-  VIOLET_SOFT
+  VIOLET_SOFT,
+  WARNING_SOFT
 } from '../utils/FocusDesignTokens';
 import {
   AiCoachAdvice,
@@ -161,7 +162,7 @@ struct Index {
   @State newResourceTitle: string = '';
   @State newResourceContent: string = '';
   @State resourceType: string = 'note';
-  @State resourceProjectId: number = 4;
+  @State resourceProjectId: number = 0;
   @State resourceFilterProjectId: number = 0;
   @State resourceWorkspace: string = 'library';
   @State showArchivedResources: boolean = false;
@@ -186,6 +187,7 @@ struct Index {
   @State showAiSettingsDialog: boolean = false;
   @State syncUsername: string = '';
   @State syncPassword: string = '';
+  @State syncBaseUrl: string = 'http://10.0.2.2:8080';
   @State syncStatus: string = '';
   @State aiModelList: string[] = [];
   @State aiModelLoading: boolean = false;
@@ -212,6 +214,8 @@ struct Index {
       this.syncFromStore();
       await authRepository.init(context);
       await focusAiCoachService.init(context);
+      await focusSyncService.init(context);
+      this.syncBaseUrl = focusSyncService.getBaseUrl();
       await this.loadAiSettings();
       const profile: LoginProfile | null = await authRepository.currentProfile();
       if (profile !== null) {
@@ -463,10 +467,25 @@ struct Index {
     if (title.length === 0) {
       return;
     }
-    const task: FocusTask = await focusStore.addTask(title, 4, 1, 8);
+    const projectId: number = this.defaultProjectId();
+    const task: FocusTask = await focusStore.addTask(title, projectId, 1, 8);
     this.newTaskTitle = '';
     this.selectedTaskId = task.id;
     this.syncFromStore();
+  }
+
+  private defaultProjectId(): number {
+    const defaultProject: FocusProject | undefined =
+      focusStore.projects.find((project: FocusProject) => project.name === '移动开发') ||
+      focusStore.projects[0];
+    return defaultProject === undefined ? 1 : defaultProject.id;
+  }
+
+  private selectedResourceProjectId(): number {
+    if (this.resourceProjectId > 0) {
+      return this.resourceProjectId;
+    }
+    return this.defaultProjectId();
   }
 
   private async toggleTask(taskId: number): Promise<void> {
@@ -691,7 +710,7 @@ struct Index {
       this.resourceMessage = '请补充资料标题和正文摘录';
       return;
     }
-    const saved: StudyResource = await focusStore.addStudyResource(title, this.resourceType, this.resourceProjectId, content);
+    const saved: StudyResource = await focusStore.addStudyResource(title, this.resourceType, this.selectedResourceProjectId(), content);
     this.newResourceTitle = '';
     this.newResourceContent = '';
     this.selectedResourceId = saved.id;
@@ -734,7 +753,7 @@ struct Index {
     const content: string = note.length > 0 ?
       `文件：${this.pickedFileUri}\n备注：${note}` :
       `文件：${this.pickedFileUri}`;
-    const saved: StudyResource = await focusStore.addStudyResource(title, 'file', this.resourceProjectId, content);
+    const saved: StudyResource = await focusStore.addStudyResource(title, 'file', this.selectedResourceProjectId(), content);
     this.newResourceTitle = '';
     this.newResourceContent = '';
     this.pickedFileUri = '';
@@ -1390,6 +1409,7 @@ struct Index {
       Column() {
         this.TodayHeroCard()
         this.TodayTaskList()
+        this.QuickAddCard()
       }
       .padding({ left: 18, right: 18, top: 18, bottom: 18 })
     }
@@ -1507,7 +1527,7 @@ struct Index {
             .fontSize(15)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
-          Text('默认归入「移动开发 / 紧急重要」')
+          Text('自动归入默认项目 / 紧急重要')
             .fontSize(11)
             .fontColor(TEXT_MUTED)
             .margin({ top: 2 })
@@ -1932,6 +1952,7 @@ struct Index {
   TasksTab() {
     Scroll() {
       Column() {
+        this.QuickAddCard()
         this.FilterBar()
         Column() {
           Row() {
@@ -2524,9 +2545,9 @@ struct Index {
           Text(project.name)
             .height(30)
             .fontSize(12)
-            .fontWeight(this.resourceProjectId === project.id ? FontWeight.Bold : FontWeight.Medium)
-            .fontColor(this.resourceProjectId === project.id ? '#FFFFFF' : TEXT_SUB)
-            .backgroundColor(this.resourceProjectId === project.id ? project.color : SURFACE_ALT)
+            .fontWeight(this.selectedResourceProjectId() === project.id ? FontWeight.Bold : FontWeight.Medium)
+            .fontColor(this.selectedResourceProjectId() === project.id ? '#FFFFFF' : TEXT_SUB)
+            .backgroundColor(this.selectedResourceProjectId() === project.id ? project.color : SURFACE_ALT)
             .borderRadius(10)
             .padding({ left: 12, right: 12 })
             .margin({ right: 6, bottom: 6 })
@@ -2674,9 +2695,9 @@ struct Index {
           Text(project.name)
             .height(30)
             .fontSize(12)
-            .fontWeight(this.resourceProjectId === project.id ? FontWeight.Bold : FontWeight.Medium)
-            .fontColor(this.resourceProjectId === project.id ? '#FFFFFF' : TEXT_SUB)
-            .backgroundColor(this.resourceProjectId === project.id ? project.color : SURFACE_ALT)
+            .fontWeight(this.selectedResourceProjectId() === project.id ? FontWeight.Bold : FontWeight.Medium)
+            .fontColor(this.selectedResourceProjectId() === project.id ? '#FFFFFF' : TEXT_SUB)
+            .backgroundColor(this.selectedResourceProjectId() === project.id ? project.color : SURFACE_ALT)
             .borderRadius(10)
             .padding({ left: 12, right: 12 })
             .margin({ right: 6, bottom: 6 })
@@ -4671,11 +4692,11 @@ struct Index {
             Row() {
               this.SmallUiAsset('cloud', 42)
               Column() {
-                Text('云端数据同步')
-                  .fontSize(16)
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor(TEXT_MAIN)
-                Text('登录后端服务器，同步任务与番茄记录')
+              Text('云端数据同步')
+                .fontSize(16)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(TEXT_MAIN)
+                Text(focusSyncService.isLoggedIn() ? `当前服务器：${focusSyncService.getBaseUrl()}` : '模拟器用 10.0.2.2；真机请填电脑局域网 IP')
                   .fontSize(11)
                   .fontColor(TEXT_MUTED)
                   .margin({ top: 2 })
@@ -4687,7 +4708,74 @@ struct Index {
             .alignItems(VerticalAlign.Center)
             .margin({ bottom: 14 })
 
+            Row() {
+              this.SoftIconBadge(focusSyncService.isLoggedIn() ? 'sync' : 'shield', 34, focusSyncService.isLoggedIn() ? SUCCESS_SOFT : WARNING_SOFT)
+              Column() {
+                Text(focusSyncService.isLoggedIn() ? '已连接后端服务' : '连接前先确认后端已启动')
+                  .fontSize(13)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(TEXT_MAIN)
+                Text(focusSyncService.isLoggedIn() ? '点击同步会先拉取服务器数据，再上推本地修改。' : '运行 .\\start-backend.ps1；默认演示账号 demo / secret。')
+                  .fontSize(11)
+                  .fontColor(TEXT_MUTED)
+                  .lineHeight(16)
+                  .margin({ top: 3 })
+              }
+              .layoutWeight(1)
+              .alignItems(HorizontalAlign.Start)
+              .margin({ left: 10 })
+            }
+            .width('100%')
+            .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+            .backgroundColor(SURFACE_ALT)
+            .borderRadius(12)
+            .margin({ bottom: 14 })
+
             if (!focusSyncService.isLoggedIn()) {
+              Text('服务器地址')
+                .fontSize(12)
+                .fontColor(TEXT_SUB)
+                .alignSelf(ItemAlign.Start)
+              TextInput({ placeholder: 'http://电脑IP:8080', text: this.syncBaseUrl })
+                .height(42)
+                .backgroundColor(SURFACE_ALT)
+                .borderRadius(10)
+                .padding({ left: 12, right: 12 })
+                .fontSize(13)
+                .margin({ top: 6, bottom: 10 })
+                .onChange((value: string) => {
+                  this.syncBaseUrl = value;
+                })
+
+              Row() {
+                Button('模拟器 10.0.2.2')
+                  .height(30)
+                  .layoutWeight(1)
+                  .fontSize(11)
+                  .fontWeight(FontWeight.Medium)
+                  .backgroundColor(SURFACE_ALT)
+                  .fontColor(TEXT_SUB)
+                  .borderRadius(9)
+                  .onClick(() => {
+                    this.syncBaseUrl = 'http://10.0.2.2:8080';
+                  })
+                Button('当前电脑 IP')
+                  .height(30)
+                  .layoutWeight(1)
+                  .fontSize(11)
+                  .fontWeight(FontWeight.Medium)
+                  .backgroundColor(SURFACE_ALT)
+                  .fontColor(TEXT_SUB)
+                  .borderRadius(9)
+                  .margin({ left: 8 })
+                  .onClick(() => {
+                    this.syncStatus = '请把“电脑IP”替换为本机局域网地址，例如 http://192.168.x.x:8080';
+                    this.syncBaseUrl = 'http://电脑IP:8080';
+                  })
+              }
+              .width('100%')
+              .margin({ bottom: 10 })
+
               Text('用户名')
                 .fontSize(12)
                 .fontColor(TEXT_SUB)
@@ -4734,6 +4822,7 @@ struct Index {
                   }
                   this.syncStatus = '登录中...';
                   await focusSyncService.init(getContext(this) as common.UIAbilityContext);
+                  await focusSyncService.saveBaseUrl(this.syncBaseUrl);
                   const result = await focusSyncService.login(this.syncUsername, this.syncPassword);
                   this.syncStatus = result.message;
                   if (result.success) {

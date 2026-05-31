@@ -14,6 +14,7 @@ interface ServerResult<T> {
 // 后端同步包
 interface SyncBundle {
   serverTime: number;
+  server_time?: number;
   projects: ServerProject[];
   tasks: ServerTask[];
   pomodoros: ServerPomodoro[];
@@ -23,42 +24,62 @@ interface SyncBundle {
 interface ServerProject {
   id: number;
   userId: number;
+  user_id?: number;
   name: string;
   color: string;
   icon: string;
   updatedAt: number;
+  updated_at?: number;
   isDeleted: number;
+  is_deleted?: number;
 }
 
 interface ServerTask {
   id: number;
   userId: number;
+  user_id?: number;
   title: string;
   note: string;
   projectId: number;
+  project_id?: number;
   priority: number;
   dueAt: number;
+  due_at?: number;
   status: number;
   pomodoroCount: number;
+  pomodoro_count?: number;
   createdAt: number;
+  created_at?: number;
   updatedAt: number;
+  updated_at?: number;
   completedAt: number;
+  completed_at?: number;
   isDeleted: number;
+  is_deleted?: number;
   clientRequestId: string;
+  client_request_id?: string;
   tagsJson: string;
+  tags_json?: string;
   subtasksJson: string;
+  subtasks_json?: string;
 }
 
 interface ServerPomodoro {
   id: number;
   userId: number;
+  user_id?: number;
   taskId: number;
+  task_id?: number;
   startAt: number;
+  start_at?: number;
   duration: number;
   completed: number;
   interruptReason: string;
+  interrupt_reason?: string;
   updatedAt: number;
+  updated_at?: number;
   clientRequestId: string;
+  client_request_id?: string;
 }
 
 interface SyncPushRequest {
@@ -69,6 +90,7 @@ interface SyncPushRequest {
 
 interface AuthResponse {
   userId: number;
+  user_id?: number;
   username: string;
   nickname: string;
   token: string;
@@ -86,7 +108,7 @@ interface SyncPullResult {
 }
 
 const PREF_NAME: string = 'focus_sync';
-const DEFAULT_BASE_URL: string = 'http://localhost:8080';
+const DEFAULT_BASE_URL: string = 'http://10.0.2.2:8080';
 
 export class FocusSyncService {
   private pref?: preferences.Preferences;
@@ -104,16 +126,41 @@ export class FocusSyncService {
     this.token = (await this.pref.get('sync.token', '')) as string;
   }
 
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  async saveBaseUrl(baseUrl: string): Promise<void> {
+    this.baseUrl = this.normalizeBaseUrl(baseUrl);
+    if (this.pref !== undefined) {
+      await this.pref.put('sync.baseUrl', this.baseUrl);
+      await this.pref.flush();
+    }
+  }
+
   isLoggedIn(): boolean {
     return this.userId > 0 && this.token.length > 0;
   }
 
   async login(username: string, password: string): Promise<SyncActionResult> {
-    const request: http.HttpRequest = http.createHttp();
+    const loginBaseUrl: string = this.normalizeBaseUrl(this.baseUrl);
     try {
-      const response: http.HttpResponse = await request.request(`${this.baseUrl}/api/user/login`, {
+      const healthResponse: http.HttpResponse = await this.request(`${loginBaseUrl}/api/projects`, {
+        method: http.RequestMethod.GET,
+        connectTimeout: 6000,
+        readTimeout: 6000,
+        header: {
+          'Content-Type': 'application/json',
+          'X-User-Id': '1'
+        }
+      });
+      const healthCode: number = Number(healthResponse.responseCode);
+      if (healthCode < 200 || healthCode >= 300) {
+        return { success: false, message: `服务器连通但健康检查返回 ${healthCode}` };
+      }
+
+      const response: http.HttpResponse = await this.request(`${loginBaseUrl}/api/user/login`, {
         method: http.RequestMethod.POST,
-        expectDataType: http.HttpDataType.STRING,
         connectTimeout: 10000,
         readTimeout: 15000,
         header: { 'Content-Type': 'application/json' },
@@ -127,9 +174,15 @@ export class FocusSyncService {
       if (result.code !== 200 || result.data === null) {
         return { success: false, message: result.msg || '登录失败' };
       }
-      this.userId = result.data.userId;
+      const resolvedUserId: number = result.data.userId === undefined ? Number(result.data.user_id) : result.data.userId;
+      if (resolvedUserId !== resolvedUserId || resolvedUserId <= 0) {
+        return { success: false, message: '登录响应缺少 userId' };
+      }
+      this.baseUrl = loginBaseUrl;
+      this.userId = resolvedUserId;
       this.token = result.data.token;
       if (this.pref !== undefined) {
+        await this.pref.put('sync.baseUrl', this.baseUrl);
         await this.pref.put('sync.userId', this.userId);
         await this.pref.put('sync.token', this.token);
         await this.pref.put('sync.username', result.data.username);
@@ -138,9 +191,7 @@ export class FocusSyncService {
       }
       return { success: true, message: `欢迎，${result.data.nickname}` };
     } catch (err) {
-      return { success: false, message: `网络错误：${JSON.stringify(err)}` };
-    } finally {
-      request.destroy();
+      return { success: false, message: `网络错误：无法连接 ${loginBaseUrl}，详情：${this.formatNetworkError(err)}` };
     }
   }
 
@@ -160,12 +211,10 @@ export class FocusSyncService {
     if (!this.isLoggedIn()) {
       return { success: false, message: '未登录' };
     }
-    const request: http.HttpRequest = http.createHttp();
     try {
       const url: string = `${this.baseUrl}/api/sync/pull?since=${since}`;
-      const response: http.HttpResponse = await request.request(url, {
+      const response: http.HttpResponse = await this.request(url, {
         method: http.RequestMethod.POST,
-        expectDataType: http.HttpDataType.STRING,
         connectTimeout: 10000,
         readTimeout: 20000,
         header: {
@@ -183,9 +232,7 @@ export class FocusSyncService {
       }
       return { success: true, message: 'pull 成功', bundle: result.data };
     } catch (err) {
-      return { success: false, message: `网络错误：${JSON.stringify(err)}` };
-    } finally {
-      request.destroy();
+      return { success: false, message: `网络错误：无法连接 ${this.baseUrl}，详情：${this.formatNetworkError(err)}` };
     }
   }
 
@@ -198,11 +245,9 @@ export class FocusSyncService {
       tasks: tasks.map((t: FocusTask) => this.toServerTask(t)),
       pomodoros: pomodoros.map((r: PomodoroRecord) => this.toServerPomodoro(r))
     };
-    const request: http.HttpRequest = http.createHttp();
     try {
-      const response: http.HttpResponse = await request.request(`${this.baseUrl}/api/sync/push`, {
+      const response: http.HttpResponse = await this.request(`${this.baseUrl}/api/sync/push`, {
         method: http.RequestMethod.POST,
-        expectDataType: http.HttpDataType.STRING,
         connectTimeout: 10000,
         readTimeout: 25000,
         header: {
@@ -221,9 +266,7 @@ export class FocusSyncService {
       }
       return { success: true, message: 'push 成功' };
     } catch (err) {
-      return { success: false, message: `网络错误：${JSON.stringify(err)}` };
-    } finally {
-      request.destroy();
+      return { success: false, message: `网络错误：无法连接 ${this.baseUrl}，详情：${this.formatNetworkError(err)}` };
     }
   }
 
@@ -263,26 +306,26 @@ export class FocusSyncService {
         id: st.id,
         title: st.title,
         note: st.note,
-        projectId: st.projectId,
+        projectId: this.numberValue(st.projectId, st.project_id, 0),
         priority: st.priority,
-        dueAt: st.dueAt,
+        dueAt: this.numberValue(st.dueAt, st.due_at, 0),
         status: st.status,
-        pomodoroCount: st.pomodoroCount,
-        createdAt: st.createdAt,
-        completedAt: st.completedAt,
-        tags: this.parseJsonArray(st.tagsJson),
-        subtasks: this.parseJsonArray(st.subtasksJson)
+        pomodoroCount: this.numberValue(st.pomodoroCount, st.pomodoro_count, 0),
+        createdAt: this.numberValue(st.createdAt, st.created_at, Date.now()),
+        completedAt: this.numberValue(st.completedAt, st.completed_at, 0),
+        tags: this.parseJsonArray(this.stringValue(st.tagsJson, st.tags_json, '[]')),
+        subtasks: this.parseJsonArray(this.stringValue(st.subtasksJson, st.subtasks_json, '[]'))
       };
       await focusDatabase.upsertTask(local);
     }
     for (const sr of bundle.pomodoros) {
       const local: PomodoroRecord = {
         id: sr.id,
-        taskId: sr.taskId,
-        startAt: sr.startAt,
+        taskId: this.numberValue(sr.taskId, sr.task_id, 0),
+        startAt: this.numberValue(sr.startAt, sr.start_at, Date.now()),
         duration: sr.duration,
         completed: sr.completed,
-        interruptReason: sr.interruptReason
+        interruptReason: this.stringValue(sr.interruptReason, sr.interrupt_reason, '')
       };
       await focusDatabase.recordPomodoro(local);
     }
@@ -348,6 +391,59 @@ export class FocusSyncService {
     } catch (err) {
       return [];
     }
+  }
+
+  private async request(url: string, options: http.HttpRequestOptions): Promise<http.HttpResponse> {
+    const request: http.HttpRequest = http.createHttp();
+    try {
+      const requestOptions: http.HttpRequestOptions = {
+        method: options.method,
+        extraData: options.extraData,
+        expectDataType: http.HttpDataType.STRING,
+        usingProtocol: http.HttpProtocol.HTTP1_1,
+        usingProxy: false,
+        usingCache: false,
+        connectTimeout: options.connectTimeout,
+        readTimeout: options.readTimeout,
+        header: options.header
+      };
+      return await request.request(url, requestOptions);
+    } finally {
+      request.destroy();
+    }
+  }
+
+  private formatNetworkError(err: Object): string {
+    const detail: string = JSON.stringify(err);
+    if (detail.length > 0 && detail !== '{}') {
+      return detail;
+    }
+    return `${err}`;
+  }
+
+  private numberValue(primary: number | undefined, fallback: number | undefined, defaultValue: number): number {
+    if (primary !== undefined && primary !== null) {
+      return Number(primary);
+    }
+    if (fallback !== undefined && fallback !== null) {
+      return Number(fallback);
+    }
+    return defaultValue;
+  }
+
+  private stringValue(primary: string | undefined, fallback: string | undefined, defaultValue: string): string {
+    if (primary !== undefined && primary !== null) {
+      return `${primary}`;
+    }
+    if (fallback !== undefined && fallback !== null) {
+      return `${fallback}`;
+    }
+    return defaultValue;
+  }
+
+  private normalizeBaseUrl(value: string): string {
+    const clean: string = value.trim().replace(/\/+$/, '');
+    return clean.length === 0 ? DEFAULT_BASE_URL : clean;
   }
 }
 

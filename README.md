@@ -35,13 +35,21 @@
 - 架构：按 MVVM 分层，`models` 保存模型，`services` 封装数据与网络，`FocusStore` 作为页面状态门面。
 - 页面：今日、任务、资料、专注、复盘、设置/同步等功能均有真实操作。
 - 后端：Spring Boot + MyBatis，提供登录、CRUD、统计和同步接口。
-- 数据库：鸿蒙端 RDB 保存本地数据；后端默认 H2 文件数据库，也提供 MySQL 配置。
+- 数据库：鸿蒙端 RDB 保存本地数据；后端启动脚本默认使用 MySQL，也可切换到 H2 文件数据库快速测试。
 - 闭环：资料经 AI 提炼生成任务，任务进入番茄专注，完成记录写入 RDB，复盘统计展示，并可同步到后端数据库。
 
 ## 快速启动后端
 
 ```powershell
 .\start-backend.ps1
+```
+
+默认使用 MySQL profile。首次使用 MySQL 前请先在本机 MySQL 中执行 `focus-server/src/main/resources/init-mysql.sql`，创建 `focus_db` 和演示账号。
+
+如果只是做课堂演示或接口测试，可以使用 H2：
+
+```powershell
+.\start-backend.ps1 -DbProfile h2
 ```
 
 默认地址：
@@ -55,10 +63,13 @@
 
 ## 前端运行
 
-1. 打开 DevEco Studio。
-2. File → Open → 选择本项目根目录。
-3. Build → Build Hap(s)/APP(s)。
-4. 在真机或模拟器运行。
+推荐使用项目脚本构建，脚本会强制使用 DevEco Studio 自带 JBR，避免系统 Java 注册表异常影响 `PackageApp`：
+
+```powershell
+.\build-frontend.ps1
+```
+
+也可以打开 DevEco Studio 后选择本项目根目录，执行 Build → Build Hap(s)/APP(s)，再在真机或模拟器运行。
 
 ## 核心功能
 

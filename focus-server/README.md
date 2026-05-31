@@ -6,8 +6,9 @@
 
 - Spring Boot 3.2
 - MyBatis Mapper + XML SQL
-- 默认 H2 文件数据库，数据落在 `focus-server/data/`
-- 保留 `application-mysql.yml` 和 `init-mysql.sql`，需要 MySQL 演示时可切换
+- 启动脚本默认使用 MySQL profile，适合正式数据库演示
+- 保留 H2 文件数据库配置，数据落在 `focus-server/data/`，适合快速测试
+- `application-mysql.yml` 和 `init-mysql.sql` 用于 MySQL 初始化
 
 ## 一键启动
 
@@ -20,6 +21,18 @@
 脚本会使用项目内 `tools/jdk-21` 和 `tools/maven`，自动打包并启动：
 
 `http://localhost:8080`
+
+默认会使用 MySQL，等价于启动时带上：
+
+```text
+--spring.profiles.active=mysql
+```
+
+首次使用 MySQL 前，请先执行 `src/main/resources/init-mysql.sql`，创建 `focus_db`、表结构和演示账号。如果只是接口测试或课堂快速演示，可切换到 H2：
+
+```powershell
+.\start-backend.ps1 -DbProfile h2
+```
 
 默认账号：
 
@@ -57,3 +70,5 @@ cd focus-server
 mvn -q -DskipTests package
 java -jar target\focus-server-0.0.1-SNAPSHOT.jar
 ```
+
+如果遇到 MySQL 未安装或 `focus_db` 不存在，可先用 `.\start-backend.ps1 -DbProfile h2` 完成后端功能验证。

@@ -11,4 +11,17 @@
 **/.test
 /.appanalyzer
 focus-server/data/
+focus-server/target/
 focus-server/backend-smoke.*.log
+/backend-*-smoke.*.log
+/eval_*.*
+/layout_*.json
+/report/nku-thesis-template-2020/*.aux
+/report/nku-thesis-template-2020/*.bbl
+/report/nku-thesis-template-2020/*.bcf
+/report/nku-thesis-template-2020/*.blg
+/report/nku-thesis-template-2020/*.log
+/report/nku-thesis-template-2020/*.out
+/report/nku-thesis-template-2020/*.run.xml
+/report/nku-thesis-template-2020/*.toc
+/report/nku-thesis-template-2020/pdf-check-*.png

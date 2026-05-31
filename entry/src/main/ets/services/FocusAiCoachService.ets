@@ -39,9 +39,9 @@ interface ChatCompletionResponse {
 }
 
 const PREF_NAME: string = 'focus_ai';
-const DEFAULT_ENDPOINT: string = 'https://sin.ioll.pp.ua/v1';
-const DEFAULT_MODEL: string = 'gpt-4o-mini';
-const DEFAULT_API_KEY: string = 'sk-9okjGLsiF0PwKslDjFXfp9mYPjVjcO7G96LzggBPnhkIYPKj';
+const DEFAULT_ENDPOINT: string = 'https://token-plan-cn.xiaomimimo.com/v1';
+const DEFAULT_MODEL: string = 'mimo-v2.5';
+const DEFAULT_API_KEY: string = 'tp-cv75si6psafr41tdpvlagnwdlevz22gjq5kt6xhvel1c3msh';
 
 export class FocusAiCoachService {
   private pref?: preferences.Preferences;

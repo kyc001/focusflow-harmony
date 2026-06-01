@@ -92,7 +92,7 @@ entry/src/main/ets/services/FocusAmbientService.ets
 
 ### 云同步
 
-云同步模块把本地 RDB 数据与后端数据库进行双向同步。移动端登录后会保存用户标识，并通过同步接口拉取和推送项目、任务、番茄钟记录。任务和番茄记录会携带稳定的 `clientRequestId`，重复推送或重复拉取时按该标识 upsert，避免重复同步污染任务列表和复盘统计。项目和任务删除会保留 `isDeleted` 墓碑并继续参与 push；客户端和服务端都按 `updatedAt` 做 Last-Write-Wins 比较，避免旧副本覆盖新修改。
+云同步模块把本地 RDB 数据与后端数据库进行双向同步。移动端登录后会保存用户标识，并通过同步接口拉取和推送项目、任务、番茄钟记录。客户端使用服务端返回的 `serverTime` 作为下一次拉取的 `since` 游标，避免客户端和服务端时钟不一致造成漏同步；本地表使用 `dirty` 标记记录待上推变更，上推成功后再清除标记，避免每次同步都全量上传。任务和番茄记录会携带稳定的 `clientRequestId`，重复推送或重复拉取时按该标识 upsert，避免重复同步污染任务列表和复盘统计。项目和任务删除会保留 `isDeleted` 墓碑并继续参与 push；客户端和服务端都按 `updatedAt` 做 Last-Write-Wins 比较，避免旧副本覆盖新修改。
 
 模拟器默认后端地址：
 
@@ -453,7 +453,7 @@ POST   /api/sync/push
 X-User-Id: 1
 ```
 
-后端响应统一使用 `Result<T>` 包装。Jackson 使用 `SNAKE_CASE` 输出字段，前端同步服务已兼容 snake_case 和 camelCase。任务和番茄记录同步时使用 `clientRequestId` 做本地和服务端幂等标识，重复拉取同一条记录时更新原记录而不是新增一条。项目、任务和番茄记录都带 `updatedAt`，同步合并时保留较新的版本；项目和任务还带 `isDeleted`，用于把删除结果同步到另一端。
+后端响应统一使用 `Result<T>` 包装。Jackson 使用 `SNAKE_CASE` 输出字段，前端同步服务已兼容 snake_case 和 camelCase。任务和番茄记录同步时使用 `clientRequestId` 做本地和服务端幂等标识，重复拉取同一条记录时更新原记录而不是新增一条。项目、任务和番茄记录都带 `updatedAt`，同步合并时保留较新的版本；项目和任务还带 `isDeleted`，用于把删除结果同步到另一端。`/api/sync/push` 使用事务包裹批量写入，并返回服务端时间而不是全量数据，客户端据此更新下一轮增量拉取游标。
 
 ## 数据库说明
 
@@ -662,11 +662,14 @@ ArkTS / PackageHap 通过，但 PackageApp 被系统 Java 注册表卡住。
 
 - 客户端 `tasks` 表增加 `client_request_id` 和 `is_deleted`
 - 客户端 `pomodoros` 表增加 `client_request_id`
+- 客户端 `projects`、`tasks`、`pomodoros` 表增加 `dirty` 标记，只上推本地变更
+- 客户端使用服务端 `serverTime` 更新同步游标，减少两端时钟漂移影响
 - 任务使用稳定 `client-task-${id}` 作为幂等键
 - 本地新增番茄时生成稳定 `clientRequestId`
 - 服务端拉取番茄记录时按 `clientRequestId` upsert，避免重复插入
 - 删除任务或项目时保留 `isDeleted` 墓碑，并在同步时继续上推
 - 前端合并和后端 push 都按 `updatedAt` 保留较新的版本
+- 后端 push 接口使用事务，避免批量同步中途失败留下半写状态
 
 ### 专注计时后台漂移
 

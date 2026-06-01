@@ -99,6 +99,7 @@ interface AuthResponse {
 interface SyncActionResult {
   success: boolean;
   message: string;
+  serverTime?: number;
 }
 
 interface SyncPullResult {
@@ -170,7 +171,7 @@ export class FocusSyncService {
       if (code < 200 || code >= 300) {
         return { success: false, message: `服务器返回 ${code}` };
       }
-      const result: ServerResult<AuthResponse> = JSON.parse(`${response.result}`) as ServerResult<AuthResponse>;
+      const result: ServerResult<AuthResponse> = this.parseServerResult<AuthResponse>(response.result);
       if (result.code !== 200 || result.data === null) {
         return { success: false, message: result.msg || '登录失败' };
       }
@@ -226,7 +227,7 @@ export class FocusSyncService {
       if (code < 200 || code >= 300) {
         return { success: false, message: `服务器返回 ${code}` };
       }
-      const result: ServerResult<SyncBundle> = JSON.parse(`${response.result}`) as ServerResult<SyncBundle>;
+      const result: ServerResult<SyncBundle> = this.parseServerResult<SyncBundle>(response.result);
       if (result.code !== 200 || result.data === null) {
         return { success: false, message: result.msg || 'pull 失败' };
       }
@@ -260,18 +261,22 @@ export class FocusSyncService {
       if (code < 200 || code >= 300) {
         return { success: false, message: `服务器返回 ${code}` };
       }
-      const result: ServerResult<SyncBundle> = JSON.parse(`${response.result}`) as ServerResult<SyncBundle>;
+      const result: ServerResult<SyncBundle> = this.parseServerResult<SyncBundle>(response.result);
       if (result.code !== 200) {
         return { success: false, message: result.msg || 'push 失败' };
       }
-      return { success: true, message: 'push 成功' };
+      return {
+        success: true,
+        message: 'push 成功',
+        serverTime: result.data === undefined || result.data === null ? undefined : this.bundleServerTime(result.data)
+      };
     } catch (err) {
       return { success: false, message: `网络错误：无法连接 ${this.baseUrl}，详情：${this.formatNetworkError(err)}` };
     }
   }
 
   async syncBidirectional(): Promise<SyncActionResult> {
-    const lastSync: number = this.pref !== undefined ? (await this.pref.get('sync.lastSyncTime', 0)) as number : 0;
+    const lastSync: number = await this.lastServerSyncTime();
     const pullResult = await this.pullFromServer(lastSync);
     if (!pullResult.success || pullResult.bundle === undefined) {
       return { success: false, message: `下拉失败：${pullResult.message}` };
@@ -279,16 +284,23 @@ export class FocusSyncService {
     await this.mergeServerData(pullResult.bundle);
     const localProjects: FocusProject[] = await focusDatabase.getProjectsForSync();
     const localTasks: FocusTask[] = await focusDatabase.getTasksForSync();
-    const localPomodoros: PomodoroRecord[] = await focusDatabase.getPomodoros();
+    const localPomodoros: PomodoroRecord[] = await focusDatabase.getPomodorosForSync();
     const pushResult = await this.pushToServer(localProjects, localTasks, localPomodoros);
     if (!pushResult.success) {
       return { success: false, message: `上推失败：${pushResult.message}` };
     }
+    await focusDatabase.markProjectsSynced(localProjects);
+    await focusDatabase.markTasksSynced(localTasks);
+    await focusDatabase.markPomodorosSynced(localPomodoros);
     if (this.pref !== undefined) {
-      await this.pref.put('sync.lastSyncTime', Date.now());
+      const serverTime: number = pushResult.serverTime || this.bundleServerTime(pullResult.bundle);
+      await this.pref.put('sync.lastServerTime', serverTime);
+      await this.pref.put('sync.lastSyncTime', serverTime);
       await this.pref.flush();
     }
-    return { success: true, message: '同步完成' };
+    const pulledCount: number = pullResult.bundle.projects.length + pullResult.bundle.tasks.length + pullResult.bundle.pomodoros.length;
+    const pushedCount: number = localProjects.length + localTasks.length + localPomodoros.length;
+    return { success: true, message: `同步完成：下拉 ${pulledCount} 条，上推 ${pushedCount} 条` };
   }
 
   private async mergeServerData(bundle: SyncBundle): Promise<void> {
@@ -445,6 +457,31 @@ export class FocusSyncService {
     } finally {
       request.destroy();
     }
+  }
+
+  private parseServerResult<T>(raw: Object | string | ArrayBuffer): ServerResult<T> {
+    const text: string = `${raw}`;
+    try {
+      return JSON.parse(text) as ServerResult<T>;
+    } catch (err) {
+      const preview: string = text.length > 120 ? `${text.substring(0, 120)}...` : text;
+      throw new Error(`Invalid JSON response: ${preview}`);
+    }
+  }
+
+  private async lastServerSyncTime(): Promise<number> {
+    if (this.pref === undefined) {
+      return 0;
+    }
+    const serverTime: number = (await this.pref.get('sync.lastServerTime', 0)) as number;
+    if (serverTime > 0) {
+      return serverTime;
+    }
+    return 0;
+  }
+
+  private bundleServerTime(bundle: SyncBundle): number {
+    return this.numberValue(bundle.serverTime, bundle.server_time, 0);
   }
 
   private formatNetworkError(err: Object): string {

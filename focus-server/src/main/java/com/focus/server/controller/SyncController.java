@@ -9,7 +9,10 @@ import com.focus.server.entity.Task;
 import com.focus.server.mapper.PomodoroMapper;
 import com.focus.server.mapper.ProjectMapper;
 import com.focus.server.mapper.TaskMapper;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/sync")
@@ -36,6 +39,7 @@ public class SyncController {
     }
 
     @PostMapping("/push")
+    @Transactional
     public Result<SyncBundle> push(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
                                    @RequestBody SyncPushRequest request) {
         long now = System.currentTimeMillis();
@@ -88,6 +92,11 @@ public class SyncController {
                 pomodoroMapper.update(pomodoro);
             }
         }
-        return pull(userId, 0L);
+        SyncBundle bundle = new SyncBundle();
+        bundle.setServerTime(System.currentTimeMillis());
+        bundle.setProjects(new ArrayList<>());
+        bundle.setTasks(new ArrayList<>());
+        bundle.setPomodoros(new ArrayList<>());
+        return Result.ok(bundle);
     }
 }

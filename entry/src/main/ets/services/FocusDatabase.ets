@@ -6,7 +6,7 @@ import { FocusProject, FocusTask, PomodoroRecord, ResourceSummaryStatus, StudyRe
 type ValueType = relationalStore.ValueType;
 
 const DB_NAME: string = 'focus.db';
-const DB_VERSION: number = 5;
+const DB_VERSION: number = 6;
 
 export class FocusDatabase {
   private store?: relationalStore.RdbStore;
@@ -38,7 +38,8 @@ export class FocusDatabase {
         'color TEXT NOT NULL, ' +
         'icon TEXT NOT NULL, ' +
         'updated_at INTEGER NOT NULL DEFAULT 0, ' +
-        'is_deleted INTEGER NOT NULL DEFAULT 0' +
+        'is_deleted INTEGER NOT NULL DEFAULT 0, ' +
+        'dirty INTEGER NOT NULL DEFAULT 1' +
         ')'
     );
     await store.executeSql(
@@ -57,7 +58,8 @@ export class FocusDatabase {
         'is_deleted INTEGER NOT NULL DEFAULT 0, ' +
         'client_request_id TEXT, ' +
         'tags_json TEXT, ' +
-        'subtasks_json TEXT' +
+        'subtasks_json TEXT, ' +
+        'dirty INTEGER NOT NULL DEFAULT 1' +
         ')'
     );
     await store.executeSql(
@@ -69,7 +71,8 @@ export class FocusDatabase {
         'completed INTEGER NOT NULL, ' +
         'interrupt_reason TEXT, ' +
         'updated_at INTEGER NOT NULL DEFAULT 0, ' +
-        'client_request_id TEXT' +
+        'client_request_id TEXT, ' +
+        'dirty INTEGER NOT NULL DEFAULT 1' +
         ')'
     );
     await store.executeSql(
@@ -92,13 +95,16 @@ export class FocusDatabase {
     );
     await this.addColumnIfMissing('projects', 'updated_at', 'INTEGER NOT NULL DEFAULT 0');
     await this.addColumnIfMissing('projects', 'is_deleted', 'INTEGER NOT NULL DEFAULT 0');
+    await this.addColumnIfMissing('projects', 'dirty', 'INTEGER NOT NULL DEFAULT 1');
     await this.addColumnIfMissing('tasks', 'updated_at', 'INTEGER NOT NULL DEFAULT 0');
     await this.addColumnIfMissing('tasks', 'is_deleted', 'INTEGER NOT NULL DEFAULT 0');
     await this.addColumnIfMissing('tasks', 'client_request_id', 'TEXT');
     await this.addColumnIfMissing('tasks', 'tags_json', 'TEXT');
     await this.addColumnIfMissing('tasks', 'subtasks_json', 'TEXT');
+    await this.addColumnIfMissing('tasks', 'dirty', 'INTEGER NOT NULL DEFAULT 1');
     await this.addColumnIfMissing('pomodoros', 'updated_at', 'INTEGER NOT NULL DEFAULT 0');
     await this.addColumnIfMissing('pomodoros', 'client_request_id', 'TEXT');
+    await this.addColumnIfMissing('pomodoros', 'dirty', 'INTEGER NOT NULL DEFAULT 1');
     await this.addColumnIfMissing('study_resources', 'summary_status', 'INTEGER NOT NULL DEFAULT 0');
     await this.backfillTaskClientRequestIds();
     await this.backfillPomodoroClientRequestIds();
@@ -128,7 +134,7 @@ export class FocusDatabase {
 
   async getProjectsForSync(): Promise<FocusProject[]> {
     const resultSet: relationalStore.ResultSet = await this.query(
-      'SELECT id, name, color, icon, updated_at, is_deleted FROM projects ORDER BY updated_at ASC, id ASC'
+      'SELECT id, name, color, icon, updated_at, is_deleted FROM projects WHERE dirty = 1 ORDER BY updated_at ASC, id ASC'
     );
     const projects: FocusProject[] = [];
     try {
@@ -152,8 +158,37 @@ export class FocusDatabase {
     return this.queryTasks('WHERE is_deleted = 0', []);
   }
 
-  async getTasksForSync(): Promise<FocusTask[]> {
+  async getTasksWithDeleted(): Promise<FocusTask[]> {
     return this.queryTasks('', []);
+  }
+
+  async getTasksForSync(): Promise<FocusTask[]> {
+    return this.queryTasks('WHERE dirty = 1', []);
+  }
+
+  async getPomodorosForSync(): Promise<PomodoroRecord[]> {
+    const resultSet: relationalStore.ResultSet = await this.query(
+      'SELECT id, task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id ' +
+        'FROM pomodoros WHERE dirty = 1 ORDER BY updated_at ASC, id ASC'
+    );
+    const records: PomodoroRecord[] = [];
+    try {
+      while (resultSet.goToNextRow()) {
+        records.push({
+          id: this.longValue(resultSet, 'id'),
+          taskId: this.longValue(resultSet, 'task_id'),
+          startAt: this.longValue(resultSet, 'start_at'),
+          duration: this.longValue(resultSet, 'duration'),
+          completed: this.longValue(resultSet, 'completed'),
+          interruptReason: this.stringValue(resultSet, 'interrupt_reason', ''),
+          updatedAt: this.longValue(resultSet, 'updated_at'),
+          clientRequestId: this.stringValue(resultSet, 'client_request_id', '')
+        });
+      }
+    } finally {
+      resultSet.close();
+    }
+    return records;
   }
 
   private async queryTasks(whereClause: string, args: relationalStore.ValueType[]): Promise<FocusTask[]> {
@@ -248,7 +283,7 @@ export class FocusDatabase {
   }
 
   async addTask(task: FocusTask): Promise<FocusTask> {
-    const values: relationalStore.ValuesBucket = this.taskToBucket(task, false);
+    const values: relationalStore.ValuesBucket = this.taskToBucket(task, false, 1);
     const id: number = await this.requireStore().insert('tasks', values);
     const clientRequestId: string = `client-task-${id}`;
     await this.requireStore().executeSql(
@@ -294,19 +329,27 @@ export class FocusDatabase {
     };
   }
 
-  async upsertProject(project: FocusProject): Promise<void> {
+  async upsertProject(project: FocusProject, markDirty: boolean = false): Promise<void> {
     const updatedAt: number = project.updatedAt === undefined || project.updatedAt <= 0 ? Date.now() : project.updatedAt;
     const existing: FocusProject | undefined = await this.findProjectById(project.id);
     if (existing !== undefined && (existing.updatedAt || 0) > updatedAt) {
       return;
     }
     await this.requireStore().executeSql(
-      'INSERT OR REPLACE INTO projects (id, name, color, icon, updated_at, is_deleted) VALUES (?, ?, ?, ?, ?, ?)',
-      [project.id, project.name, project.color, project.icon, updatedAt, project.isDeleted === undefined ? 0 : project.isDeleted]
+      'INSERT OR REPLACE INTO projects (id, name, color, icon, updated_at, is_deleted, dirty) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [
+        project.id,
+        project.name,
+        project.color,
+        project.icon,
+        updatedAt,
+        project.isDeleted === undefined ? 0 : project.isDeleted,
+        markDirty ? 1 : 0
+      ]
     );
   }
 
-  async upsertTask(task: FocusTask): Promise<void> {
+  async upsertTask(task: FocusTask, markDirty: boolean = false): Promise<void> {
     const updatedAt: number = task.updatedAt === undefined || task.updatedAt <= 0 ? Date.now() : task.updatedAt;
     const clientRequestId: string = this.taskClientRequestId(task);
     const existing: FocusTask | undefined = await this.findTaskByIdOrClientRequestId(task.id, clientRequestId);
@@ -314,11 +357,11 @@ export class FocusDatabase {
       return;
     }
     const targetId: number = existing === undefined ? task.id : existing.id;
-    const values: relationalStore.ValuesBucket = this.taskToBucket(task, true);
+    const values: relationalStore.ValuesBucket = this.taskToBucket(task, true, markDirty ? 1 : 0);
     await this.requireStore().executeSql(
       'INSERT OR REPLACE INTO tasks (' +
-        'id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, is_deleted, client_request_id, tags_json, subtasks_json' +
-        ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, is_deleted, client_request_id, tags_json, subtasks_json, dirty' +
+        ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         targetId,
         values.title as string,
@@ -334,7 +377,8 @@ export class FocusDatabase {
         task.isDeleted === undefined ? (task.status === TaskStatus.DELETED ? 1 : 0) : task.isDeleted,
         clientRequestId,
         values.tags_json as string,
-        values.subtasks_json as string
+        values.subtasks_json as string,
+        markDirty ? 1 : 0
       ]
     );
   }
@@ -365,7 +409,7 @@ export class FocusDatabase {
   }
 
   async updateTask(task: FocusTask): Promise<void> {
-    const values: relationalStore.ValuesBucket = this.taskToBucket(task, false);
+    const values: relationalStore.ValuesBucket = this.taskToBucket(task, false, 1);
     const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('tasks');
     predicates.equalTo('id', task.id);
     await this.requireStore().update(values, predicates);
@@ -398,7 +442,8 @@ export class FocusDatabase {
       completed: record.completed,
       interrupt_reason: record.interruptReason,
       updated_at: updatedAt,
-      client_request_id: clientRequestId
+      client_request_id: clientRequestId,
+      dirty: 1
     };
     const id: number = await this.requireStore().insert('pomodoros', values);
     return {
@@ -413,7 +458,7 @@ export class FocusDatabase {
     };
   }
 
-  async upsertPomodoro(record: PomodoroRecord): Promise<void> {
+  async upsertPomodoro(record: PomodoroRecord, markDirty: boolean = false): Promise<void> {
     const updatedAt: number = record.updatedAt === undefined || record.updatedAt <= 0 ? Date.now() : record.updatedAt;
     const clientRequestId: string = this.pomodoroClientRequestId(record);
     const existing: PomodoroRecord | undefined = await this.findPomodoroByClientRequestId(clientRequestId);
@@ -423,8 +468,8 @@ export class FocusDatabase {
     const existingId: number = existing === undefined ? 0 : existing.id;
     if (existingId > 0) {
       await this.requireStore().executeSql(
-        'INSERT OR REPLACE INTO pomodoros (id, task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id) ' +
-          'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT OR REPLACE INTO pomodoros (id, task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id, dirty) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           existingId,
           record.taskId,
@@ -433,13 +478,14 @@ export class FocusDatabase {
           record.completed,
           record.interruptReason,
           updatedAt,
-          clientRequestId
+          clientRequestId,
+          markDirty ? 1 : 0
         ]
       );
     } else {
       await this.requireStore().executeSql(
-        'INSERT INTO pomodoros (task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id) ' +
-          'VALUES (?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO pomodoros (task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id, dirty) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [
           record.taskId,
           record.startAt,
@@ -447,7 +493,8 @@ export class FocusDatabase {
           record.completed,
           record.interruptReason,
           updatedAt,
-          clientRequestId
+          clientRequestId,
+          markDirty ? 1 : 0
         ]
       );
     }
@@ -455,9 +502,36 @@ export class FocusDatabase {
 
   async incrementTaskPomodoro(taskId: number): Promise<void> {
     await this.requireStore().executeSql(
-      'UPDATE tasks SET pomodoro_count = pomodoro_count + 1, updated_at = ? WHERE id = ?',
+      'UPDATE tasks SET pomodoro_count = pomodoro_count + 1, updated_at = ?, dirty = 1 WHERE id = ?',
       [Date.now(), taskId]
     );
+  }
+
+  async markProjectsSynced(projects: FocusProject[]): Promise<void> {
+    for (const project of projects) {
+      await this.requireStore().executeSql(
+        'UPDATE projects SET dirty = 0 WHERE id = ? AND updated_at = ?',
+        [project.id, project.updatedAt]
+      );
+    }
+  }
+
+  async markTasksSynced(tasks: FocusTask[]): Promise<void> {
+    for (const task of tasks) {
+      await this.requireStore().executeSql(
+        'UPDATE tasks SET dirty = 0 WHERE id = ? AND updated_at = ? AND client_request_id = ?',
+        [task.id, task.updatedAt, this.taskClientRequestId(task)]
+      );
+    }
+  }
+
+  async markPomodorosSynced(records: PomodoroRecord[]): Promise<void> {
+    for (const record of records) {
+      await this.requireStore().executeSql(
+        'UPDATE pomodoros SET dirty = 0 WHERE id = ? AND updated_at = ? AND client_request_id = ?',
+        [record.id, record.updatedAt, this.pomodoroClientRequestId(record)]
+      );
+    }
   }
 
   isReady(): boolean {
@@ -473,15 +547,15 @@ export class FocusDatabase {
     const tasks: FocusTask[] = createSeedTasks();
     const records: PomodoroRecord[] = createSeedPomodoros();
     for (const project of projects) {
-      await this.upsertProject(project);
+      await this.upsertProject(project, true);
     }
     for (const task of tasks) {
-      await this.upsertTask(task);
+      await this.upsertTask(task, true);
     }
     for (const record of records) {
       await this.requireStore().executeSql(
-        'INSERT OR REPLACE INTO pomodoros (id, task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [record.id, record.taskId, record.startAt, record.duration, record.completed, record.interruptReason, Date.now(), this.pomodoroClientRequestId(record)]
+        'INSERT OR REPLACE INTO pomodoros (id, task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id, dirty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [record.id, record.taskId, record.startAt, record.duration, record.completed, record.interruptReason, Date.now(), this.pomodoroClientRequestId(record), 1]
       );
     }
   }
@@ -655,7 +729,7 @@ export class FocusDatabase {
     }
   }
 
-  private taskToBucket(task: FocusTask, includeId: boolean): relationalStore.ValuesBucket {
+  private taskToBucket(task: FocusTask, includeId: boolean, dirty: number = 1): relationalStore.ValuesBucket {
     const values: relationalStore.ValuesBucket = {
       title: task.title,
       note: task.note,
@@ -670,7 +744,8 @@ export class FocusDatabase {
       is_deleted: task.isDeleted === undefined ? (task.status === TaskStatus.DELETED ? 1 : 0) : task.isDeleted,
       client_request_id: this.taskClientRequestId(task),
       tags_json: JSON.stringify(task.tags),
-      subtasks_json: JSON.stringify(task.subtasks)
+      subtasks_json: JSON.stringify(task.subtasks),
+      dirty: dirty
     };
     if (includeId) {
       values.id = task.id;

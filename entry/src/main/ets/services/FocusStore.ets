@@ -101,7 +101,7 @@ export class FocusStore {
       return;
     }
     this.projects = await focusDatabase.getProjects();
-    this.tasks = await focusDatabase.getTasks();
+    this.tasks = await focusDatabase.getTasksWithDeleted();
     this.pomodoros = await focusDatabase.getPomodoros();
     this.resources = await focusDatabase.getStudyResources();
     if (this.projects.length === 0) {

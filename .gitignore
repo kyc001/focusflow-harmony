@@ -1,6 +1,9 @@
 /node_modules
 /oh_modules
 /local.properties
+/.env
+/.env.*
+!/.env.example
 /.idea
 **/build
 /.hvigor
@@ -16,6 +19,11 @@ focus-server/backend-smoke.*.log
 /backend-*-smoke.*.log
 /eval_*.*
 /layout_*.json
+/tmp/
+/tmp-*.jpeg
+/deliverables/
+/tools/
+/entry/src/main/resources/rawfile/ai-env.json
 /report/nku-thesis-template-2020/*.aux
 /report/nku-thesis-template-2020/*.bbl
 /report/nku-thesis-template-2020/*.bcf
@@ -24,4 +32,7 @@ focus-server/backend-smoke.*.log
 /report/nku-thesis-template-2020/*.out
 /report/nku-thesis-template-2020/*.run.xml
 /report/nku-thesis-template-2020/*.toc
+/report/nku-thesis-template-2020/*.xdv
+/report/nku-thesis-template-2020/*.fls
+/report/nku-thesis-template-2020/*.fdb_latexmk
 /report/nku-thesis-template-2020/pdf-check-*.png

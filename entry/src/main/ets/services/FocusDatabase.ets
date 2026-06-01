@@ -6,7 +6,7 @@ import { FocusProject, FocusTask, PomodoroRecord, StudyResource, TaskStatus } fr
 type ValueType = relationalStore.ValueType;
 
 const DB_NAME: string = 'focus.db';
-const DB_VERSION: number = 3;
+const DB_VERSION: number = 4;
 
 export class FocusDatabase {
   private store?: relationalStore.RdbStore;
@@ -66,7 +66,8 @@ export class FocusDatabase {
         'duration INTEGER NOT NULL, ' +
         'completed INTEGER NOT NULL, ' +
         'interrupt_reason TEXT, ' +
-        'updated_at INTEGER NOT NULL DEFAULT 0' +
+        'updated_at INTEGER NOT NULL DEFAULT 0, ' +
+        'client_request_id TEXT' +
         ')'
     );
     await store.executeSql(
@@ -92,6 +93,8 @@ export class FocusDatabase {
     await this.addColumnIfMissing('tasks', 'tags_json', 'TEXT');
     await this.addColumnIfMissing('tasks', 'subtasks_json', 'TEXT');
     await this.addColumnIfMissing('pomodoros', 'updated_at', 'INTEGER NOT NULL DEFAULT 0');
+    await this.addColumnIfMissing('pomodoros', 'client_request_id', 'TEXT');
+    await this.backfillPomodoroClientRequestIds();
   }
 
   async getProjects(): Promise<FocusProject[]> {
@@ -145,7 +148,7 @@ export class FocusDatabase {
 
   async getPomodoros(): Promise<PomodoroRecord[]> {
     const resultSet: relationalStore.ResultSet = await this.query(
-      'SELECT id, task_id, start_at, duration, completed, interrupt_reason FROM pomodoros ORDER BY start_at DESC, id DESC'
+      'SELECT id, task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id FROM pomodoros ORDER BY start_at DESC, id DESC'
     );
     const records: PomodoroRecord[] = [];
     try {
@@ -156,7 +159,9 @@ export class FocusDatabase {
           startAt: this.longValue(resultSet, 'start_at'),
           duration: this.longValue(resultSet, 'duration'),
           completed: this.longValue(resultSet, 'completed'),
-          interruptReason: this.stringValue(resultSet, 'interrupt_reason', '')
+          interruptReason: this.stringValue(resultSet, 'interrupt_reason', ''),
+          updatedAt: this.longValue(resultSet, 'updated_at'),
+          clientRequestId: this.stringValue(resultSet, 'client_request_id', '')
         });
       }
     } finally {
@@ -304,13 +309,16 @@ export class FocusDatabase {
   }
 
   async recordPomodoro(record: PomodoroRecord): Promise<PomodoroRecord> {
+    const updatedAt: number = record.updatedAt === undefined || record.updatedAt <= 0 ? Date.now() : record.updatedAt;
+    const clientRequestId: string = this.pomodoroClientRequestId(record);
     const values: relationalStore.ValuesBucket = {
       task_id: record.taskId,
       start_at: record.startAt,
       duration: record.duration,
       completed: record.completed,
       interrupt_reason: record.interruptReason,
-      updated_at: Date.now()
+      updated_at: updatedAt,
+      client_request_id: clientRequestId
     };
     const id: number = await this.requireStore().insert('pomodoros', values);
     return {
@@ -319,8 +327,50 @@ export class FocusDatabase {
       startAt: record.startAt,
       duration: record.duration,
       completed: record.completed,
-      interruptReason: record.interruptReason
+      interruptReason: record.interruptReason,
+      updatedAt: updatedAt,
+      clientRequestId: clientRequestId
     };
+  }
+
+  async upsertPomodoro(record: PomodoroRecord): Promise<void> {
+    const updatedAt: number = record.updatedAt === undefined || record.updatedAt <= 0 ? Date.now() : record.updatedAt;
+    const clientRequestId: string = this.pomodoroClientRequestId(record);
+    const existing: PomodoroRecord | undefined = await this.findPomodoroByClientRequestId(clientRequestId);
+    if (existing !== undefined && (existing.updatedAt || 0) > updatedAt) {
+      return;
+    }
+    const existingId: number = existing === undefined ? 0 : existing.id;
+    if (existingId > 0) {
+      await this.requireStore().executeSql(
+        'INSERT OR REPLACE INTO pomodoros (id, task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          existingId,
+          record.taskId,
+          record.startAt,
+          record.duration,
+          record.completed,
+          record.interruptReason,
+          updatedAt,
+          clientRequestId
+        ]
+      );
+    } else {
+      await this.requireStore().executeSql(
+        'INSERT INTO pomodoros (task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [
+          record.taskId,
+          record.startAt,
+          record.duration,
+          record.completed,
+          record.interruptReason,
+          updatedAt,
+          clientRequestId
+        ]
+      );
+    }
   }
 
   async incrementTaskPomodoro(taskId: number): Promise<void> {
@@ -350,8 +400,8 @@ export class FocusDatabase {
     }
     for (const record of records) {
       await this.requireStore().executeSql(
-        'INSERT OR REPLACE INTO pomodoros (id, task_id, start_at, duration, completed, interrupt_reason, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [record.id, record.taskId, record.startAt, record.duration, record.completed, record.interruptReason, Date.now()]
+        'INSERT OR REPLACE INTO pomodoros (id, task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [record.id, record.taskId, record.startAt, record.duration, record.completed, record.interruptReason, Date.now(), this.pomodoroClientRequestId(record)]
       );
     }
   }
@@ -394,6 +444,59 @@ export class FocusDatabase {
       return 0;
     } finally {
       resultSet.close();
+    }
+  }
+
+  private async findPomodoroByClientRequestId(clientRequestId: string): Promise<PomodoroRecord | undefined> {
+    const resultSet: relationalStore.ResultSet = await this.query(
+      'SELECT id, task_id, start_at, duration, completed, interrupt_reason, updated_at, client_request_id ' +
+        'FROM pomodoros WHERE client_request_id = ? ORDER BY updated_at DESC, id ASC LIMIT 1',
+      [clientRequestId]
+    );
+    try {
+      if (resultSet.goToNextRow()) {
+        return {
+          id: this.longValue(resultSet, 'id'),
+          taskId: this.longValue(resultSet, 'task_id'),
+          startAt: this.longValue(resultSet, 'start_at'),
+          duration: this.longValue(resultSet, 'duration'),
+          completed: this.longValue(resultSet, 'completed'),
+          interruptReason: this.stringValue(resultSet, 'interrupt_reason', ''),
+          updatedAt: this.longValue(resultSet, 'updated_at'),
+          clientRequestId: this.stringValue(resultSet, 'client_request_id', '')
+        };
+      }
+      return undefined;
+    } finally {
+      resultSet.close();
+    }
+  }
+
+  private async backfillPomodoroClientRequestIds(): Promise<void> {
+    const resultSet: relationalStore.ResultSet = await this.query(
+      'SELECT id, task_id, start_at, duration FROM pomodoros WHERE client_request_id IS NULL OR client_request_id = ?',
+      ['']
+    );
+    const records: PomodoroRecord[] = [];
+    try {
+      while (resultSet.goToNextRow()) {
+        records.push({
+          id: this.longValue(resultSet, 'id'),
+          taskId: this.longValue(resultSet, 'task_id'),
+          startAt: this.longValue(resultSet, 'start_at'),
+          duration: this.longValue(resultSet, 'duration'),
+          completed: 0,
+          interruptReason: ''
+        });
+      }
+    } finally {
+      resultSet.close();
+    }
+    for (const record of records) {
+      await this.requireStore().executeSql(
+        'UPDATE pomodoros SET client_request_id = ? WHERE id = ?',
+        [this.pomodoroClientRequestId(record), record.id]
+      );
     }
   }
 
@@ -479,6 +582,13 @@ export class FocusDatabase {
     } catch (err) {
       return [];
     }
+  }
+
+  private pomodoroClientRequestId(record: PomodoroRecord): string {
+    if (record.clientRequestId !== undefined && record.clientRequestId.trim().length > 0) {
+      return record.clientRequestId.trim();
+    }
+    return `local-pomo-${record.id}-${record.taskId}-${record.startAt}-${record.duration}`;
   }
 }
 

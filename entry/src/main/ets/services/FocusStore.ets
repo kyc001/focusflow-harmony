@@ -1,3 +1,4 @@
+import taskpool from '@ohos.taskpool';
 import { createDefaultSettings, createForestPlants, createSeedProjects } from '../data/SeedData';
 import {
   FocusProject,
@@ -6,6 +7,7 @@ import {
   ForestPlant,
   PomodoroRecord,
   ResourceInsight,
+  ReviewStats,
   StatPoint,
   StudyResource,
   StudyResourceStatus,
@@ -15,6 +17,64 @@ import { focusDatabase } from './FocusDatabase';
 
 const DAY_MS: number = 24 * 60 * 60 * 1000;
 
+@Concurrent
+function buildReviewStatsSnapshot(
+  projects: FocusProject[],
+  tasks: FocusTask[],
+  pomodoros: PomodoroRecord[],
+  plants: ForestPlant[],
+  now: number
+): ReviewStats {
+  const dayMs: number = 24 * 60 * 60 * 1000;
+  const startOfToday: number = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), new Date(now).getDate()).getTime();
+  const completed: PomodoroRecord[] = pomodoros.filter((record: PomodoroRecord) => record.completed === 1);
+  let streak: number = 0;
+  for (let i: number = 0; i < 30; i++) {
+    const dayStart: number = startOfToday - i * dayMs;
+    const dayEnd: number = dayStart + dayMs;
+    const hasRecord: boolean = completed.some((record: PomodoroRecord) => record.startAt >= dayStart && record.startAt < dayEnd);
+    if (!hasRecord) {
+      break;
+    }
+    streak++;
+  }
+  const weekNames: string[] = ['一', '二', '三', '四', '五', '六', '日'];
+  const weekPoints: StatPoint[] = weekNames.map((name: string, index: number) => {
+    const dayStart: number = startOfToday - (6 - index) * dayMs;
+    const dayEnd: number = dayStart + dayMs;
+    const minutes: number = Math.round(completed
+      .filter((record: PomodoroRecord) => record.startAt >= dayStart && record.startAt < dayEnd)
+      .reduce((sum: number, record: PomodoroRecord) => sum + record.duration, 0) / 60);
+    const point: StatPoint = { label: name, value: minutes };
+    return point;
+  });
+  const projectPoints: StatPoint[] = projects.map((project: FocusProject) => {
+    const taskIds: number[] = tasks
+      .filter((task: FocusTask) => task.projectId === project.id)
+      .map((task: FocusTask) => task.id);
+    const minutes: number = Math.round(completed
+      .filter((record: PomodoroRecord) => taskIds.indexOf(record.taskId) >= 0)
+      .reduce((sum: number, record: PomodoroRecord) => sum + record.duration, 0) / 60);
+    const point: StatPoint = { label: project.name, value: minutes };
+    return point;
+  });
+  const totalFocusMinutes: number = Math.round(completed.reduce((sum: number, record: PomodoroRecord) => sum + record.duration, 0) / 60);
+  const bestStreak: number = Math.max(streak, 6);
+  const unlockedPlantIds: number[] = plants
+    .filter((plant: ForestPlant) => completed.length >= plant.unlockPomodoros && streak >= plant.unlockStreak)
+    .map((plant: ForestPlant) => plant.id);
+  return {
+    completedPomodoros: completed.length,
+    interruptedPomodoros: pomodoros.filter((record: PomodoroRecord) => record.completed === 0).length,
+    totalFocusMinutes: totalFocusMinutes,
+    weekFocusPoints: weekPoints,
+    projectFocusPoints: projectPoints,
+    streakDays: streak,
+    bestStreakDays: bestStreak,
+    unlockedPlantIds: unlockedPlantIds
+  };
+}
+
 export class FocusStore {
   projects: FocusProject[] = createSeedProjects();
   tasks: FocusTask[] = [];
@@ -22,6 +82,7 @@ export class FocusStore {
   resources: StudyResource[] = [];
   settings: FocusSettings = createDefaultSettings();
   plants: ForestPlant[] = createForestPlants();
+  private reviewStats: ReviewStats = buildReviewStatsSnapshot(this.projects, this.tasks, this.pomodoros, this.plants, Date.now());
 
   async refresh(): Promise<void> {
     if (!focusDatabase.isReady()) {
@@ -34,6 +95,7 @@ export class FocusStore {
     if (this.projects.length === 0) {
       this.projects = createSeedProjects();
     }
+    await this.refreshReviewStats();
   }
 
   getProject(projectId: number): FocusProject {
@@ -220,7 +282,9 @@ export class FocusStore {
       startAt: Date.now() - duration * 1000,
       duration: duration,
       completed: completed ? 1 : 0,
-      interruptReason: reason
+      interruptReason: reason,
+      updatedAt: Date.now(),
+      clientRequestId: `local-pomo-${Date.now()}-${taskId}`
     };
     await focusDatabase.recordPomodoro(record);
     if (completed) {
@@ -230,71 +294,35 @@ export class FocusStore {
   }
 
   completedPomodoros(): number {
-    return this.pomodoros.filter((record: PomodoroRecord) => record.completed === 1).length;
+    return this.reviewStats.completedPomodoros;
   }
 
   interruptedPomodoros(): number {
-    return this.pomodoros.filter((record: PomodoroRecord) => record.completed === 0).length;
+    return this.reviewStats.interruptedPomodoros;
   }
 
   totalFocusMinutes(): number {
-    return Math.round(this.pomodoros
-      .filter((record: PomodoroRecord) => record.completed === 1)
-      .reduce((sum: number, record: PomodoroRecord) => sum + record.duration, 0) / 60);
+    return this.reviewStats.totalFocusMinutes;
   }
 
   weekFocusPoints(): StatPoint[] {
-    const names: string[] = ['一', '二', '三', '四', '五', '六', '日'];
-    return names.map((name: string, index: number) => {
-      const dayStart: number = this.startOfToday() - (6 - index) * DAY_MS;
-      const dayEnd: number = dayStart + DAY_MS;
-      const minutes: number = Math.round(this.pomodoros
-        .filter((record: PomodoroRecord) => record.completed === 1 && record.startAt >= dayStart && record.startAt < dayEnd)
-        .reduce((sum: number, record: PomodoroRecord) => sum + record.duration, 0) / 60);
-      const point: StatPoint = { label: name, value: minutes };
-      return point;
-    });
+    return this.reviewStats.weekFocusPoints.slice();
   }
 
   projectFocusPoints(): StatPoint[] {
-    return this.projects.map((project: FocusProject) => {
-      const taskIds: number[] = this.tasks
-        .filter((task: FocusTask) => task.projectId === project.id)
-        .map((task: FocusTask) => task.id);
-      const minutes: number = Math.round(this.pomodoros
-        .filter((record: PomodoroRecord) => record.completed === 1 && taskIds.indexOf(record.taskId) >= 0)
-        .reduce((sum: number, record: PomodoroRecord) => sum + record.duration, 0) / 60);
-      const point: StatPoint = { label: project.name, value: minutes };
-      return point;
-    });
+    return this.reviewStats.projectFocusPoints.slice();
   }
 
   streakDays(): number {
-    let streak: number = 0;
-    for (let i: number = 0; i < 30; i++) {
-      const dayStart: number = this.startOfToday() - i * DAY_MS;
-      const dayEnd: number = dayStart + DAY_MS;
-      const hasRecord: boolean = this.pomodoros.some((record: PomodoroRecord) => {
-        return record.completed === 1 && record.startAt >= dayStart && record.startAt < dayEnd;
-      });
-      if (!hasRecord) {
-        break;
-      }
-      streak++;
-    }
-    return streak;
+    return this.reviewStats.streakDays;
   }
 
   bestStreakDays(): number {
-    return Math.max(this.streakDays(), 6);
+    return this.reviewStats.bestStreakDays;
   }
 
   unlockedPlants(): ForestPlant[] {
-    const total: number = this.completedPomodoros();
-    const streak: number = this.streakDays();
-    return this.plants.filter((plant: ForestPlant) => {
-      return total >= plant.unlockPomodoros && streak >= plant.unlockStreak;
-    });
+    return this.plants.filter((plant: ForestPlant) => this.reviewStats.unlockedPlantIds.indexOf(plant.id) >= 0);
   }
 
   extractedResourceCount(): number {
@@ -356,9 +384,20 @@ export class FocusStore {
     };
   }
 
-  private startOfToday(): number {
-    const now: Date = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  private async refreshReviewStats(): Promise<void> {
+    try {
+      const result: Object = await taskpool.execute(
+        buildReviewStatsSnapshot,
+        this.projects.slice(),
+        this.tasks.slice(),
+        this.pomodoros.slice(),
+        this.plants.slice(),
+        Date.now()
+      );
+      this.reviewStats = result as ReviewStats;
+    } catch (err) {
+      this.reviewStats = buildReviewStatsSnapshot(this.projects, this.tasks, this.pomodoros, this.plants, Date.now());
+    }
   }
 }
 

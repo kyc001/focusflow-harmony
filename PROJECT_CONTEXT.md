@@ -24,6 +24,7 @@
 - 番茄钟记录
 - 白噪音播放
 - 数据统计
+- TaskPool 复盘统计预计算
 - 云同步
 - AI 教练服务
 - 后端 MySQL/H2 数据库支持
@@ -37,8 +38,6 @@ D:\Study\26sp\arkts\final
 ├─ entry                            HarmonyOS 前端 module
 ├─ focus-server                     Spring Boot 后端
 ├─ report\nku-thesis-template-2020  论文目录
-├─ tools\jdk-21                     项目本地后端 JDK
-├─ tools\maven                      项目本地 Maven
 ├─ build-frontend.ps1               前端构建脚本
 ├─ setup-backend-env.ps1            后端环境初始化脚本
 ├─ start-backend.ps1                后端启动脚本
@@ -53,6 +52,13 @@ entry/src/main/ets/entryability/EntryAbility.ets
 entry/src/main/ets/pages/Index.ets
 entry/src/main/ets/pages/FocusSolo.ets
 entry/src/main/ets/pages/Splash.ets
+entry/src/main/ets/components/TodayView.ets
+entry/src/main/ets/components/TasksView.ets
+entry/src/main/ets/components/ResourcesView.ets
+entry/src/main/ets/components/FocusSessionView.ets
+entry/src/main/ets/components/ReviewView.ets
+entry/src/main/ets/components/ProfileView.ets
+entry/src/main/ets/components/FocusVisuals.ets
 entry/src/main/ets/services/FocusStore.ets
 entry/src/main/ets/services/FocusDatabase.ets
 entry/src/main/ets/services/FocusSyncService.ets
@@ -65,6 +71,7 @@ entry/src/main/ets/models/FocusModels.ets
 entry/src/main/ets/data/SeedData.ets
 entry/src/main/ets/utils/FocusDesignTokens.ets
 entry/src/main/ets/utils/FocusFormatters.ets
+entry/src/main/ets/utils/FocusRoutes.ets
 ```
 
 后端核心文件：
@@ -116,13 +123,13 @@ HDC：
 C:\Program Files\Huawei\DevEco Studio\sdk\default\openharmony\toolchains\hdc.exe
 ```
 
-项目本地 JDK：
+项目本地 JDK，若存在：
 
 ```text
 D:\Study\26sp\arkts\final\tools\jdk-21
 ```
 
-项目本地 Maven：
+项目本地 Maven，若存在：
 
 ```text
 D:\Study\26sp\arkts\final\tools\maven
@@ -224,10 +231,19 @@ Finished ::assembleApp
 脚本设置：
 
 ```powershell
-$env:JAVA_HOME  = "D:\Study\26sp\arkts\final\tools\jdk-21"
+$env:JAVA_HOME  = "D:\Study\26sp\arkts\final\tools\jdk-21" # 若完整可用
 $env:MAVEN_HOME = "D:\Study\26sp\arkts\final\tools\maven"
 $env:Path       = "$env:JAVA_HOME\bin;$env:MAVEN_HOME\bin;$env:Path"
 ```
+
+当前脚本会检查 JDK 是否包含 `bin\java.exe` 和 `lib\modules`。如果项目内 `tools\jdk-21` 不完整，会自动回退到：
+
+```text
+D:\jdk
+C:\Program Files\Huawei\DevEco Studio\jbr
+```
+
+同时会从 PATH 中移除损坏的 Oracle `javapath`。
 
 后端测试：
 
@@ -261,7 +277,7 @@ H2 快速测试启动：
 
 启动脚本行为：
 
-1. 设置项目本地 JDK 和 Maven
+1. 自动选择可用 JDK，设置项目本地 Maven
 2. 进入 `focus-server`
 3. 执行 `mvn -q -DskipTests package`
 4. 启动 `target\focus-server-0.0.1-SNAPSHOT.jar`
@@ -298,10 +314,20 @@ server:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/focus_db?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
-    username: root
-    password: 123456
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/focus_db?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:}
 ```
+
+本地 MySQL 密码放在根目录 `.env`：
+
+```text
+MYSQL_URL=jdbc:mysql://localhost:3306/focus_db?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+MYSQL_USERNAME=root
+MYSQL_PASSWORD=...
+```
+
+`setup-backend-env.ps1` 和 `start-backend.ps1` 会读取 `.env` 注入进程环境变量。
 
 初始化 SQL：
 
@@ -497,9 +523,10 @@ entry/src/main/ets/services/FocusAiCoachService.ets
 
 注意：
 
-- 该文件可能包含 AI 服务 endpoint、model、API key 默认值
-- 推送 GitHub 前必须确认没有真实密钥
-- 不要把 `sk-*`、`tp-*`、token 或私有 endpoint 明文提交到公开仓库
+- 源码默认不保存真实 API key
+- 本地可通过根目录 `.env` 配置 `AI_ENDPOINT`、`AI_MODEL`、`AI_API_KEY`
+- `build-frontend.ps1` 会读取 `.env` 并生成被忽略的 `entry/src/main/resources/rawfile/ai-env.json`
+- 推送 GitHub 前必须确认 `.env` 和 `ai-env.json` 没有被跟踪
 
 ## 9. HDC 调试方法
 
@@ -817,7 +844,9 @@ setup-backend-env.ps1 语法坏了，导致后端测试被脚本拦住。
 处理：
 
 - 重写为有效 PowerShell
-- 使用项目本地 JDK/Maven
+- 自动选择可用 JDK，优先项目本地 JDK，回退到 `D:\jdk` 或 DevEco Studio JBR
+- 使用项目本地 Maven
+- 从 PATH 移除损坏的 Oracle `javapath`
 - dot-source 后可直接运行 `mvn test`
 
 验证：
@@ -826,6 +855,75 @@ setup-backend-env.ps1 语法坏了，导致后端测试被脚本拦住。
 . .\setup-backend-env.ps1
 Set-Location .\focus-server
 mvn test
+```
+
+结果：通过。
+
+### 14.7 Navigation 路由评分点
+
+问题：
+
+```text
+早期个人页详情使用 Tabs + Stack 条件渲染浮层，不满足“最新 Navigation 方式跳转”的评分点。
+```
+
+处理：
+
+- `Index.ets` 外层使用 `Navigation(this.navStack)`
+- 资料库、复盘统计、云同步和设置入口调用 `pushPathByName`
+- 目标页面通过 `NavDestination` 承载
+- 返回按钮调用 `navStack.pop()`
+
+验证：
+
+```powershell
+.\build-frontend.ps1 -HvigorArgs assembleHap,--no-daemon
+```
+
+结果：通过。
+
+### 14.8 TaskPool 复盘统计优化
+
+问题：
+
+```text
+复盘页会反复计算本周统计、项目占比、连续学习天数和植物解锁状态；当番茄记录增多时，主线程重复扫描数组会影响页面响应。
+```
+
+处理：
+
+- `FocusStore.ets` 新增 `@Concurrent` 统计函数
+- 数据刷新后使用 `taskpool.execute` 后台生成 `ReviewStats` 快照
+- 页面读取预计算快照，避免构建 UI 时重复聚合
+- TaskPool 执行失败时回退到同步计算，保证统计页面可用
+
+验证：
+
+```powershell
+.\build-frontend.ps1
+```
+
+结果：`PackageApp / SignApp / assembleApp` 全部通过。
+
+### 14.9 双向同步重复番茄记录
+
+问题：
+
+```text
+拉取服务端番茄记录时如果直接 insert，多次同步可能产生重复专注记录，影响复盘统计。
+```
+
+处理：
+
+- 客户端 `pomodoros` 表增加 `client_request_id`
+- 本地创建番茄记录时生成稳定 `clientRequestId`
+- 服务端拉取番茄记录时按 `clientRequestId` 查询并 upsert
+- 同步推送保留本地 `clientRequestId`，让前后端幂等标识一致
+
+验证：
+
+```powershell
+.\build-frontend.ps1 -HvigorArgs assembleHap,--no-daemon
 ```
 
 结果：通过。
@@ -1001,6 +1099,8 @@ xelatex -interaction=nonstopmode main.tex
 - GitHub token
 - SSH 私钥
 - 数据库真实生产密码
+- `.env`
+- `entry/src/main/resources/rawfile/ai-env.json`
 - 任何 `sk-*`、`tp-*`、`ghp_*`、`github_pat_*` 格式密钥
 
 当前文档不记录任何外部 API key 明文。
@@ -1011,15 +1111,12 @@ xelatex -interaction=nonstopmode main.tex
 rg -n "sk-[A-Za-z0-9_-]{20,}|tp-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]+|api[_-]?key|token|secret|password" -S --glob '!oh_modules/**' --glob '!node_modules/**' --glob '!**/build/**' --glob '!focus-server/target/**'
 ```
 
-如果扫描命中配置文件中的示例密码，需要判断是否只是本地演示配置。真实密钥必须移除。
+如果扫描命中 `.env` 或 `ai-env.json`，说明扫描命令没有排除本地配置文件。真实密钥不能进入 Git 索引。
 
 ## 17. 当前仍需关注的点
 
-1. `FocusAiCoachService.ets` 是否还含真实 endpoint/model/key 默认值，需要在公开推送前改成占位配置或从本地偏好读取。
-2. `application-mysql.yml` 当前包含本机 MySQL root 密码示例，公开仓库建议改成环境变量或示例配置。
-3. ArkTS deprecated warning 不阻塞，但后续可逐步替换。
-4. `signingConfigs` 未配置，发布正式包前需要配置签名。
-5. `focus-server/target` 以前被 Git 跟踪过，现在已加入 `.gitignore` 并清理，后续提交会从仓库删除。
-6. 旧根目录 `白噪音/*.mp3` 已清理，实际运行资源在 `entry/src/main/resources/rawfile/`。
-7. 如果重新构建后生成 `eval_*`、`layout_*.json`、LaTeX 中间文件，它们已被 `.gitignore` 忽略。
-
+1. ArkTS deprecated warning 不阻塞，但后续可逐步替换。
+2. `signingConfigs` 未配置，发布正式包前需要配置签名。
+3. `focus-server/target` 以前被 Git 跟踪过，现在已加入 `.gitignore` 并清理，后续提交会从仓库删除。
+4. 旧根目录 `白噪音/*.mp3` 已清理，实际运行资源在 `entry/src/main/resources/rawfile/`。
+5. 如果重新构建后生成 `eval_*`、`layout_*.json`、LaTeX 中间文件，它们已被 `.gitignore` 忽略。

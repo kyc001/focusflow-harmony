@@ -31,6 +31,32 @@ $env:JRE_HOME = $jbrHome
 $env:DEVECO_SDK_HOME = $sdkHome
 $env:Path = ($pathEntries | Select-Object -Unique) -join ';'
 
+$dotEnvPath = Join-Path $projectRoot ".env"
+$aiEnvPath = Join-Path $projectRoot "entry\src\main\resources\rawfile\ai-env.json"
+if (Test-Path $dotEnvPath) {
+  $dotEnv = @{}
+  Get-Content $dotEnvPath | ForEach-Object {
+    $line = $_.Trim()
+    if ($line.Length -eq 0 -or $line.StartsWith("#") -or -not $line.Contains("=")) {
+      return
+    }
+    $name, $value = $line.Split("=", 2)
+    $dotEnv[$name.Trim()] = $value.Trim().Trim('"').Trim("'")
+  }
+  $aiConfig = [ordered]@{
+    endpoint = $dotEnv["AI_ENDPOINT"]
+    model = $dotEnv["AI_MODEL"]
+    apiKey = $dotEnv["AI_API_KEY"]
+  }
+  if (($aiConfig.endpoint -or $aiConfig.model -or $aiConfig.apiKey) -and (Test-Path (Split-Path -Parent $aiEnvPath))) {
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($aiEnvPath, (($aiConfig | ConvertTo-Json -Compress) + "`n"), $utf8NoBom)
+    Write-Host "AI env config generated from local .env." -ForegroundColor Cyan
+  }
+} elseif (Test-Path $aiEnvPath) {
+  Remove-Item -LiteralPath $aiEnvPath -Force
+}
+
 Write-Host "Frontend build environment configured." -ForegroundColor Green
 Write-Host "  JAVA_HOME = $env:JAVA_HOME"
 Write-Host "  java     = $((Get-Command java).Source)"

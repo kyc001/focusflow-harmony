@@ -14,8 +14,9 @@ public interface PomodoroMapper {
 
     int insert(Pomodoro pomodoro);
 
+    int update(Pomodoro pomodoro);
+
     Integer sumCompletedDuration(@Param("userId") Long userId);
 
     Integer countByCompleted(@Param("userId") Long userId, @Param("completed") Integer completed);
 }
-

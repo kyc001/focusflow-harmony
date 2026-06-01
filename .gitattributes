@@ -1,0 +1,9 @@
+*.ets linguist-language=TypeScript
+*.json5 linguist-language=JSON
+*.tex linguist-vendored
+*.pdf binary
+*.jpeg binary
+*.jpg binary
+*.png binary
+report/** linguist-documentation
+tools/** linguist-vendored

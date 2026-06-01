@@ -64,12 +64,20 @@ public class SyncController {
         }
         for (Pomodoro pomodoro : request.getPomodoros()) {
             pomodoro.setUserId(userId);
-            pomodoro.setUpdatedAt(now);
-            if (pomodoro.getClientRequestId() == null || pomodoroMapper.findByClientRequestId(userId, pomodoro.getClientRequestId()) == null) {
+            pomodoro.setUpdatedAt(pomodoro.getUpdatedAt() == null || pomodoro.getUpdatedAt() <= 0 ? now : pomodoro.getUpdatedAt());
+            if (pomodoro.getClientRequestId() == null || pomodoro.getClientRequestId().trim().isEmpty()) {
+                pomodoro.setClientRequestId("server-pomo-" + now + "-" + pomodoro.getTaskId() + "-" + pomodoro.getStartAt());
                 pomodoroMapper.insert(pomodoro);
+                continue;
+            }
+            Pomodoro existing = pomodoroMapper.findByClientRequestId(userId, pomodoro.getClientRequestId());
+            if (existing == null) {
+                pomodoroMapper.insert(pomodoro);
+            } else if (existing.getUpdatedAt() == null || existing.getUpdatedAt() <= pomodoro.getUpdatedAt()) {
+                pomodoro.setId(existing.getId());
+                pomodoroMapper.update(pomodoro);
             }
         }
         return pull(userId, 0L);
     }
 }
-

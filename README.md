@@ -7,9 +7,12 @@ FocusFlow Harmony 是一个面向学习和深度工作的 HarmonyOS 专注效率
 ## 项目特性
 
 - HarmonyOS 原生前端：基于 ArkTS、ArkUI、RDB、Preferences、AVPlayer、ArkWeb。
+- Navigation 路由：个人页资料库、复盘统计、云同步和设置入口使用 `Navigation` + `NavPathStack` 页面栈。
+- 组件化视图：今日、任务、资料、专注、复盘、我的等界面拆分到 `components/`，主页面负责路由和业务状态编排。
 - 专注工作流闭环：任务规划、今日看板、番茄钟、专注记录、复盘统计。
 - 本地优先：核心数据先写入 HarmonyOS RDB，本地账户可离线使用。
 - 后端同步：Spring Boot + MyBatis 提供登录、项目、任务、番茄钟、统计、同步接口。
+- TaskPool 统计优化：复盘统计在数据刷新后后台预计算快照，降低大量番茄记录下的主线程重复扫描。
 - 数据库可切换：默认 MySQL，支持 H2 文件数据库快速演示和测试。
 - 白噪音播放：支持室外、海边、虫鸣三类本地 rawfile 音频。
 - 移动端体验优化：快速添加任务、默认项目兜底、云同步地址提示、模拟器/真机连接指引。
@@ -85,10 +88,11 @@ entry/src/main/ets/services/FocusAmbientService.ets
 - 专注中断情况
 - 连续打卡反馈
 - 图表化展示
+- TaskPool 后台预计算统计快照
 
 ### 云同步
 
-云同步模块把本地 RDB 数据与后端数据库进行双向同步。移动端登录后会保存用户标识，并通过同步接口拉取和推送项目、任务、番茄钟记录。
+云同步模块把本地 RDB 数据与后端数据库进行双向同步。移动端登录后会保存用户标识，并通过同步接口拉取和推送项目、任务、番茄钟记录。任务和番茄记录会携带 `clientRequestId`，本地拉取时也会按该标识去重，避免重复同步污染复盘统计。
 
 模拟器默认后端地址：
 
@@ -159,7 +163,8 @@ MySQL / H2 Database
 
 ```text
 entry/src/main/ets
-├─ pages/         页面和交互入口
+├─ pages/         页面入口和 Navigation 路由编排
+├─ components/    今日、任务、资料、专注、复盘、我的等可复用视图组件
 ├─ services/      数据库、同步、设置、白噪音、原生能力封装
 ├─ models/        前端数据模型
 ├─ repository/    认证和本地持久化入口
@@ -169,13 +174,14 @@ entry/src/main/ets
 
 核心职责：
 
-- View：`pages/Index.ets`、`pages/FocusSolo.ets`
+- View：`pages/Index.ets`、`pages/FocusSolo.ets`、`components/*.ets`
 - ViewModel/Store：`services/FocusStore.ets`
 - Model：`models/FocusModels.ets`
 - Local Data：`services/FocusDatabase.ets`
 - Remote Sync：`services/FocusSyncService.ets`
 - Native Ability：`services/FocusNativeServices.ets`
 - Ambient Audio：`services/FocusAmbientService.ets`
+- Review Stats：`services/FocusStore.ets` 使用 `@Concurrent` + `taskpool.execute` 预计算复盘统计
 
 ### 后端分层
 
@@ -227,9 +233,6 @@ focus-server/src/main/resources
 │     └─ resources/
 ├─ report/
 │  └─ nku-thesis-template-2020/
-├─ tools/
-│  ├─ jdk-21/
-│  └─ maven/
 ├─ build-frontend.ps1
 ├─ setup-backend-env.ps1
 ├─ start-backend.ps1
@@ -259,14 +262,14 @@ C:\Program Files\Huawei\DevEco Studio\sdk\default\openharmony\toolchains\hdc.exe
 
 ### 后端
 
-项目自带后端构建工具：
+后端脚本会优先使用项目根目录下的本地工具链：
 
 ```text
 tools/jdk-21
 tools/maven
 ```
 
-因此后端不依赖系统 Java 和系统 Maven。推荐使用项目脚本设置环境，避免版本不一致。
+这些工具链用于本机复现实验环境，但不建议提交到公开仓库。若克隆仓库后没有 `tools/` 目录，可以安装 JDK 21 和 Maven，或自行放置同名目录后使用脚本。脚本会检查 JDK 是否包含 `lib/modules`，如果项目内 JDK 不完整，会自动回退到 `D:\jdk` 或 DevEco Studio 自带 JBR，并从 PATH 中移除损坏的 Oracle `javapath`。
 
 ## 快速开始
 
@@ -283,6 +286,14 @@ cd focusflow-harmony
 
 ```powershell
 .\start-backend.ps1
+```
+
+如果本机 MySQL 不是空密码 root 账号，把 `.env.example` 复制为 `.env` 并填写：
+
+```text
+MYSQL_URL=jdbc:mysql://localhost:3306/focus_db?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+MYSQL_USERNAME=root
+MYSQL_PASSWORD=your-local-password
 ```
 
 首次使用 MySQL 前，需要在本机 MySQL 中执行：
@@ -321,6 +332,16 @@ password: secret
 ```
 
 该脚本会强制使用 DevEco Studio 自带 JBR，并从 PATH 中移除 Oracle `javapath`，用于规避 `PackageApp` 阶段被系统 Java 注册表问题卡住的情况。
+
+如果需要本地启用远程 AI，把 `.env.example` 复制为 `.env` 并填写：
+
+```text
+AI_ENDPOINT=https://example.com/v1
+AI_MODEL=your-model-name
+AI_API_KEY=your-api-key
+```
+
+`.env` 不会上传到 Git。前端构建脚本会在本地生成 `entry/src/main/resources/rawfile/ai-env.json`，该文件同样被忽略；后端脚本会读取同一份 `.env` 注入 MySQL 连接环境变量。
 
 只构建 HAP：
 
@@ -432,7 +453,7 @@ POST   /api/sync/push
 X-User-Id: 1
 ```
 
-后端响应统一使用 `Result<T>` 包装。Jackson 使用 `SNAKE_CASE` 输出字段，前端同步服务已兼容 snake_case 和 camelCase。
+后端响应统一使用 `Result<T>` 包装。Jackson 使用 `SNAKE_CASE` 输出字段，前端同步服务已兼容 snake_case 和 camelCase。番茄记录同步时使用 `clientRequestId` 做本地和服务端幂等标识，重复拉取同一条记录时更新原记录而不是新增一条。
 
 ## 数据库说明
 
@@ -456,7 +477,7 @@ focus-server/src/main/resources/init-mysql.sql
 focus_db
 ```
 
-公开部署时建议将数据库用户名和密码改为环境变量或外部配置，不要把真实生产密码提交到仓库。
+`application-mysql.yml` 使用 `MYSQL_URL`、`MYSQL_USERNAME`、`MYSQL_PASSWORD` 环境变量读取连接信息。未配置时默认连接本机 `focus_db`，用户名为 `root`，密码为空。真实密码放在本地 `.env`，不要提交到仓库。
 
 ### H2
 
@@ -618,6 +639,30 @@ ArkTS / PackageHap 通过，但 PackageApp 被系统 Java 注册表卡住。
 - 真机提示填写电脑局域网 IP
 - 页面提示启动后端和演示账号
 
+### Navigation 路由不符合评分点
+
+处理：
+
+- 在 `Index.ets` 外层加入 `Navigation(this.navStack)`
+- 资料库、复盘统计、云同步、设置使用 `pushPathByName`
+- 目标页面由 `NavDestination` 承载，返回按钮执行 `navStack.pop()`
+
+### 复盘统计主线程压力
+
+处理：
+
+- `FocusStore` 新增 `ReviewStats` 统计快照
+- 使用 `@Concurrent` 函数在 TaskPool 中计算周统计、项目占比、连续学习天数和植物解锁
+- TaskPool 不可用时回退到同步计算，保证统计页面仍可展示
+
+### 双向同步重复番茄记录
+
+处理：
+
+- 客户端 `pomodoros` 表增加 `client_request_id`
+- 本地新增番茄时生成稳定 `clientRequestId`
+- 服务端拉取番茄记录时按 `clientRequestId` upsert，避免重复插入
+
 ## 安全注意事项
 
 公开推送前不要提交：
@@ -629,6 +674,8 @@ ArkTS / PackageHap 通过，但 PackageApp 被系统 Java 注册表卡住。
 - `C:\Users\kyc\.codex\auth.json`
 - `C:\Users\kyc\.codex\config.toml`
 - 真实生产数据库密码
+- `.env`
+- `entry/src/main/resources/rawfile/ai-env.json`
 
 建议推送前扫描：
 

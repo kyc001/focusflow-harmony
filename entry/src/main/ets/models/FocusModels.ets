@@ -62,6 +62,8 @@ export interface PomodoroRecord {
   duration: number;
   completed: number;
   interruptReason: string;
+  updatedAt?: number;
+  clientRequestId?: string;
 }
 
 export interface FocusSettings {
@@ -85,6 +87,17 @@ export interface ForestPlant {
 export interface StatPoint {
   label: string;
   value: number;
+}
+
+export interface ReviewStats {
+  completedPomodoros: number;
+  interruptedPomodoros: number;
+  totalFocusMinutes: number;
+  weekFocusPoints: StatPoint[];
+  projectFocusPoints: StatPoint[];
+  streakDays: number;
+  bestStreakDays: number;
+  unlockedPlantIds: number[];
 }
 
 export interface AiCoachSettings {

@@ -35,6 +35,18 @@
         VALUES (#{userId}, #{taskId}, #{startAt}, #{duration}, #{completed}, #{interruptReason}, #{updatedAt}, #{clientRequestId})
     </insert>
 
+    <update id="update">
+        UPDATE pomodoros
+        SET task_id = #{taskId},
+            start_at = #{startAt},
+            duration = #{duration},
+            completed = #{completed},
+            interrupt_reason = #{interruptReason},
+            updated_at = #{updatedAt},
+            client_request_id = #{clientRequestId}
+        WHERE id = #{id} AND user_id = #{userId}
+    </update>
+
     <select id="sumCompletedDuration" resultType="int">
         SELECT COALESCE(SUM(duration), 0) FROM pomodoros WHERE user_id = #{userId} AND completed = 1
     </select>
@@ -43,4 +55,3 @@
         SELECT COUNT(*) FROM pomodoros WHERE user_id = #{userId} AND completed = #{completed}
     </select>
 </mapper>
-

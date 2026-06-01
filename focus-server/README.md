@@ -18,7 +18,7 @@
 .\start-backend.ps1
 ```
 
-脚本会使用项目内 `tools/jdk-21` 和 `tools/maven`，自动打包并启动：
+脚本会自动选择可用 JDK，并使用项目内 `tools/maven` 自动打包和启动：
 
 `http://localhost:8080`
 
@@ -29,6 +29,14 @@
 ```
 
 首次使用 MySQL 前，请先执行 `src/main/resources/init-mysql.sql`，创建 `focus_db`、表结构和演示账号。如果只是接口测试或课堂快速演示，可切换到 H2：
+
+如果本机 MySQL 不是空密码 root 账号，请在项目根目录 `.env` 中配置：
+
+```text
+MYSQL_URL=jdbc:mysql://localhost:3306/focus_db?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+MYSQL_USERNAME=root
+MYSQL_PASSWORD=your-local-password
+```
 
 ```powershell
 .\start-backend.ps1 -DbProfile h2

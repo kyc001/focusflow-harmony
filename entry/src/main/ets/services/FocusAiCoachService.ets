@@ -1,6 +1,7 @@
 import preferences from '@ohos.data.preferences';
 import { common } from '@kit.AbilityKit';
 import http from '@ohos.net.http';
+import util from '@ohos.util';
 import {
   AiCoachAdvice,
   AiCoachSettings,
@@ -38,13 +39,25 @@ interface ChatCompletionResponse {
   choices?: ChatCompletionChoice[];
 }
 
+interface AiEnvConfig {
+  endpoint?: string;
+  model?: string;
+  apiKey?: string;
+}
+
 const PREF_NAME: string = 'focus_ai';
-const DEFAULT_ENDPOINT: string = 'https://token-plan-cn.xiaomimimo.com/v1';
-const DEFAULT_MODEL: string = 'mimo-v2.5';
-const DEFAULT_API_KEY: string = 'tp-cv75si6psafr41tdpvlagnwdlevz22gjq5kt6xhvel1c3msh';
+const DEFAULT_ENDPOINT: string = '';
+const DEFAULT_MODEL: string = '';
+const DEFAULT_API_KEY: string = '';
 
 export class FocusAiCoachService {
   private pref?: preferences.Preferences;
+  private envDefaults: AiCoachSettings = {
+    enabled: true,
+    endpoint: DEFAULT_ENDPOINT,
+    model: DEFAULT_MODEL,
+    apiKey: DEFAULT_API_KEY
+  };
 
   async init(context: common.UIAbilityContext): Promise<void> {
     if (this.pref !== undefined) {
@@ -55,14 +68,15 @@ export class FocusAiCoachService {
     } catch (err) {
       this.pref = undefined;
     }
+    this.envDefaults = this.loadEnvDefaults(context);
   }
 
   defaultSettings(): AiCoachSettings {
     return {
       enabled: true,
-      endpoint: DEFAULT_ENDPOINT,
-      model: DEFAULT_MODEL,
-      apiKey: DEFAULT_API_KEY
+      endpoint: this.envDefaults.endpoint,
+      model: this.envDefaults.model,
+      apiKey: this.envDefaults.apiKey
     };
   }
 
@@ -71,21 +85,12 @@ export class FocusAiCoachService {
       return this.defaultSettings();
     }
     try {
-      let endpoint: string = (await this.pref.get('ai.endpoint', DEFAULT_ENDPOINT)) as string;
-      let model: string = (await this.pref.get('ai.model', DEFAULT_MODEL)) as string;
-      let apiKey: string = (await this.pref.get('ai.apiKey', DEFAULT_API_KEY)) as string;
-      if (endpoint === 'https://token-plan-cn.xiaomimimo.com/v1') {
-        endpoint = DEFAULT_ENDPOINT;
-        await this.pref.put('ai.endpoint', endpoint);
-      }
-      if (model === 'mimo-v2.5-pro' || model === 'mimo-v2.5') {
-        model = DEFAULT_MODEL;
-        await this.pref.put('ai.model', model);
-      }
-      if (apiKey.trim().length === 0) {
-        apiKey = DEFAULT_API_KEY;
-        await this.pref.put('ai.apiKey', apiKey);
-      }
+      let endpoint: string = (await this.pref.get('ai.endpoint', this.envDefaults.endpoint)) as string;
+      let model: string = (await this.pref.get('ai.model', this.envDefaults.model)) as string;
+      let apiKey: string = (await this.pref.get('ai.apiKey', this.envDefaults.apiKey)) as string;
+      endpoint = this.envDefaults.endpoint.length > 0 ? this.envDefaults.endpoint : endpoint;
+      model = this.envDefaults.model.length > 0 ? this.envDefaults.model : model;
+      apiKey = this.envDefaults.apiKey.length > 0 ? this.envDefaults.apiKey : apiKey;
       return {
         enabled: (await this.pref.get('ai.enabled', true)) as boolean,
         endpoint: endpoint,
@@ -100,8 +105,8 @@ export class FocusAiCoachService {
   async saveSettings(settings: AiCoachSettings): Promise<AiCoachSettings> {
     const normalized: AiCoachSettings = {
       enabled: settings.enabled,
-      endpoint: this.cleanOrDefault(settings.endpoint, DEFAULT_ENDPOINT),
-      model: this.cleanOrDefault(settings.model, DEFAULT_MODEL),
+      endpoint: this.cleanOrDefault(settings.endpoint, this.envDefaults.endpoint),
+      model: this.cleanOrDefault(settings.model, this.envDefaults.model),
       apiKey: settings.apiKey.trim()
     };
     if (this.pref === undefined) {
@@ -134,7 +139,7 @@ export class FocusAiCoachService {
     const request: http.HttpRequest = http.createHttp();
     try {
       const payload: ChatRequestPayload = {
-        model: this.cleanOrDefault(settings.model, DEFAULT_MODEL),
+        model: this.cleanOrDefault(settings.model, this.envDefaults.model),
         messages: [
           {
             role: 'system',
@@ -401,7 +406,7 @@ export class FocusAiCoachService {
   }
 
   private chatCompletionsUrl(endpoint: string): string {
-    const clean: string = this.cleanOrDefault(endpoint, DEFAULT_ENDPOINT).replace(/\/+$/, '');
+    const clean: string = this.cleanOrDefault(endpoint, this.envDefaults.endpoint).replace(/\/+$/, '');
     if (clean.endsWith('/chat/completions')) {
       return clean;
     }
@@ -414,6 +419,27 @@ export class FocusAiCoachService {
   private cleanOrDefault(value: string, fallback: string): string {
     const cleaned: string = value.trim();
     return cleaned.length === 0 ? fallback : cleaned;
+  }
+
+  private loadEnvDefaults(context: common.UIAbilityContext): AiCoachSettings {
+    try {
+      const content: Uint8Array = context.resourceManager.getRawFileContentSync('ai-env.json');
+      const decoder: util.TextDecoder = util.TextDecoder.create('utf-8');
+      const parsed: AiEnvConfig = JSON.parse(decoder.decode(content)) as AiEnvConfig;
+      return {
+        enabled: true,
+        endpoint: this.cleanOrDefault(parsed.endpoint === undefined ? '' : parsed.endpoint, DEFAULT_ENDPOINT),
+        model: this.cleanOrDefault(parsed.model === undefined ? '' : parsed.model, DEFAULT_MODEL),
+        apiKey: parsed.apiKey === undefined ? DEFAULT_API_KEY : parsed.apiKey.trim()
+      };
+    } catch (err) {
+      return {
+        enabled: true,
+        endpoint: DEFAULT_ENDPOINT,
+        model: DEFAULT_MODEL,
+        apiKey: DEFAULT_API_KEY
+      };
+    }
   }
 
   private remoteAdviceStatus(message: string): AiCoachAdvice {

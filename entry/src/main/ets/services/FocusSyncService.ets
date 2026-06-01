@@ -319,15 +319,18 @@ export class FocusSyncService {
       await focusDatabase.upsertTask(local);
     }
     for (const sr of bundle.pomodoros) {
+      const clientRequestId: string = this.stringValue(sr.clientRequestId, sr.client_request_id, '');
       const local: PomodoroRecord = {
         id: sr.id,
         taskId: this.numberValue(sr.taskId, sr.task_id, 0),
         startAt: this.numberValue(sr.startAt, sr.start_at, Date.now()),
         duration: sr.duration,
         completed: sr.completed,
-        interruptReason: this.stringValue(sr.interruptReason, sr.interrupt_reason, '')
+        interruptReason: this.stringValue(sr.interruptReason, sr.interrupt_reason, ''),
+        updatedAt: this.numberValue(sr.updatedAt, sr.updated_at, Date.now()),
+        clientRequestId: clientRequestId.length > 0 ? clientRequestId : `server-pomo-${sr.id}`
       };
-      await focusDatabase.recordPomodoro(local);
+      await focusDatabase.upsertPomodoro(local);
     }
   }
 
@@ -373,9 +376,16 @@ export class FocusSyncService {
       duration: r.duration,
       completed: r.completed,
       interruptReason: r.interruptReason,
-      updatedAt: Date.now(),
-      clientRequestId: `client-pomo-${r.id}-${r.startAt}`
+      updatedAt: r.updatedAt === undefined || r.updatedAt <= 0 ? Date.now() : r.updatedAt,
+      clientRequestId: this.localPomodoroClientRequestId(r)
     };
+  }
+
+  private localPomodoroClientRequestId(r: PomodoroRecord): string {
+    if (r.clientRequestId !== undefined && r.clientRequestId.trim().length > 0) {
+      return r.clientRequestId.trim();
+    }
+    return `local-pomo-${r.id}-${r.taskId}-${r.startAt}-${r.duration}`;
   }
 
   private parseJsonArray(value: string): string[] {

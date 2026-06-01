@@ -6,15 +6,64 @@ param(
 $activeProfile = if ($DbProfile -eq "h2") { "" } else { $DbProfile }
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$javaHome = Join-Path $projectRoot "tools\jdk-21"
 $mavenHome = Join-Path $projectRoot "tools\maven"
 $serverDir = Join-Path $projectRoot "focus-server"
 
+function Test-UsableJavaHome {
+  param([string]$Path)
+  return $Path `
+    -and (Test-Path (Join-Path $Path "bin\java.exe")) `
+    -and (Test-Path (Join-Path $Path "lib\modules"))
+}
+
+function Import-DotEnv {
+  param([string]$Path)
+  if (-not (Test-Path $Path)) {
+    return
+  }
+  Get-Content $Path | ForEach-Object {
+    $line = $_.Trim()
+    if ($line.Length -eq 0 -or $line.StartsWith("#") -or -not $line.Contains("=")) {
+      return
+    }
+    $name, $value = $line.Split("=", 2)
+    $cleanName = $name.Trim()
+    if ($cleanName.Length -eq 0) {
+      return
+    }
+    [Environment]::SetEnvironmentVariable($cleanName, $value.Trim().Trim('"').Trim("'"), "Process")
+  }
+}
+
+$javaCandidates = @(
+  (Join-Path $projectRoot "tools\jdk-21"),
+  "D:\jdk",
+  "C:\Program Files\Huawei\DevEco Studio\jbr"
+)
+
+$javaHome = $javaCandidates | Where-Object { Test-UsableJavaHome $_ } | Select-Object -First 1
+if (-not $javaHome) {
+  throw "No usable JDK found. Install JDK 21 or DevEco Studio JBR."
+}
+
+if (-not (Test-Path (Join-Path $mavenHome "bin\mvn.cmd"))) {
+  throw "Project Maven not found: $mavenHome"
+}
+
+$pathEntries = @(
+  (Join-Path $javaHome "bin"),
+  (Join-Path $mavenHome "bin")
+)
+$pathEntries += ($env:Path -split ';' | Where-Object {
+  $_ -and ($_ -notmatch [regex]::Escape("C:\Program Files (x86)\Common Files\Oracle\Java\javapath"))
+})
+
 $env:JAVA_HOME = $javaHome
 $env:MAVEN_HOME = $mavenHome
-$env:Path = "$javaHome\bin;$mavenHome\bin;$env:Path"
+$env:Path = ($pathEntries | Select-Object -Unique) -join ';'
+Import-DotEnv (Join-Path $projectRoot ".env")
 
-Write-Host "Using project-local JDK and Maven" -ForegroundColor Green
+Write-Host "Using configured JDK and project-local Maven" -ForegroundColor Green
 Write-Host "JAVA_HOME=$javaHome"
 Write-Host "MAVEN_HOME=$mavenHome"
 

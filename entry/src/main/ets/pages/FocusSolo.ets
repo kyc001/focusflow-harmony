@@ -4,6 +4,7 @@ import { ambientDisplayName, focusAmbientService, normalizeAmbientType } from '.
 import { focusDatabase } from '../services/FocusDatabase';
 import { FocusBackgroundService, FocusNotificationService } from '../services/FocusNativeServices';
 import { focusSettingsService } from '../services/FocusSettingsService';
+import { focusFormSnapshotService } from '../services/FocusFormSnapshotService';
 import { focusStore } from '../services/FocusStore';
 import {
   ACCENT,
@@ -135,6 +136,12 @@ struct FocusSolo {
       }
       await focusStore.refresh();
       await focusStore.recordPomodoro(this.taskId, this.focusSeconds, true, '');
+      await focusFormSnapshotService.saveSnapshot(
+        getContext(this) as common.UIAbilityContext,
+        focusStore.tasks,
+        focusStore.pomodoros,
+        focusStore.resources.length
+      );
       this.message = '番茄完成，已写入本地记录';
     } catch (err) {
       this.message = '番茄完成，本地记录稍后可在主页补同步';

@@ -22,6 +22,8 @@ import {
 } from '../services/FocusAmbientService';
 import { focusDatabase } from '../services/FocusDatabase';
 import { focusSettingsService } from '../services/FocusSettingsService';
+import { focusFormSnapshotService } from '../services/FocusFormSnapshotService';
+import { focusNetworkService } from '../services/FocusNetworkService';
 import { focusStore } from '../services/FocusStore';
 import { focusSyncService } from '../services/FocusSyncService';
 import { FocusBackgroundService, FocusNotificationService } from '../services/FocusNativeServices';
@@ -167,6 +169,8 @@ struct Index {
   @State syncPassword: string = '';
   @State syncBaseUrl: string = 'http://10.0.2.2:8080';
   @State syncStatus: string = '';
+  @State networkOnline: boolean = true;
+  @State networkStatusText: string = '网络状态检测中';
   @State aiModelList: string[] = [];
   @State aiModelLoading: boolean = false;
   private timerId: number = -1;
@@ -181,6 +185,7 @@ struct Index {
 
   aboutToDisappear() {
     this.stopTicker();
+    focusNetworkService.stop();
   }
 
   async initNativeStore() {
@@ -195,6 +200,10 @@ struct Index {
       await focusAiCoachService.init(context);
       await focusSyncService.init(context);
       this.syncBaseUrl = focusSyncService.getBaseUrl();
+      await focusNetworkService.start((online: boolean, message: string) => {
+        this.networkOnline = online;
+        this.networkStatusText = message;
+      });
       await this.loadAiSettings();
       const profile: LoginProfile | null = await authRepository.currentProfile();
       if (profile !== null) {
@@ -243,10 +252,18 @@ struct Index {
     this.records = focusStore.pomodoros.slice();
     this.resources = focusStore.resources.slice();
     this.settings = focusStore.settings;
+    this.saveFormSnapshot();
     const selected: StudyResource | undefined = this.resources.find((resource: StudyResource) => resource.id === this.selectedResourceId);
     if (selected === undefined) {
       this.selectedResourceId = this.resources.length > 0 ? this.resources[0].id : 0;
     }
+  }
+
+  private saveFormSnapshot(): void {
+    const context = getContext(this) as common.UIAbilityContext;
+    focusFormSnapshotService.saveSnapshot(context, this.tasks, this.records, this.resources.length).catch((err: Error) => {
+      console.error(`save form snapshot failed: ${JSON.stringify(err)}`);
+    });
   }
 
   private async persistFocusSettings(message: string): Promise<void> {
@@ -1828,6 +1845,33 @@ struct Index {
             .borderRadius(12)
             .margin({ bottom: 14 })
 
+            Row() {
+              SoftIconBadge({
+                variant: this.networkOnline ? 'sync' : 'shield',
+                badgeSize: 34,
+                fill: this.networkOnline ? SUCCESS_SOFT : DANGER_SOFT
+              })
+              Column() {
+                Text(this.networkOnline ? '网络可用' : '当前离线')
+                  .fontSize(13)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(this.networkOnline ? SUCCESS : DANGER)
+                Text(this.networkStatusText)
+                  .fontSize(11)
+                  .fontColor(TEXT_MUTED)
+                  .lineHeight(16)
+                  .margin({ top: 3 })
+              }
+              .layoutWeight(1)
+              .alignItems(HorizontalAlign.Start)
+              .margin({ left: 10 })
+            }
+            .width('100%')
+            .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+            .backgroundColor(this.networkOnline ? SUCCESS_SOFT : DANGER_SOFT)
+            .borderRadius(12)
+            .margin({ bottom: 14 })
+
             if (!focusSyncService.isLoggedIn()) {
               Text('服务器地址')
                 .fontSize(12)
@@ -1909,10 +1953,15 @@ struct Index {
                 .height(44)
                 .fontSize(14)
                 .fontWeight(FontWeight.Bold)
-                .backgroundColor(ACCENT)
+                .enabled(this.networkOnline)
+                .backgroundColor(this.networkOnline ? ACCENT : SURFACE_ALT)
                 .fontColor('#FFFFFF')
                 .borderRadius(12)
                 .onClick(async () => {
+                  if (!this.networkOnline) {
+                    this.syncStatus = '当前离线，联网后再登录';
+                    return;
+                  }
                   if (this.syncUsername.length === 0 || this.syncPassword.length === 0) {
                     this.syncStatus = '请填写用户名和密码';
                     return;
@@ -1939,11 +1988,16 @@ struct Index {
                 .height(44)
                 .fontSize(14)
                 .fontWeight(FontWeight.Bold)
-                .backgroundColor(SUCCESS)
+                .enabled(this.networkOnline)
+                .backgroundColor(this.networkOnline ? SUCCESS : SURFACE_ALT)
                 .fontColor('#FFFFFF')
                 .borderRadius(12)
                 .margin({ bottom: 10 })
                 .onClick(async () => {
+                  if (!this.networkOnline) {
+                    this.syncStatus = '当前离线，联网后再同步';
+                    return;
+                  }
                   this.syncStatus = '同步中...';
                   await focusSyncService.init(getContext(this) as common.UIAbilityContext);
                   const result = await focusSyncService.syncBidirectional();

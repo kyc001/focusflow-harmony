@@ -1,13 +1,16 @@
-@Entry
+let storage = new LocalStorage();
+
+@Entry(storage)
 @Component
 struct FocusCard {
-  @State title: string = '知序 今日';
-  @State subtitle: string = '本地学习闭环';
-  @State progress: string = '4/6 番茄';
-  @State task1: string = 'HW4 报告复盘';
-  @State task2: string = '数据库索引总结';
-  @State task3: string = '协程 Demo 排练';
-  @State isCompact: boolean = false;
+  @LocalStorageProp('title') title: string = '知序 今日';
+  @LocalStorageProp('subtitle') subtitle: string = '本地学习闭环';
+  @LocalStorageProp('progress') progress: string = '0/4 番茄';
+  @LocalStorageProp('progressPercent') progressPercent: number = 0;
+  @LocalStorageProp('task1') task1: string = '暂无待办任务';
+  @LocalStorageProp('task2') task2: string = '打开应用添加学习计划';
+  @LocalStorageProp('task3') task3: string = '完成番茄后卡片会更新';
+  @LocalStorageProp('isCompact') isCompact: boolean = false;
 
   build() {
     FormLink({
@@ -66,7 +69,7 @@ struct FocusCard {
               .fontSize(this.isCompact ? 9 : 10)
               .fontColor('#99FFFFFF')
             Blank()
-            Text(this.progress.split('/')[0] + '%')
+            Text(`${this.progressPercent}%`)
               .fontSize(this.isCompact ? 10 : 11)
               .fontWeight(FontWeight.Bold)
               .fontColor('#FFFFFF')
@@ -74,7 +77,7 @@ struct FocusCard {
           .width('100%')
           .margin({ top: this.isCompact ? 6 : 8 })
 
-          Progress({ value: 67, total: 100, type: ProgressType.Linear })
+          Progress({ value: this.progressPercent, total: 100, type: ProgressType.Linear })
             .width('100%')
             .height(this.isCompact ? 4 : 5)
             .color('#818CF8')

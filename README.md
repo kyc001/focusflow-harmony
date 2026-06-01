@@ -11,7 +11,7 @@
 - 组件化视图：今日、任务、资料、专注、复盘、我的等界面拆分到 `components/`，主页面负责路由和业务状态编排。
 - 专注工作流闭环：任务规划、今日看板、番茄钟、专注记录、复盘统计。
 - 本地优先：核心数据先写入 HarmonyOS RDB，本地账户可离线使用。
-- 后端同步：Spring Boot + MyBatis 提供登录、项目、任务、番茄钟、统计、同步接口。
+- 后端同步：Spring Boot + MyBatis 提供登录、项目、任务、番茄钟、统计、同步接口，并通过 JWT 保护业务接口。
 - TaskPool 统计优化：复盘统计在数据刷新后后台预计算快照，降低大量番茄记录下的主线程重复扫描。
 - 数据库可切换：默认 MySQL，支持 H2 文件数据库快速演示和测试。
 - 白噪音播放：支持室外、海边、虫鸣三类本地 rawfile 音频。
@@ -294,6 +294,8 @@ cd focusflow-harmony
 MYSQL_URL=jdbc:mysql://localhost:3306/focus_db?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
 MYSQL_USERNAME=root
 MYSQL_PASSWORD=your-local-password
+FOCUS_JWT_SECRET=replace-with-a-local-dev-secret
+FOCUS_JWT_EXPIRE_SECONDS=604800
 ```
 
 首次使用 MySQL 前，需要在本机 MySQL 中执行：
@@ -341,7 +343,7 @@ AI_MODEL=your-model-name
 AI_API_KEY=your-api-key
 ```
 
-`.env` 不会上传到 Git。前端构建脚本会在本地生成 `entry/src/main/resources/rawfile/ai-env.json`，该文件同样被忽略；后端脚本会读取同一份 `.env` 注入 MySQL 连接环境变量。
+`.env` 不会上传到 Git。前端构建脚本会在本地生成 `entry/src/main/resources/rawfile/ai-env.json`，该文件同样被忽略；后端脚本会读取同一份 `.env` 注入 MySQL 连接环境变量和 JWT 配置。仓库里的 JWT 默认密钥只适合本地演示，正式联调时应通过 `FOCUS_JWT_SECRET` 覆盖。
 
 只构建 HAP：
 
@@ -447,13 +449,20 @@ POST   /api/sync/pull
 POST   /api/sync/push
 ```
 
-多数业务接口通过请求头识别用户：
+登录、注册和连通性检查之外的业务接口使用 JWT 鉴权：
 
 ```text
-X-User-Id: 1
+Authorization: Bearer <login 返回的 token>
 ```
 
-后端响应统一使用 `Result<T>` 包装。Jackson 使用 `SNAKE_CASE` 输出字段，前端同步服务已兼容 snake_case 和 camelCase。任务和番茄记录同步时使用 `clientRequestId` 做本地和服务端幂等标识，重复拉取同一条记录时更新原记录而不是新增一条。项目、任务和番茄记录都带 `updatedAt`，同步合并时保留较新的版本；项目和任务还带 `isDeleted`，用于把删除结果同步到另一端。`/api/sync/push` 使用事务包裹批量写入，并返回服务端时间而不是全量数据，客户端据此更新下一轮增量拉取游标。
+后端响应统一使用 `Result<T>` 包装。Jackson 使用 `SNAKE_CASE` 输出字段，前端同步服务已兼容 snake_case 和 camelCase。登录接口返回 HS256 JWT，移动端后续请求通过 `Authorization: Bearer <token>` 携带令牌；后端拦截器校验 token 后把用户 ID 写入请求上下文，业务接口不再信任客户端可随意伪造的 `X-User-Id`。任务和番茄记录同步时使用 `clientRequestId` 做本地和服务端幂等标识，重复拉取同一条记录时更新原记录而不是新增一条。项目、任务和番茄记录都带 `updatedAt`，同步合并时保留较新的版本；项目和任务还带 `isDeleted`，用于把删除结果同步到另一端。`/api/sync/push` 使用事务包裹批量写入，并返回服务端时间而不是全量数据，客户端据此更新下一轮增量拉取游标。
+
+Swagger/OpenAPI 调试入口：
+
+```text
+http://localhost:8080/swagger-ui.html
+http://localhost:8080/v3/api-docs
+```
 
 ## 数据库说明
 

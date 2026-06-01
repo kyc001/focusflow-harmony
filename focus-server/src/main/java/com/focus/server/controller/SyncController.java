@@ -1,5 +1,6 @@
 package com.focus.server.controller;
 
+import com.focus.server.common.AuthUser;
 import com.focus.server.common.Result;
 import com.focus.server.dto.SyncBundle;
 import com.focus.server.dto.SyncPushRequest;
@@ -9,6 +10,7 @@ import com.focus.server.entity.Task;
 import com.focus.server.mapper.PomodoroMapper;
 import com.focus.server.mapper.ProjectMapper;
 import com.focus.server.mapper.TaskMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,8 +30,9 @@ public class SyncController {
     }
 
     @PostMapping("/pull")
-    public Result<SyncBundle> pull(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<SyncBundle> pull(HttpServletRequest servletRequest,
                                    @RequestParam(value = "since", defaultValue = "0") Long since) {
+        Long userId = AuthUser.id(servletRequest);
         SyncBundle bundle = new SyncBundle();
         bundle.setServerTime(System.currentTimeMillis());
         bundle.setProjects(projectMapper.findUpdatedSince(userId, since));
@@ -40,8 +43,9 @@ public class SyncController {
 
     @PostMapping("/push")
     @Transactional
-    public Result<SyncBundle> push(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<SyncBundle> push(HttpServletRequest servletRequest,
                                    @RequestBody SyncPushRequest request) {
+        Long userId = AuthUser.id(servletRequest);
         long now = System.currentTimeMillis();
         for (Project project : request.getProjects()) {
             project.setUserId(userId);

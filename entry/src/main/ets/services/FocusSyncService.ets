@@ -146,14 +146,11 @@ export class FocusSyncService {
   async login(username: string, password: string): Promise<SyncActionResult> {
     const loginBaseUrl: string = this.normalizeBaseUrl(this.baseUrl);
     try {
-      const healthResponse: http.HttpResponse = await this.request(`${loginBaseUrl}/api/projects`, {
+      const healthResponse: http.HttpResponse = await this.request(`${loginBaseUrl}/api/user/ping`, {
         method: http.RequestMethod.GET,
         connectTimeout: 6000,
         readTimeout: 6000,
-        header: {
-          'Content-Type': 'application/json',
-          'X-User-Id': '1'
-        }
+        header: { 'Content-Type': 'application/json' }
       });
       const healthCode: number = Number(healthResponse.responseCode);
       if (healthCode < 200 || healthCode >= 300) {
@@ -220,6 +217,7 @@ export class FocusSyncService {
         readTimeout: 20000,
         header: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.token}`,
           'X-User-Id': `${this.userId}`
         }
       });
@@ -253,6 +251,7 @@ export class FocusSyncService {
         readTimeout: 25000,
         header: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.token}`,
           'X-User-Id': `${this.userId}`
         },
         extraData: JSON.stringify(payload)

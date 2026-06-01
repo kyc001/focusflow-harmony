@@ -1,9 +1,11 @@
 package com.focus.server.controller;
 
+import com.focus.server.common.AuthUser;
 import com.focus.server.common.Result;
 import com.focus.server.dto.ProjectRequest;
 import com.focus.server.entity.Project;
 import com.focus.server.mapper.ProjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,13 +20,15 @@ public class ProjectController {
     }
 
     @GetMapping
-    public Result<List<Project>> list(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId) {
+    public Result<List<Project>> list(HttpServletRequest servletRequest) {
+        Long userId = AuthUser.id(servletRequest);
         return Result.ok(projectMapper.findAll(userId));
     }
 
     @PostMapping
-    public Result<Project> create(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<Project> create(HttpServletRequest servletRequest,
                                   @RequestBody ProjectRequest request) {
+        Long userId = AuthUser.id(servletRequest);
         Project project = new Project();
         project.setUserId(userId);
         project.setName(request.getName());
@@ -37,9 +41,10 @@ public class ProjectController {
     }
 
     @PutMapping("/{id}")
-    public Result<Project> update(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<Project> update(HttpServletRequest servletRequest,
                                   @PathVariable Long id,
                                   @RequestBody ProjectRequest request) {
+        Long userId = AuthUser.id(servletRequest);
         Project project = projectMapper.findById(id, userId);
         if (project == null) {
             return Result.fail("project not found");
@@ -53,10 +58,10 @@ public class ProjectController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Boolean> delete(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<Boolean> delete(HttpServletRequest servletRequest,
                                   @PathVariable Long id) {
+        Long userId = AuthUser.id(servletRequest);
         projectMapper.softDelete(id, userId, System.currentTimeMillis());
         return Result.ok(true);
     }
 }
-

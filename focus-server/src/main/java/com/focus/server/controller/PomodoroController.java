@@ -1,10 +1,12 @@
 package com.focus.server.controller;
 
+import com.focus.server.common.AuthUser;
 import com.focus.server.common.Result;
 import com.focus.server.dto.PomodoroRequest;
 import com.focus.server.entity.Pomodoro;
 import com.focus.server.mapper.PomodoroMapper;
 import com.focus.server.mapper.TaskMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,16 +23,18 @@ public class PomodoroController {
     }
 
     @GetMapping
-    public Result<List<Pomodoro>> list(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<List<Pomodoro>> list(HttpServletRequest servletRequest,
                                        @RequestParam(value = "startAt", defaultValue = "0") Long startAt,
                                        @RequestParam(value = "endAt", required = false) Long endAt) {
+        Long userId = AuthUser.id(servletRequest);
         long end = endAt == null ? System.currentTimeMillis() : endAt;
         return Result.ok(pomodoroMapper.findByRange(userId, startAt, end));
     }
 
     @PostMapping
-    public Result<Pomodoro> create(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<Pomodoro> create(HttpServletRequest servletRequest,
                                    @RequestBody PomodoroRequest request) {
+        Long userId = AuthUser.id(servletRequest);
         if (request.getClientRequestId() != null) {
             Pomodoro existing = pomodoroMapper.findByClientRequestId(userId, request.getClientRequestId());
             if (existing != null) {
@@ -53,4 +57,3 @@ public class PomodoroController {
         return Result.ok(pomodoro);
     }
 }
-

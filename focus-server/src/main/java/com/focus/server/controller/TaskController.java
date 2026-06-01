@@ -1,10 +1,12 @@
 package com.focus.server.controller;
 
+import com.focus.server.common.AuthUser;
 import com.focus.server.common.PageResult;
 import com.focus.server.common.Result;
 import com.focus.server.dto.TaskRequest;
 import com.focus.server.entity.Task;
 import com.focus.server.mapper.TaskMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,12 +21,13 @@ public class TaskController {
     }
 
     @GetMapping
-    public Result<PageResult<Task>> list(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<PageResult<Task>> list(HttpServletRequest servletRequest,
                                          @RequestParam(value = "keyword", required = false) String keyword,
                                          @RequestParam(value = "status", required = false) Integer status,
                                          @RequestParam(value = "projectId", required = false) Long projectId,
                                          @RequestParam(value = "page", defaultValue = "1") Integer page,
                                          @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
+        Long userId = AuthUser.id(servletRequest);
         int offset = Math.max(0, page - 1) * pageSize;
         List<Task> list = taskMapper.findPage(userId, keyword, status, projectId, offset, pageSize);
         Long total = taskMapper.count(userId, keyword, status, projectId);
@@ -32,15 +35,17 @@ public class TaskController {
     }
 
     @GetMapping("/{id}")
-    public Result<Task> detail(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<Task> detail(HttpServletRequest servletRequest,
                                @PathVariable Long id) {
+        Long userId = AuthUser.id(servletRequest);
         Task task = taskMapper.findById(id, userId);
         return task == null ? Result.fail("task not found") : Result.ok(task);
     }
 
     @PostMapping
-    public Result<Task> create(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<Task> create(HttpServletRequest servletRequest,
                                @RequestBody TaskRequest request) {
+        Long userId = AuthUser.id(servletRequest);
         if (request.getClientRequestId() != null) {
             Task existing = taskMapper.findByClientRequestId(userId, request.getClientRequestId());
             if (existing != null) {
@@ -61,9 +66,10 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public Result<Task> update(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<Task> update(HttpServletRequest servletRequest,
                                @PathVariable Long id,
                                @RequestBody TaskRequest request) {
+        Long userId = AuthUser.id(servletRequest);
         Task task = taskMapper.findById(id, userId);
         if (task == null) {
             return Result.fail("task not found");
@@ -78,8 +84,9 @@ public class TaskController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Boolean> delete(@RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+    public Result<Boolean> delete(HttpServletRequest servletRequest,
                                   @PathVariable Long id) {
+        Long userId = AuthUser.id(servletRequest);
         taskMapper.softDelete(id, userId, System.currentTimeMillis());
         return Result.ok(true);
     }
@@ -94,4 +101,3 @@ public class TaskController {
         task.setClientRequestId(request.getClientRequestId());
     }
 }
-

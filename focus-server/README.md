@@ -6,6 +6,8 @@
 
 - Spring Boot 3.2
 - MyBatis Mapper + XML SQL
+- JWT 登录鉴权
+- Swagger / OpenAPI 接口文档
 - 启动脚本默认使用 MySQL profile，适合正式数据库演示
 - 保留 H2 文件数据库配置，数据落在 `focus-server/data/`，适合快速测试
 - `application-mysql.yml` 和 `init-mysql.sql` 用于 MySQL 初始化
@@ -36,6 +38,8 @@
 MYSQL_URL=jdbc:mysql://localhost:3306/focus_db?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
 MYSQL_USERNAME=root
 MYSQL_PASSWORD=your-local-password
+FOCUS_JWT_SECRET=replace-with-a-local-dev-secret
+FOCUS_JWT_EXPIRE_SECONDS=604800
 ```
 
 ```powershell
@@ -68,7 +72,17 @@ H2 控制台：
 - `POST /api/sync/pull`：从后端拉取增量数据
 - `POST /api/sync/push`：把前端本地 RDB 数据推送到后端数据库
 
-接口默认读取请求头 `X-User-Id`，移动端登录后会保存用户标识并用于同步。
+`/api/user/login` 和 `/api/user/register` 会返回 JWT。除登录、注册和 `/api/user/ping` 外，业务接口需要携带：
+
+```text
+Authorization: Bearer <token>
+```
+
+Swagger 调试页：
+
+```text
+http://localhost:8080/swagger-ui.html
+```
 
 ## 验证命令
 

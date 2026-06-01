@@ -7,7 +7,8 @@ import com.focus.server.dto.LoginRequest;
 import com.focus.server.dto.RegisterRequest;
 import com.focus.server.entity.User;
 import com.focus.server.mapper.UserMapper;
-import org.springframework.beans.factory.annotation.Value;
+import com.focus.server.service.JwtService;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,12 +18,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/user")
 public class UserController {
     private final UserMapper userMapper;
+    private final JwtService jwtService;
 
-    @Value("${focus.demo-token-prefix:focus-token-}")
-    private String tokenPrefix;
-
-    public UserController(UserMapper userMapper) {
+    public UserController(UserMapper userMapper, JwtService jwtService) {
         this.userMapper = userMapper;
+        this.jwtService = jwtService;
+    }
+
+    @GetMapping("/ping")
+    public Result<String> ping() {
+        return Result.ok("pong");
     }
 
     @PostMapping("/register")
@@ -59,6 +64,6 @@ public class UserController {
     }
 
     private AuthResponse toAuth(User user) {
-        return new AuthResponse(user.getId(), user.getUsername(), user.getNickname(), tokenPrefix + user.getId() + "-" + System.currentTimeMillis());
+        return new AuthResponse(user.getId(), user.getUsername(), user.getNickname(), jwtService.createToken(user.getId(), user.getUsername()));
     }
 }

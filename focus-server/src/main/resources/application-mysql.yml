@@ -20,4 +20,6 @@ mybatis:
     map-underscore-to-camel-case: true
 
 focus:
-  demo-token-prefix: focus-token-
+  jwt:
+    secret: ${FOCUS_JWT_SECRET:focus-dev-secret-change-me}
+    expire-seconds: ${FOCUS_JWT_EXPIRE_SECONDS:604800}

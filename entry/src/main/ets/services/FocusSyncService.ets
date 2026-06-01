@@ -278,7 +278,7 @@ export class FocusSyncService {
     }
     await this.mergeServerData(pullResult.bundle);
     const localProjects: FocusProject[] = await focusDatabase.getProjectsForSync();
-    const localTasks: FocusTask[] = await focusDatabase.getTasks();
+    const localTasks: FocusTask[] = await focusDatabase.getTasksForSync();
     const localPomodoros: PomodoroRecord[] = await focusDatabase.getPomodoros();
     const pushResult = await this.pushToServer(localProjects, localTasks, localPomodoros);
     if (!pushResult.success) {

@@ -169,7 +169,7 @@ export struct TodayView {
 
   private todayTasks(): FocusTask[] {
     return this.tasks
-      .filter((task: FocusTask) => task.status === TaskStatus.TODO)
+      .filter((task: FocusTask) => task.status === TaskStatus.TODO && task.isDeleted !== 1)
       .sort((left: FocusTask, right: FocusTask) => {
         if (left.priority !== right.priority) {
           return left.priority - right.priority;
@@ -179,11 +179,11 @@ export struct TodayView {
   }
 
   private doneCount(): number {
-    return this.tasks.filter((task: FocusTask) => task.status === TaskStatus.DONE).length;
+    return this.tasks.filter((task: FocusTask) => task.status === TaskStatus.DONE && task.isDeleted !== 1).length;
   }
 
   private totalCount(): number {
-    return this.tasks.filter((task: FocusTask) => task.status !== TaskStatus.DELETED).length;
+    return this.tasks.filter((task: FocusTask) => task.status !== TaskStatus.DELETED && task.isDeleted !== 1).length;
   }
 
   private startSelectedTask(): void {

@@ -1,7 +1,7 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { common } from '@kit.AbilityKit';
 import { createSeedPomodoros, createSeedProjects, createSeedStudyResources, createSeedTasks } from '../data/SeedData';
-import { FocusProject, FocusTask, PomodoroRecord, StudyResource, TaskStatus } from '../models/FocusModels';
+import { FocusProject, FocusTask, PomodoroRecord, ResourceSummaryStatus, StudyResource, TaskStatus } from '../models/FocusModels';
 
 type ValueType = relationalStore.ValueType;
 
@@ -81,6 +81,7 @@ export class FocusDatabase {
         'linked_task_id INTEGER NOT NULL DEFAULT 0, ' +
         'content TEXT, ' +
         'summary TEXT, ' +
+        'summary_status INTEGER NOT NULL DEFAULT 0, ' +
         'key_points_json TEXT, ' +
         'tags_json TEXT, ' +
         'status INTEGER NOT NULL DEFAULT 0, ' +
@@ -98,6 +99,7 @@ export class FocusDatabase {
     await this.addColumnIfMissing('tasks', 'subtasks_json', 'TEXT');
     await this.addColumnIfMissing('pomodoros', 'updated_at', 'INTEGER NOT NULL DEFAULT 0');
     await this.addColumnIfMissing('pomodoros', 'client_request_id', 'TEXT');
+    await this.addColumnIfMissing('study_resources', 'summary_status', 'INTEGER NOT NULL DEFAULT 0');
     await this.backfillTaskClientRequestIds();
     await this.backfillPomodoroClientRequestIds();
   }
@@ -147,9 +149,18 @@ export class FocusDatabase {
   }
 
   async getTasks(): Promise<FocusTask[]> {
+    return this.queryTasks('WHERE is_deleted = 0', []);
+  }
+
+  async getTasksForSync(): Promise<FocusTask[]> {
+    return this.queryTasks('', []);
+  }
+
+  private async queryTasks(whereClause: string, args: relationalStore.ValueType[]): Promise<FocusTask[]> {
     const resultSet: relationalStore.ResultSet = await this.query(
       'SELECT id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, is_deleted, client_request_id, tags_json, subtasks_json ' +
-        'FROM tasks ORDER BY status ASC, due_at ASC, priority ASC, id DESC'
+        `FROM tasks ${whereClause} ORDER BY status ASC, due_at ASC, priority ASC, id DESC`,
+      args
     );
     const tasks: FocusTask[] = [];
     try {
@@ -204,7 +215,7 @@ export class FocusDatabase {
 
   async getStudyResources(): Promise<StudyResource[]> {
     const resultSet: relationalStore.ResultSet = await this.query(
-      'SELECT id, title, source_type, project_id, linked_task_id, content, summary, key_points_json, tags_json, status, created_at, updated_at, review_due_at ' +
+      'SELECT id, title, source_type, project_id, linked_task_id, content, summary, summary_status, key_points_json, tags_json, status, created_at, updated_at, review_due_at ' +
         'FROM study_resources ORDER BY status ASC, updated_at DESC, id DESC'
     );
     const resources: StudyResource[] = [];
@@ -218,6 +229,10 @@ export class FocusDatabase {
           linkedTaskId: this.longValue(resultSet, 'linked_task_id'),
           content: this.stringValue(resultSet, 'content', ''),
           summary: this.stringValue(resultSet, 'summary', ''),
+          summaryStatus: this.resourceSummaryStatus(
+            this.longValue(resultSet, 'summary_status'),
+            this.stringValue(resultSet, 'summary', '')
+          ),
           keyPoints: this.parseStringArray(this.stringValue(resultSet, 'key_points_json', '[]')),
           tags: this.parseStringArray(this.stringValue(resultSet, 'tags_json', '[]')),
           status: this.longValue(resultSet, 'status'),
@@ -328,8 +343,8 @@ export class FocusDatabase {
     const values: relationalStore.ValuesBucket = this.resourceToBucket(resource, true);
     await this.requireStore().executeSql(
       'INSERT OR REPLACE INTO study_resources (' +
-        'id, title, source_type, project_id, linked_task_id, content, summary, key_points_json, tags_json, status, created_at, updated_at, review_due_at' +
-        ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'id, title, source_type, project_id, linked_task_id, content, summary, summary_status, key_points_json, tags_json, status, created_at, updated_at, review_due_at' +
+        ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         values.id as number,
         values.title as string,
@@ -338,6 +353,7 @@ export class FocusDatabase {
         values.linked_task_id as number,
         values.content as string,
         values.summary as string,
+        values.summary_status as number,
         values.key_points_json as string,
         values.tags_json as string,
         values.status as number,
@@ -671,6 +687,7 @@ export class FocusDatabase {
       linked_task_id: resource.linkedTaskId,
       content: resource.content,
       summary: resource.summary,
+      summary_status: resource.summaryStatus === undefined ? ResourceSummaryStatus.PENDING : resource.summaryStatus,
       key_points_json: JSON.stringify(resource.keyPoints),
       tags_json: JSON.stringify(resource.tags),
       status: resource.status,
@@ -723,6 +740,17 @@ export class FocusDatabase {
     } catch (err) {
       return [];
     }
+  }
+
+  private resourceSummaryStatus(rawStatus: number, summary: string): number {
+    if (rawStatus > ResourceSummaryStatus.PENDING) {
+      return rawStatus;
+    }
+    const trimmed: string = summary.trim();
+    if (trimmed.length === 0 || trimmed.indexOf('待 AI') === 0) {
+      return ResourceSummaryStatus.PENDING;
+    }
+    return ResourceSummaryStatus.EXTRACTED;
   }
 
   private pomodoroClientRequestId(record: PomodoroRecord): string {

@@ -36,9 +36,11 @@ function Import-DotEnv {
 }
 
 $javaCandidates = @(
+  $env:JAVA_HOME,
+  $env:JDK_HOME,
   (Join-Path $projectRoot "tools\jdk-21"),
-  "D:\jdk",
-  "C:\Program Files\Huawei\DevEco Studio\jbr"
+  "C:\Program Files\Java\jdk-21",
+  $(if ($env:DEVECO_STUDIO_HOME) { Join-Path $env:DEVECO_STUDIO_HOME "jbr" })
 )
 
 $javaHome = $javaCandidates | Where-Object { Test-UsableJavaHome $_ } | Select-Object -First 1

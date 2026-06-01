@@ -1,4 +1,4 @@
-# FocusFlow Harmony 项目上下文
+# 知序项目上下文
 
 本文档记录当前项目的本机路径、构建方式、HDC 调试方法、模拟器操作、后端环境、论文路径、Git/代理信息和已知问题。内容基于当前工作区状态和已完成调试过程整理。
 
@@ -8,12 +8,12 @@
 - 当前 Shell：PowerShell
 - 当前 Git 分支：`master`
 - GitHub 远程仓库：`https://github.com/kyc001/focusflow-harmony.git`
-- HarmonyOS bundleName：`com.example.myapplication`
+- HarmonyOS bundleName：`com.nankai.zhixu`
 - 主 module：`entry`
 - 主 Ability：`EntryAbility`
+- 启动页：`entry/src/main/ets/pages/Splash.ets`
 - 主页面入口：`entry/src/main/ets/pages/Index.ets`
-- 当前入口加载逻辑：`EntryAbility.ets` 直接 `loadContent('pages/Index')`
-- 原 Splash 卡住问题：已绕过，不再从 `pages/Splash` 进入主界面
+- 当前入口加载逻辑：`EntryAbility.ets` 先 `loadContent('pages/Splash')`，Splash 动画结束后通过 `this.getUIContext().getRouter().replaceUrl({ url: 'pages/Index' })` 进入主页面
 
 项目是一个 HarmonyOS ArkTS 专注效率应用，配套 Spring Boot + MyBatis 后端。主要功能包括：
 
@@ -175,12 +175,13 @@ assembleApp --no-daemon
 .\build-frontend.ps1 -HvigorArgs assembleHap,--no-daemon
 ```
 
-脚本设置的环境变量：
+脚本设置的主要环境变量：
 
 ```powershell
-$env:JAVA_HOME = "C:\Program Files\Huawei\DevEco Studio\jbr"
-$env:JRE_HOME = "C:\Program Files\Huawei\DevEco Studio\jbr"
-$env:DEVECO_SDK_HOME = "C:\Program Files\Huawei\DevEco Studio\sdk"
+$devecoRoot = $env:DEVECO_STUDIO_HOME 或 "C:\Program Files\Huawei\DevEco Studio"
+$env:JAVA_HOME = "$devecoRoot\jbr"
+$env:JRE_HOME = "$devecoRoot\jbr"
+$env:DEVECO_SDK_HOME = "$devecoRoot\sdk"
 ```
 
 脚本会把以下路径放到 PATH 前面：
@@ -236,11 +237,14 @@ $env:MAVEN_HOME = "D:\Study\26sp\arkts\final\tools\maven"
 $env:Path       = "$env:JAVA_HOME\bin;$env:MAVEN_HOME\bin;$env:Path"
 ```
 
-当前脚本会检查 JDK 是否包含 `bin\java.exe` 和 `lib\modules`。如果项目内 `tools\jdk-21` 不完整，会自动回退到：
+当前脚本会检查 JDK 是否包含 `bin\java.exe` 和 `lib\modules`。候选顺序为：
 
 ```text
-D:\jdk
-C:\Program Files\Huawei\DevEco Studio\jbr
+JAVA_HOME
+JDK_HOME
+D:\Study\26sp\arkts\final\tools\jdk-21
+C:\Program Files\Java\jdk-21
+DEVECO_STUDIO_HOME\jbr（仅在设置 DEVECO_STUDIO_HOME 时）
 ```
 
 同时会从 PATH 中移除损坏的 Oracle `javapath`。
@@ -440,7 +444,7 @@ AppScope/app.json5
 
 ```json
 {
-  "bundleName": "com.example.myapplication",
+  "bundleName": "com.nankai.zhixu",
   "versionCode": 1000000,
   "versionName": "1.0.0"
 }
@@ -557,14 +561,14 @@ $hdc = 'C:\Program Files\Huawei\DevEco Studio\sdk\default\openharmony\toolchains
 如果需要干净安装：
 
 ```powershell
-& $hdc uninstall com.example.myapplication
+& $hdc uninstall com.nankai.zhixu
 & $hdc install -r .\entry\build\default\outputs\default\app\entry-default.hap
 ```
 
 启动应用：
 
 ```powershell
-& $hdc shell aa start -a EntryAbility -b com.example.myapplication -m entry
+& $hdc shell aa start -a EntryAbility -b com.nankai.zhixu -m entry
 ```
 
 必须带 `-m entry`。不带 module 参数时可能报：
@@ -616,9 +620,9 @@ specified ability does not exist
 .\build-frontend.ps1 -HvigorArgs assembleHap,--no-daemon
 $hdc = 'C:\Program Files\Huawei\DevEco Studio\sdk\default\openharmony\toolchains\hdc.exe'
 & $hdc list targets
-& $hdc uninstall com.example.myapplication
+& $hdc uninstall com.nankai.zhixu
 & $hdc install -r .\entry\build\default\outputs\default\app\entry-default.hap
-& $hdc shell aa start -a EntryAbility -b com.example.myapplication -m entry
+& $hdc shell aa start -a EntryAbility -b com.nankai.zhixu -m entry
 Start-Sleep -Seconds 8
 & $hdc shell snapshot_display -f /data/local/tmp/app.jpeg
 & $hdc file recv /data/local/tmp/app.jpeg .\app.jpeg
@@ -628,7 +632,7 @@ Start-Sleep -Seconds 8
 
 模拟器启动后：
 
-1. 应用打开后能进入登录页，不再卡在 Splash 的“加载中”。
+1. 应用打开后先展示 Splash 动画，然后自动进入登录页。
 2. 点击“进入本地账户”后进入 Today 工作台。
 3. Today 页面可见专注、任务、统计等内容。
 4. Tasks 页面可见快速添加任务卡片。
@@ -844,7 +848,7 @@ setup-backend-env.ps1 语法坏了，导致后端测试被脚本拦住。
 处理：
 
 - 重写为有效 PowerShell
-- 自动选择可用 JDK，优先项目本地 JDK，回退到 `D:\jdk` 或 DevEco Studio JBR
+- 自动选择可用 JDK，优先环境变量和项目本地 JDK，必要时使用标准 JDK 21 或 `DEVECO_STUDIO_HOME\jbr`
 - 使用项目本地 Maven
 - 从 PATH 移除损坏的 Oracle `javapath`
 - dot-source 后可直接运行 `mvn test`
@@ -976,23 +980,24 @@ ArkTS/PackageHap 通过，最终 PackageApp 被系统 Java 注册表卡住。
 
 结果：`PackageApp / SignApp / assembleApp` 全部通过。
 
-### 14.3 应用启动卡在 Splash
+### 14.3 应用启动与 Splash
 
-问题：
+历史问题：
 
 ```text
 应用启动后停在 Splash 的“加载中...”
 ```
 
-处理：
+当前处理：
 
-- `EntryAbility.ets` 从 `windowStage.loadContent('pages/Splash')`
-- 改为 `windowStage.loadContent('pages/Index')`
+- 保留 `Splash.ets` 作为首屏入口
+- `EntryAbility.ets` 使用 `windowStage.loadContent('pages/Splash')`
+- `Splash.ets` 动画结束后通过 `this.getUIContext().getRouter().replaceUrl({ url: 'pages/Index' })` 进入主页面
 
-结果：
+验证目标：
 
-- 模拟器启动后进入登录页
-- 不再卡 Splash
+- 模拟器启动后先展示 Splash 动画
+- 约 2.5 秒后进入登录页或已登录后的主页面
 
 ### 14.4 白噪音无法正常加载
 
@@ -1092,9 +1097,9 @@ Set-Location D:\Study\26sp\arkts\final
 
 $hdc = 'C:\Program Files\Huawei\DevEco Studio\sdk\default\openharmony\toolchains\hdc.exe'
 & $hdc list targets
-& $hdc uninstall com.example.myapplication
+& $hdc uninstall com.nankai.zhixu
 & $hdc install -r .\entry\build\default\outputs\default\app\entry-default.hap
-& $hdc shell aa start -a EntryAbility -b com.example.myapplication -m entry
+& $hdc shell aa start -a EntryAbility -b com.nankai.zhixu -m entry
 ```
 
 ### 15.4 完整前端打包

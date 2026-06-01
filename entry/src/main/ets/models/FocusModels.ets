@@ -9,6 +9,12 @@ export enum StudyResourceStatus {
   ARCHIVED = 1
 }
 
+export enum ResourceSummaryStatus {
+  PENDING = 0,
+  EXTRACTED = 1,
+  FAILED = 2
+}
+
 export enum PomodoroStatus {
   IDLE = 0,
   RUNNING = 1,
@@ -52,6 +58,7 @@ export interface StudyResource {
   linkedTaskId: number;
   content: string;
   summary: string;
+  summaryStatus?: number;
   keyPoints: string[];
   tags: string[];
   status: number;

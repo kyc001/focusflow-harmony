@@ -1,5 +1,3 @@
-import { router } from '@kit.ArkUI';
-
 @Entry
 @Component
 struct Splash {
@@ -11,7 +9,11 @@ struct Splash {
     }, 100);
 
     setTimeout(() => {
-      router.replaceUrl({ url: 'pages/Index' });
+      this.getUIContext().getRouter()
+        .replaceUrl({ url: 'pages/Index' })
+        .catch((err: Error) => {
+          console.error(`Splash route failed: ${err.message}`);
+        });
     }, 2500);
   }
 

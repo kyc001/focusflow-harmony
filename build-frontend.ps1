@@ -3,7 +3,7 @@ param(
 )
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$devecoRoot = "C:\Program Files\Huawei\DevEco Studio"
+$devecoRoot = if ($env:DEVECO_STUDIO_HOME) { $env:DEVECO_STUDIO_HOME } else { "C:\Program Files\Huawei\DevEco Studio" }
 $hvigor = Join-Path $devecoRoot "tools\hvigor\bin\hvigorw.bat"
 $jbrHome = Join-Path $devecoRoot "jbr"
 $sdkHome = Join-Path $devecoRoot "sdk"

@@ -34,6 +34,7 @@ import {
 import {
   FocusProject,
   ResourceInsight,
+  ResourceSummaryStatus,
   StudyResource,
   StudyResourceStatus
 } from '../models/FocusModels';
@@ -188,7 +189,9 @@ export struct ResourcesView {
     if (resource === undefined) {
       return '从左侧资料列表选择一份内容，或先添加课程笔记、论文摘录、网页链接。';
     }
-    return resource.summary.length > 0 ? resource.summary : this.latestResourceInsight.summary;
+    return this.resourceHasExtractedInsight(resource) && resource.summary.length > 0 ?
+      resource.summary :
+      this.latestResourceInsight.summary;
   }
 
   private selectedResourceKeyPoints(): string[] {
@@ -196,7 +199,16 @@ export struct ResourcesView {
     if (resource === undefined) {
       return this.latestResourceInsight.keyPoints;
     }
-    return resource.keyPoints.length > 0 ? resource.keyPoints : this.latestResourceInsight.keyPoints;
+    return this.resourceHasExtractedInsight(resource) && resource.keyPoints.length > 0 ?
+      resource.keyPoints :
+      this.latestResourceInsight.keyPoints;
+  }
+
+  private resourceHasExtractedInsight(resource: StudyResource): boolean {
+    if (resource.summaryStatus === ResourceSummaryStatus.EXTRACTED) {
+      return true;
+    }
+    return resource.summaryStatus === undefined && resource.summary.length > 0 && resource.summary !== '待 AI';
   }
 
   private resourceInsightSourceLabel(): string {
@@ -982,7 +994,9 @@ export struct ResourcesView {
           .width('100%')
           .margin({ top: 5 })
 
-          Text(resource.summary.length > 0 ? resource.summary : this.resourcePreview(resource.content))
+          Text(this.resourceHasExtractedInsight(resource) && resource.summary.length > 0 ?
+            resource.summary :
+            this.resourcePreview(resource.content))
             .fontSize(12)
             .fontColor(TEXT_SUB)
             .lineHeight(18)
@@ -990,20 +1004,22 @@ export struct ResourcesView {
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .margin({ top: 7 })
 
-          Flex({ wrap: FlexWrap.Wrap }) {
-            ForEach(resource.keyPoints.slice(0, 3), (point: string) => {
-              Text(point)
-                .fontSize(10)
-                .fontColor(TEXT_MUTED)
-                .backgroundColor(CARD_SOFT)
-                .borderRadius(7)
-                .padding({ left: 7, right: 7, top: 3, bottom: 3 })
-                .margin({ right: 5, top: 5 })
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-            }, (point: string) => point)
+          if (this.resourceHasExtractedInsight(resource) && resource.keyPoints.length > 0) {
+            Flex({ wrap: FlexWrap.Wrap }) {
+              ForEach(resource.keyPoints.slice(0, 3), (point: string) => {
+                Text(point)
+                  .fontSize(10)
+                  .fontColor(TEXT_MUTED)
+                  .backgroundColor(CARD_SOFT)
+                  .borderRadius(7)
+                  .padding({ left: 7, right: 7, top: 3, bottom: 3 })
+                  .margin({ right: 5, top: 5 })
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+              }, (point: string) => point)
+            }
+            .width('100%')
           }
-          .width('100%')
 
           Row() {
             Button(this.selectedResourceId === resource.id ? '已选择' : '选择')

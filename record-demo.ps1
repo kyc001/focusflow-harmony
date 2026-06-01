@@ -5,7 +5,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$hdc = "C:\Program Files\Huawei\DevEco Studio\sdk\default\openharmony\toolchains\hdc.exe"
+$devecoRoot = if ($env:DEVECO_STUDIO_HOME) { $env:DEVECO_STUDIO_HOME } else { "C:\Program Files\Huawei\DevEco Studio" }
+$hdc = Join-Path $devecoRoot "sdk\default\openharmony\toolchains\hdc.exe"
 $framesDir = Join-Path $projectRoot "tmp\demo-frames"
 
 if (-not (Test-Path $hdc)) {
@@ -54,8 +55,8 @@ $resolvedOutput = Join-Path $projectRoot $OutputPath
 New-Item -ItemType Directory -Force -Path $framesDir | Out-Null
 Get-ChildItem -LiteralPath $framesDir -File -ErrorAction SilentlyContinue | Remove-Item -Force
 
-Write-Host "Starting FocusFlow app..." -ForegroundColor Cyan
-Invoke-Hdc shell aa start -a EntryAbility -b com.example.myapplication -m entry
+Write-Host "Starting 知序 app..." -ForegroundColor Cyan
+Invoke-Hdc shell aa start -a EntryAbility -b com.nankai.zhixu -m entry
 Start-Sleep -Seconds 2
 
 # Make sure the recording does not start inside an input field or a settings detail page.

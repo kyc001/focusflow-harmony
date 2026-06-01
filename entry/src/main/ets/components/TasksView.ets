@@ -65,13 +65,14 @@ export struct TasksView {
   private filteredTasks(): FocusTask[] {
     const keyword: string = this.searchText.trim();
     return this.tasks.filter((task: FocusTask) => {
+      const deleted: boolean = task.status === TaskStatus.DELETED || task.isDeleted === 1;
       const projectMatched: boolean = this.filterProjectId === 0 || task.projectId === this.filterProjectId;
       const priorityMatched: boolean = this.filterPriority < 0 || task.priority === this.filterPriority;
       const keywordMatched: boolean = keyword.length === 0 ||
         task.title.indexOf(keyword) >= 0 ||
         task.note.indexOf(keyword) >= 0 ||
         task.tags.join(',').indexOf(keyword) >= 0;
-      const statusMatched: boolean = this.showRecycle ? task.status === TaskStatus.DELETED : task.status !== TaskStatus.DELETED;
+      const statusMatched: boolean = this.showRecycle ? deleted : !deleted;
       return projectMatched && priorityMatched && keywordMatched && statusMatched;
     });
   }
@@ -354,7 +355,7 @@ export struct TaskRowView {
           }
 
           Row() {
-            if (this.task.status === TaskStatus.DELETED) {
+            if (this.task.status === TaskStatus.DELETED || this.task.isDeleted === 1) {
               Button('恢复任务')
                 .height(28)
                 .fontSize(11)

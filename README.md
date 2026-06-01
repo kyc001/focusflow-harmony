@@ -1,6 +1,6 @@
-# FocusFlow Harmony
+# 知序
 
-FocusFlow Harmony 是一个面向学习和深度工作的 HarmonyOS 专注效率应用。项目使用 ArkTS/ArkUI 构建移动端体验，使用 Spring Boot + MyBatis 提供后端同步服务，并支持 MySQL 与 H2 两种数据库运行模式。
+知序是一个面向学习和深度工作的 HarmonyOS 专注效率应用。项目使用 ArkTS/ArkUI 构建移动端体验，使用 Spring Boot + MyBatis 提供后端同步服务，并支持 MySQL 与 H2 两种数据库运行模式。
 
 这个项目不是一个静态展示 Demo，而是一个包含前端、本地数据、后端接口、数据库持久化、云同步和课程论文材料的完整闭环系统。用户可以在移动端完成任务规划、番茄钟专注、白噪音播放、复盘统计和后端同步。
 
@@ -269,7 +269,7 @@ tools/jdk-21
 tools/maven
 ```
 
-这些工具链用于本机复现实验环境，但不建议提交到公开仓库。若克隆仓库后没有 `tools/` 目录，可以安装 JDK 21 和 Maven，或自行放置同名目录后使用脚本。脚本会检查 JDK 是否包含 `lib/modules`，如果项目内 JDK 不完整，会自动回退到 `D:\jdk` 或 DevEco Studio 自带 JBR，并从 PATH 中移除损坏的 Oracle `javapath`。
+这些工具链用于本机复现实验环境，但不建议提交到公开仓库。若克隆仓库后没有 `tools/` 目录，可以安装 JDK 21 和 Maven，或自行放置同名目录后使用脚本。后端脚本会按 `JAVA_HOME`、`JDK_HOME`、`tools/jdk-21`、标准 JDK 21 安装目录的顺序查找可用 JDK；如果设置了 `DEVECO_STUDIO_HOME`，也会把 DevEco Studio 自带 JBR 作为候选。脚本会从 PATH 中移除损坏的 Oracle `javapath`。
 
 ## 快速开始
 
@@ -369,14 +369,14 @@ $hdc = 'C:\Program Files\Huawei\DevEco Studio\sdk\default\openharmony\toolchains
 如需干净安装：
 
 ```powershell
-& $hdc uninstall com.example.myapplication
+& $hdc uninstall com.nankai.zhixu
 & $hdc install -r .\entry\build\default\outputs\default\app\entry-default.hap
 ```
 
 启动应用：
 
 ```powershell
-& $hdc shell aa start -a EntryAbility -b com.example.myapplication -m entry
+& $hdc shell aa start -a EntryAbility -b com.nankai.zhixu -m entry
 ```
 
 注意必须带 `-m entry`，否则可能出现 `specified ability does not exist`。
@@ -610,7 +610,7 @@ ArkTS / PackageHap 通过，但 PackageApp 被系统 Java 注册表卡住。
 - 强制使用 DevEco Studio 自带 JBR
 - 清理 PATH 中的 Oracle `javapath`
 
-### 启动卡 Splash
+### 启动停在 Splash
 
 现象：
 
@@ -620,8 +620,9 @@ ArkTS / PackageHap 通过，但 PackageApp 被系统 Java 注册表卡住。
 
 处理：
 
-- `EntryAbility.ets` 直接加载 `pages/Index`
-- 避免 deprecated router 跳转导致入口失败
+- 当前版本默认先加载 `pages/Splash`，再由 Splash 动画跳转到 `pages/Index`
+- 若调试时长期停在 Splash，优先检查 `Splash.ets` 中的跳转目标是否仍为 `pages/Index`
+- 临时排障时可把 `EntryAbility.ets` 改为直接加载 `pages/Index`，但正式演示建议保留 Splash 首屏
 
 ### 白噪音加载失败
 

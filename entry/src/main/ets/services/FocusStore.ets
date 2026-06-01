@@ -6,6 +6,7 @@ import {
   FocusTask,
   ForestPlant,
   PomodoroRecord,
+  ResourceSummaryStatus,
   ResourceInsight,
   ReviewStats,
   StatPoint,
@@ -28,6 +29,10 @@ function buildReviewStatsSnapshot(
   const dayMs: number = 24 * 60 * 60 * 1000;
   const startOfToday: number = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), new Date(now).getDate()).getTime();
   const completed: PomodoroRecord[] = pomodoros.filter((record: PomodoroRecord) => record.completed === 1);
+  const completedDayStarts: number[] = Array.from(new Set(completed.map((record: PomodoroRecord) => {
+    const date: Date = new Date(record.startAt);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  }))).sort((left: number, right: number) => left - right);
   let streak: number = 0;
   for (let i: number = 0; i < 30; i++) {
     const dayStart: number = startOfToday - i * dayMs;
@@ -59,7 +64,14 @@ function buildReviewStatsSnapshot(
     return point;
   });
   const totalFocusMinutes: number = Math.round(completed.reduce((sum: number, record: PomodoroRecord) => sum + record.duration, 0) / 60);
-  const bestStreak: number = Math.max(streak, 6);
+  let bestStreak: number = 0;
+  let runningStreak: number = 0;
+  let previousDayStart: number = 0;
+  for (const dayStart of completedDayStarts) {
+    runningStreak = previousDayStart > 0 && dayStart - previousDayStart === dayMs ? runningStreak + 1 : 1;
+    bestStreak = Math.max(bestStreak, runningStreak);
+    previousDayStart = dayStart;
+  }
   const unlockedPlantIds: number[] = plants
     .filter((plant: ForestPlant) => completed.length >= plant.unlockPomodoros && streak >= plant.unlockStreak)
     .map((plant: ForestPlant) => plant.id);
@@ -161,6 +173,7 @@ export class FocusStore {
       linkedTaskId: 0,
       content: content,
       summary: '待 AI 提炼摘要',
+      summaryStatus: ResourceSummaryStatus.PENDING,
       keyPoints: [],
       tags: this.initialTags(sourceType, content),
       status: StudyResourceStatus.ACTIVE,
@@ -186,6 +199,7 @@ export class FocusStore {
       linkedTaskId: resource.linkedTaskId,
       content: resource.content,
       summary: insight.summary,
+      summaryStatus: ResourceSummaryStatus.EXTRACTED,
       keyPoints: insight.keyPoints,
       tags: resource.tags,
       status: resource.status,
@@ -234,6 +248,7 @@ export class FocusStore {
       linkedTaskId: saved.id,
       content: resource.content,
       summary: resource.summary,
+      summaryStatus: resource.summaryStatus,
       keyPoints: resource.keyPoints,
       tags: resource.tags,
       status: resource.status,
@@ -283,8 +298,7 @@ export class FocusStore {
       duration: duration,
       completed: completed ? 1 : 0,
       interruptReason: reason,
-      updatedAt: Date.now(),
-      clientRequestId: `local-pomo-${Date.now()}-${taskId}`
+      updatedAt: Date.now()
     };
     await focusDatabase.recordPomodoro(record);
     if (completed) {
@@ -327,8 +341,7 @@ export class FocusStore {
 
   extractedResourceCount(): number {
     return this.resources.filter((resource: StudyResource) => {
-      const isPendingSummary: boolean = resource.summary.indexOf('待 AI') === 0 && resource.summary.indexOf('提炼摘要') >= 0;
-      return resource.summary.length > 0 && !isPendingSummary;
+      return resource.summaryStatus === ResourceSummaryStatus.EXTRACTED;
     }).length;
   }
 
@@ -345,6 +358,7 @@ export class FocusStore {
       linkedTaskId: resource.linkedTaskId,
       content: resource.content,
       summary: resource.summary,
+      summaryStatus: resource.summaryStatus,
       keyPoints: resource.keyPoints,
       tags: resource.tags,
       status: status,

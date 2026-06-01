@@ -93,6 +93,7 @@ import {
   FocusTask,
   PomodoroRecord,
   PomodoroStatus,
+  ResourceSummaryStatus,
   ResourceInsight,
   StudyResource,
   StudyResourceStatus,
@@ -426,7 +427,7 @@ struct Index {
     try {
       const context = getContext(this) as common.UIAbilityContext;
       context.startAbility({
-        bundleName: 'com.example.myapplication',
+        bundleName: 'com.nankai.zhixu',
         abilityName: 'FocusAbility',
         parameters: {
           taskId: taskId,
@@ -510,7 +511,8 @@ struct Index {
   }
 
   private resourceInsightForDisplay(resource: StudyResource): ResourceInsight {
-    const hasSavedInsight: boolean = resource.summary.length > 0 && resource.summary !== '待 AI 提炼摘要';
+    const hasSavedInsight: boolean = resource.summaryStatus === ResourceSummaryStatus.EXTRACTED ||
+      (resource.summary.length > 0 && resource.summary !== '待 AI 提炼摘要');
     return {
       source: hasSavedInsight ? '已保存提炼' : '未提炼',
       summary: hasSavedInsight ? resource.summary : '配置远程 AI 后，可为这份资料生成摘要、要点和下一步任务。',

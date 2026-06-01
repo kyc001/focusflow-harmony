@@ -134,10 +134,58 @@ export struct ReviewView {
         .borderRadius(12)
         .backgroundColor(SURFACE_ALT)
         .margin({ top: 14 })
+      this.WebFallbackChart()
     }
     .reviewCardStyle()
     .alignItems(HorizontalAlign.Start)
     .margin({ top: 12 })
+  }
+
+  @Builder
+  private WebFallbackChart() {
+    Column() {
+      Text('ArkTS 兜底视图')
+        .fontSize(11)
+        .fontColor(TEXT_MUTED)
+        .margin({ bottom: 8 })
+      Row() {
+        ForEach(focusStore.weekFocusPoints(), (point: StatPoint) => {
+          Column() {
+            Text(`${point.value}`)
+              .fontSize(10)
+              .fontColor(TEXT_MUTED)
+              .margin({ bottom: 5 })
+            Column()
+              .width(16)
+              .height(Math.max(8, Math.min(78, point.value * 2 + 8)))
+              .borderRadius(8)
+              .backgroundColor(ACCENT)
+              .linearGradient({
+                angle: 90,
+                colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
+              })
+              .shadow({ radius: 8, color: GLOW_BLUE, offsetX: 0, offsetY: 2 })
+            Text(point.label)
+              .fontSize(10)
+              .fontColor(TEXT_MUTED)
+              .margin({ top: 6 })
+          }
+          .layoutWeight(1)
+          .height(112)
+          .justifyContent(FlexAlign.End)
+          .alignItems(HorizontalAlign.Center)
+        }, (point: StatPoint) => point.label)
+      }
+      .height(124)
+      .width('100%')
+      .alignItems(VerticalAlign.Bottom)
+    }
+    .width('100%')
+    .padding(12)
+    .backgroundColor('#F7FAFF')
+    .border({ width: 1, color: BORDER_SOFT })
+    .borderRadius(12)
+    .margin({ top: 10 })
   }
 
   @Builder

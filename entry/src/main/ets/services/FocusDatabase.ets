@@ -6,7 +6,7 @@ import { FocusProject, FocusTask, PomodoroRecord, StudyResource, TaskStatus } fr
 type ValueType = relationalStore.ValueType;
 
 const DB_NAME: string = 'focus.db';
-const DB_VERSION: number = 4;
+const DB_VERSION: number = 5;
 
 export class FocusDatabase {
   private store?: relationalStore.RdbStore;
@@ -54,6 +54,8 @@ export class FocusDatabase {
         'created_at INTEGER NOT NULL, ' +
         'updated_at INTEGER NOT NULL DEFAULT 0, ' +
         'completed_at INTEGER NOT NULL DEFAULT 0, ' +
+        'is_deleted INTEGER NOT NULL DEFAULT 0, ' +
+        'client_request_id TEXT, ' +
         'tags_json TEXT, ' +
         'subtasks_json TEXT' +
         ')'
@@ -90,16 +92,19 @@ export class FocusDatabase {
     await this.addColumnIfMissing('projects', 'updated_at', 'INTEGER NOT NULL DEFAULT 0');
     await this.addColumnIfMissing('projects', 'is_deleted', 'INTEGER NOT NULL DEFAULT 0');
     await this.addColumnIfMissing('tasks', 'updated_at', 'INTEGER NOT NULL DEFAULT 0');
+    await this.addColumnIfMissing('tasks', 'is_deleted', 'INTEGER NOT NULL DEFAULT 0');
+    await this.addColumnIfMissing('tasks', 'client_request_id', 'TEXT');
     await this.addColumnIfMissing('tasks', 'tags_json', 'TEXT');
     await this.addColumnIfMissing('tasks', 'subtasks_json', 'TEXT');
     await this.addColumnIfMissing('pomodoros', 'updated_at', 'INTEGER NOT NULL DEFAULT 0');
     await this.addColumnIfMissing('pomodoros', 'client_request_id', 'TEXT');
+    await this.backfillTaskClientRequestIds();
     await this.backfillPomodoroClientRequestIds();
   }
 
   async getProjects(): Promise<FocusProject[]> {
     const resultSet: relationalStore.ResultSet = await this.query(
-      'SELECT id, name, color, icon FROM projects WHERE is_deleted = 0 ORDER BY id ASC'
+      'SELECT id, name, color, icon, updated_at, is_deleted FROM projects WHERE is_deleted = 0 ORDER BY id ASC'
     );
     const projects: FocusProject[] = [];
     try {
@@ -108,7 +113,31 @@ export class FocusDatabase {
           id: this.longValue(resultSet, 'id'),
           name: this.stringValue(resultSet, 'name', '默认项目'),
           color: this.stringValue(resultSet, 'color', '#4F63D2'),
-          icon: this.stringValue(resultSet, 'icon', 'P')
+          icon: this.stringValue(resultSet, 'icon', 'P'),
+          updatedAt: this.longValue(resultSet, 'updated_at'),
+          isDeleted: this.longValue(resultSet, 'is_deleted')
+        });
+      }
+    } finally {
+      resultSet.close();
+    }
+    return projects;
+  }
+
+  async getProjectsForSync(): Promise<FocusProject[]> {
+    const resultSet: relationalStore.ResultSet = await this.query(
+      'SELECT id, name, color, icon, updated_at, is_deleted FROM projects ORDER BY updated_at ASC, id ASC'
+    );
+    const projects: FocusProject[] = [];
+    try {
+      while (resultSet.goToNextRow()) {
+        projects.push({
+          id: this.longValue(resultSet, 'id'),
+          name: this.stringValue(resultSet, 'name', '默认项目'),
+          color: this.stringValue(resultSet, 'color', '#4F63D2'),
+          icon: this.stringValue(resultSet, 'icon', 'P'),
+          updatedAt: this.longValue(resultSet, 'updated_at'),
+          isDeleted: this.longValue(resultSet, 'is_deleted')
         });
       }
     } finally {
@@ -119,7 +148,7 @@ export class FocusDatabase {
 
   async getTasks(): Promise<FocusTask[]> {
     const resultSet: relationalStore.ResultSet = await this.query(
-      'SELECT id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, completed_at, tags_json, subtasks_json ' +
+      'SELECT id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, is_deleted, client_request_id, tags_json, subtasks_json ' +
         'FROM tasks ORDER BY status ASC, due_at ASC, priority ASC, id DESC'
     );
     const tasks: FocusTask[] = [];
@@ -137,7 +166,10 @@ export class FocusDatabase {
           createdAt: this.longValue(resultSet, 'created_at'),
           completedAt: this.longValue(resultSet, 'completed_at'),
           tags: this.parseStringArray(this.stringValue(resultSet, 'tags_json', '[]')),
-          subtasks: this.parseStringArray(this.stringValue(resultSet, 'subtasks_json', '[]'))
+          subtasks: this.parseStringArray(this.stringValue(resultSet, 'subtasks_json', '[]')),
+          updatedAt: this.longValue(resultSet, 'updated_at'),
+          isDeleted: this.longValue(resultSet, 'is_deleted'),
+          clientRequestId: this.stringValue(resultSet, 'client_request_id', '')
         });
       }
     } finally {
@@ -203,6 +235,11 @@ export class FocusDatabase {
   async addTask(task: FocusTask): Promise<FocusTask> {
     const values: relationalStore.ValuesBucket = this.taskToBucket(task, false);
     const id: number = await this.requireStore().insert('tasks', values);
+    const clientRequestId: string = `client-task-${id}`;
+    await this.requireStore().executeSql(
+      'UPDATE tasks SET client_request_id = ? WHERE id = ?',
+      [clientRequestId, id]
+    );
     return {
       id: id,
       title: task.title,
@@ -215,7 +252,10 @@ export class FocusDatabase {
       createdAt: task.createdAt,
       completedAt: task.completedAt,
       tags: task.tags,
-      subtasks: task.subtasks
+      subtasks: task.subtasks,
+      updatedAt: values.updated_at as number,
+      isDeleted: 0,
+      clientRequestId: clientRequestId
     };
   }
 
@@ -240,20 +280,32 @@ export class FocusDatabase {
   }
 
   async upsertProject(project: FocusProject): Promise<void> {
+    const updatedAt: number = project.updatedAt === undefined || project.updatedAt <= 0 ? Date.now() : project.updatedAt;
+    const existing: FocusProject | undefined = await this.findProjectById(project.id);
+    if (existing !== undefined && (existing.updatedAt || 0) > updatedAt) {
+      return;
+    }
     await this.requireStore().executeSql(
-      'INSERT OR REPLACE INTO projects (id, name, color, icon, updated_at, is_deleted) VALUES (?, ?, ?, ?, ?, 0)',
-      [project.id, project.name, project.color, project.icon, Date.now()]
+      'INSERT OR REPLACE INTO projects (id, name, color, icon, updated_at, is_deleted) VALUES (?, ?, ?, ?, ?, ?)',
+      [project.id, project.name, project.color, project.icon, updatedAt, project.isDeleted === undefined ? 0 : project.isDeleted]
     );
   }
 
   async upsertTask(task: FocusTask): Promise<void> {
+    const updatedAt: number = task.updatedAt === undefined || task.updatedAt <= 0 ? Date.now() : task.updatedAt;
+    const clientRequestId: string = this.taskClientRequestId(task);
+    const existing: FocusTask | undefined = await this.findTaskByIdOrClientRequestId(task.id, clientRequestId);
+    if (existing !== undefined && (existing.updatedAt || 0) > updatedAt) {
+      return;
+    }
+    const targetId: number = existing === undefined ? task.id : existing.id;
     const values: relationalStore.ValuesBucket = this.taskToBucket(task, true);
     await this.requireStore().executeSql(
       'INSERT OR REPLACE INTO tasks (' +
-        'id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, tags_json, subtasks_json' +
-        ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, is_deleted, client_request_id, tags_json, subtasks_json' +
+        ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
-        values.id as number,
+        targetId,
         values.title as string,
         values.note as string,
         values.project_id as number,
@@ -262,8 +314,10 @@ export class FocusDatabase {
         values.status as number,
         values.pomodoro_count as number,
         values.created_at as number,
-        values.updated_at as number,
+        updatedAt,
         values.completed_at as number,
+        task.isDeleted === undefined ? (task.status === TaskStatus.DELETED ? 1 : 0) : task.isDeleted,
+        clientRequestId,
         values.tags_json as string,
         values.subtasks_json as string
       ]
@@ -299,6 +353,16 @@ export class FocusDatabase {
     const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('tasks');
     predicates.equalTo('id', task.id);
     await this.requireStore().update(values, predicates);
+  }
+
+  async localProjectUpdatedAt(projectId: number): Promise<number> {
+    const project: FocusProject | undefined = await this.findProjectById(projectId);
+    return project === undefined ? 0 : (project.updatedAt || 0);
+  }
+
+  async localTaskUpdatedAt(taskId: number, clientRequestId: string): Promise<number> {
+    const task: FocusTask | undefined = await this.findTaskByIdOrClientRequestId(taskId, clientRequestId);
+    return task === undefined ? 0 : (task.updatedAt || 0);
   }
 
   async updateStudyResource(resource: StudyResource): Promise<void> {
@@ -472,6 +536,81 @@ export class FocusDatabase {
     }
   }
 
+  private async findProjectById(projectId: number): Promise<FocusProject | undefined> {
+    const resultSet: relationalStore.ResultSet = await this.query(
+      'SELECT id, name, color, icon, updated_at, is_deleted FROM projects WHERE id = ? LIMIT 1',
+      [projectId]
+    );
+    try {
+      if (resultSet.goToNextRow()) {
+        return {
+          id: this.longValue(resultSet, 'id'),
+          name: this.stringValue(resultSet, 'name', '默认项目'),
+          color: this.stringValue(resultSet, 'color', '#4F63D2'),
+          icon: this.stringValue(resultSet, 'icon', 'P'),
+          updatedAt: this.longValue(resultSet, 'updated_at'),
+          isDeleted: this.longValue(resultSet, 'is_deleted')
+        };
+      }
+      return undefined;
+    } finally {
+      resultSet.close();
+    }
+  }
+
+  private async findTaskByIdOrClientRequestId(taskId: number, clientRequestId: string): Promise<FocusTask | undefined> {
+    const resultSet: relationalStore.ResultSet = await this.query(
+      'SELECT id, title, note, project_id, priority, due_at, status, pomodoro_count, created_at, updated_at, completed_at, is_deleted, client_request_id, tags_json, subtasks_json ' +
+        'FROM tasks WHERE id = ? OR client_request_id = ? ORDER BY updated_at DESC, id ASC LIMIT 1',
+      [taskId, clientRequestId]
+    );
+    try {
+      if (resultSet.goToNextRow()) {
+        return {
+          id: this.longValue(resultSet, 'id'),
+          title: this.stringValue(resultSet, 'title', '未命名任务'),
+          note: this.stringValue(resultSet, 'note', ''),
+          projectId: this.longValue(resultSet, 'project_id'),
+          priority: this.longValue(resultSet, 'priority'),
+          dueAt: this.longValue(resultSet, 'due_at'),
+          status: this.longValue(resultSet, 'status'),
+          pomodoroCount: this.longValue(resultSet, 'pomodoro_count'),
+          createdAt: this.longValue(resultSet, 'created_at'),
+          completedAt: this.longValue(resultSet, 'completed_at'),
+          tags: this.parseStringArray(this.stringValue(resultSet, 'tags_json', '[]')),
+          subtasks: this.parseStringArray(this.stringValue(resultSet, 'subtasks_json', '[]')),
+          updatedAt: this.longValue(resultSet, 'updated_at'),
+          isDeleted: this.longValue(resultSet, 'is_deleted'),
+          clientRequestId: this.stringValue(resultSet, 'client_request_id', '')
+        };
+      }
+      return undefined;
+    } finally {
+      resultSet.close();
+    }
+  }
+
+  private async backfillTaskClientRequestIds(): Promise<void> {
+    const resultSet: relationalStore.ResultSet = await this.query(
+      'SELECT id FROM tasks WHERE client_request_id IS NULL OR client_request_id = ?',
+      ['']
+    );
+    const ids: number[] = [];
+    try {
+      while (resultSet.goToNextRow()) {
+        ids.push(this.longValue(resultSet, 'id'));
+      }
+    } finally {
+      resultSet.close();
+    }
+    for (const id of ids) {
+      await this.requireStore().executeSql(
+        'UPDATE tasks SET client_request_id = ? WHERE id = ?',
+        [`client-task-${id}`, id]
+      );
+    }
+  }
+
   private async backfillPomodoroClientRequestIds(): Promise<void> {
     const resultSet: relationalStore.ResultSet = await this.query(
       'SELECT id, task_id, start_at, duration FROM pomodoros WHERE client_request_id IS NULL OR client_request_id = ?',
@@ -512,6 +651,8 @@ export class FocusDatabase {
       created_at: task.createdAt,
       updated_at: Date.now(),
       completed_at: task.completedAt,
+      is_deleted: task.isDeleted === undefined ? (task.status === TaskStatus.DELETED ? 1 : 0) : task.isDeleted,
+      client_request_id: this.taskClientRequestId(task),
       tags_json: JSON.stringify(task.tags),
       subtasks_json: JSON.stringify(task.subtasks)
     };
@@ -589,6 +730,13 @@ export class FocusDatabase {
       return record.clientRequestId.trim();
     }
     return `local-pomo-${record.id}-${record.taskId}-${record.startAt}-${record.duration}`;
+  }
+
+  private taskClientRequestId(task: FocusTask): string {
+    if (task.clientRequestId !== undefined && task.clientRequestId.trim().length > 0) {
+      return task.clientRequestId.trim();
+    }
+    return `client-task-${task.id}`;
   }
 }
 

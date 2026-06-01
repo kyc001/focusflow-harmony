@@ -905,20 +905,46 @@ mvn test
 
 结果：`PackageApp / SignApp / assembleApp` 全部通过。
 
-### 14.9 双向同步重复番茄记录
+### 14.9 双向同步幂等、删除墓碑与冲突裁决
 
 问题：
 
 ```text
-拉取服务端番茄记录时如果直接 insert，多次同步可能产生重复专注记录，影响复盘统计。
+如果同步只按本地现存列表上推，删除后的项目或任务会在下次 pull 时从服务端旧副本恢复；如果任务每次 push 都生成新的 clientRequestId，服务端也无法识别重复提交；如果客户端无条件接受服务端数据，旧数据可能覆盖新修改。
 ```
 
 处理：
 
+- 客户端 `tasks` 表增加 `is_deleted` 和 `client_request_id`
 - 客户端 `pomodoros` 表增加 `client_request_id`
+- 本地任务创建后回填稳定 `client-task-${id}`，同步时不再用 `Date.now()` 生成新 key
 - 本地创建番茄记录时生成稳定 `clientRequestId`
-- 服务端拉取番茄记录时按 `clientRequestId` 查询并 upsert
-- 同步推送保留本地 `clientRequestId`，让前后端幂等标识一致
+- 项目和任务删除保留 `isDeleted` 墓碑，普通列表过滤墓碑，但 `getProjectsForSync()` 和任务同步仍会上推墓碑
+- 服务端 push 对项目按 id、任务按 clientRequestId/id、番茄按 clientRequestId 查重
+- 前端 merge 和后端 push 都按 `updatedAt` 做 Last-Write-Wins，旧数据不会覆盖新数据
+
+验证：
+
+```powershell
+.\build-frontend.ps1 -HvigorArgs assembleHap,--no-daemon
+```
+
+结果：通过。
+
+### 14.10 专注计时后台漂移
+
+问题：
+
+```text
+如果只依赖 setInterval 每秒递减，在切后台、熄屏或系统节流时，番茄剩余时间可能慢于真实时间。
+```
+
+处理：
+
+- `Index.ets` 和 `FocusSolo.ets` 记录开始或恢复时的时间戳
+- 每次 tick 用 `Date.now()` 减去时间戳计算已过时间
+- 暂停时冻结累计秒数，恢复时重新记录开始时间
+- 完成或中断前调用计时修正逻辑，保证写入的番茄时长接近真实经过时间
 
 验证：
 

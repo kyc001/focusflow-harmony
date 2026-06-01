@@ -37,6 +37,8 @@ struct FocusSolo {
   @State message: string = '独立 FocusAbility 已就绪';
   @State ambientNoise: string = 'ocean';
   private timerId: number = -1;
+  private accumulatedSeconds: number = 0;
+  private lastStartedAt: number = 0;
 
   aboutToAppear() {
     this.initLocalStore();
@@ -73,27 +75,37 @@ struct FocusSolo {
     }
     if (this.remainingSeconds <= 0) {
       this.remainingSeconds = this.focusSeconds;
+      this.accumulatedSeconds = 0;
     }
     this.running = true;
+    this.lastStartedAt = Date.now();
     this.message = FocusBackgroundService.startPomodoroGuard();
     focusAmbientService.play(this.ambientNoise, getContext(this) as common.UIAbilityContext).catch(() => {
       this.message = `${ambientDisplayName(this.ambientNoise)} 启动失败，计时继续`;
     });
+    this.startTicker();
+  }
+
+  private startTicker(): void {
+    this.clearTicker();
+    this.updateTimerFromClock();
     this.timerId = setInterval(() => {
-      if (this.remainingSeconds <= 1) {
+      if (!this.running) {
+        return;
+      }
+      this.updateTimerFromClock();
+      if (this.remainingSeconds <= 0) {
         this.finish();
         return;
       }
-      this.remainingSeconds--;
     }, 1000);
   }
 
   private pause(): void {
+    this.updateTimerFromClock();
+    this.accumulatedSeconds = this.focusSeconds - this.remainingSeconds;
     this.running = false;
-    if (this.timerId >= 0) {
-      clearInterval(this.timerId);
-      this.timerId = -1;
-    }
+    this.clearTicker();
   }
 
   private stop(): void {
@@ -105,8 +117,11 @@ struct FocusSolo {
   }
 
   private finish(): void {
+    this.updateTimerFromClock();
     this.stop();
     this.remainingSeconds = this.focusSeconds;
+    this.accumulatedSeconds = 0;
+    this.lastStartedAt = 0;
     this.message = '番茄完成，正在写入本地记录';
     this.persistCompletion();
     FocusNotificationService.publishBasic('番茄完成', this.taskTitle);
@@ -129,6 +144,8 @@ struct FocusSolo {
   private reset(): void {
     this.stop();
     this.remainingSeconds = this.focusSeconds;
+    this.accumulatedSeconds = 0;
+    this.lastStartedAt = 0;
     this.message = '已重置，准备开始下一段专注';
   }
 
@@ -138,7 +155,25 @@ struct FocusSolo {
     this.ambientNoise = normalizeAmbientType(settings.noise);
     if (!this.running) {
       this.remainingSeconds = this.focusSeconds;
+      this.accumulatedSeconds = 0;
+      this.lastStartedAt = 0;
     }
+  }
+
+  private clearTicker(): void {
+    if (this.timerId >= 0) {
+      clearInterval(this.timerId);
+      this.timerId = -1;
+    }
+  }
+
+  private updateTimerFromClock(): void {
+    if (!this.running) {
+      return;
+    }
+    const runningSeconds: number = this.lastStartedAt <= 0 ? 0 : Math.floor((Date.now() - this.lastStartedAt) / 1000);
+    const elapsed: number = Math.min(this.focusSeconds, this.accumulatedSeconds + Math.max(0, runningSeconds));
+    this.remainingSeconds = Math.max(0, this.focusSeconds - elapsed);
   }
 
   private progressValue(): number {

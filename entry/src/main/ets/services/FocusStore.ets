@@ -105,7 +105,7 @@ export class FocusStore {
 
   getTodayTasks(): FocusTask[] {
     return this.tasks
-      .filter((task: FocusTask) => task.status === TaskStatus.TODO)
+      .filter((task: FocusTask) => task.status === TaskStatus.TODO && task.isDeleted !== 1)
       .sort((left: FocusTask, right: FocusTask) => {
         if (left.priority !== right.priority) {
           return left.priority - right.priority;
@@ -115,11 +115,11 @@ export class FocusStore {
   }
 
   getActiveTasks(): FocusTask[] {
-    return this.tasks.filter((task: FocusTask) => task.status !== TaskStatus.DELETED);
+    return this.tasks.filter((task: FocusTask) => task.status !== TaskStatus.DELETED && task.isDeleted !== 1);
   }
 
   getDeletedTasks(): FocusTask[] {
-    return this.tasks.filter((task: FocusTask) => task.status === TaskStatus.DELETED);
+    return this.tasks.filter((task: FocusTask) => task.status === TaskStatus.DELETED || task.isDeleted === 1);
   }
 
   getActiveResources(): StudyResource[] {
@@ -379,6 +379,9 @@ export class FocusStore {
       pomodoroCount: task.pomodoroCount,
       createdAt: task.createdAt,
       completedAt: completedAt,
+      updatedAt: task.updatedAt,
+      isDeleted: status === TaskStatus.DELETED ? 1 : 0,
+      clientRequestId: task.clientRequestId,
       tags: task.tags,
       subtasks: task.subtasks
     };

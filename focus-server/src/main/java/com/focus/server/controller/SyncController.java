@@ -41,24 +41,34 @@ public class SyncController {
         long now = System.currentTimeMillis();
         for (Project project : request.getProjects()) {
             project.setUserId(userId);
-            project.setUpdatedAt(now);
+            project.setUpdatedAt(project.getUpdatedAt() == null || project.getUpdatedAt() <= 0 ? now : project.getUpdatedAt());
             project.setIsDeleted(project.getIsDeleted() == null ? 0 : project.getIsDeleted());
-            if (project.getId() == null) {
+            Project existing = project.getId() == null ? null : projectMapper.findById(project.getId(), userId);
+            if (existing == null) {
                 projectMapper.insert(project);
-            } else {
+            } else if (existing.getUpdatedAt() == null || existing.getUpdatedAt() <= project.getUpdatedAt()) {
+                project.setId(existing.getId());
                 projectMapper.update(project);
             }
         }
         for (Task task : request.getTasks()) {
             task.setUserId(userId);
-            task.setUpdatedAt(now);
+            task.setUpdatedAt(task.getUpdatedAt() == null || task.getUpdatedAt() <= 0 ? now : task.getUpdatedAt());
             task.setCreatedAt(task.getCreatedAt() == null ? now : task.getCreatedAt());
             task.setCompletedAt(task.getCompletedAt() == null ? 0L : task.getCompletedAt());
             task.setPomodoroCount(task.getPomodoroCount() == null ? 0 : task.getPomodoroCount());
             task.setIsDeleted(task.getIsDeleted() == null ? 0 : task.getIsDeleted());
-            if (task.getId() == null) {
+            if (task.getClientRequestId() == null || task.getClientRequestId().trim().isEmpty()) {
+                task.setClientRequestId("client-task-" + (task.getId() == null ? now : task.getId()));
+            }
+            Task existing = taskMapper.findByClientRequestId(userId, task.getClientRequestId());
+            if (existing == null && task.getId() != null) {
+                existing = taskMapper.findById(task.getId(), userId);
+            }
+            if (existing == null) {
                 taskMapper.insert(task);
-            } else {
+            } else if (existing.getUpdatedAt() == null || existing.getUpdatedAt() <= task.getUpdatedAt()) {
+                task.setId(existing.getId());
                 taskMapper.update(task);
             }
         }

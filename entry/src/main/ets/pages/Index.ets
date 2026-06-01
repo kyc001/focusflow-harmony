@@ -169,6 +169,9 @@ struct Index {
   @State aiModelList: string[] = [];
   @State aiModelLoading: boolean = false;
   private timerId: number = -1;
+  private focusSessionTotalSeconds: number = 25 * 60;
+  private focusAccumulatedSeconds: number = 0;
+  private focusLastStartedAt: number = 0;
 
   aboutToAppear() {
     this.remainingSeconds = this.settings.focusMinutes * 60;
@@ -738,10 +741,13 @@ struct Index {
       return;
     }
     if (this.timerStatus === PomodoroStatus.IDLE || this.timerStatus === PomodoroStatus.FINISHED) {
-      this.remainingSeconds = this.settings.focusMinutes * 60;
+      this.focusSessionTotalSeconds = this.settings.focusMinutes * 60;
+      this.remainingSeconds = this.focusSessionTotalSeconds;
       this.elapsedSeconds = 0;
+      this.focusAccumulatedSeconds = 0;
     }
     this.timerStatus = PomodoroStatus.RUNNING;
+    this.focusLastStartedAt = Date.now();
     this.serviceMessage = FocusBackgroundService.startPomodoroGuard();
     this.startTicker();
     focusAmbientService.play(this.settings.noise, getContext(this) as common.UIAbilityContext).catch((err: Error) => {
@@ -753,6 +759,8 @@ struct Index {
     if (this.timerStatus !== PomodoroStatus.RUNNING) {
       return;
     }
+    this.updateTimerFromClock();
+    this.focusAccumulatedSeconds = this.elapsedSeconds;
     this.timerStatus = PomodoroStatus.PAUSED;
     this.stopTicker();
   }
@@ -762,19 +770,25 @@ struct Index {
     this.timerStatus = PomodoroStatus.IDLE;
     this.remainingSeconds = this.settings.focusMinutes * 60;
     this.elapsedSeconds = 0;
+    this.focusSessionTotalSeconds = this.settings.focusMinutes * 60;
+    this.focusAccumulatedSeconds = 0;
+    this.focusLastStartedAt = 0;
     this.interruptionReason = '';
     this.serviceMessage = FocusBackgroundService.stopPomodoroGuard();
   }
 
   private async completePomodoro(): Promise<void> {
     const task: FocusTask = this.getSelectedTask();
-    const duration: number = Math.max(this.elapsedSeconds, this.settings.focusMinutes * 60);
+    this.updateTimerFromClock();
+    const duration: number = Math.max(this.elapsedSeconds, this.focusSessionTotalSeconds);
     this.stopTicker();
     this.timerStatus = PomodoroStatus.FINISHED;
     await focusStore.recordPomodoro(task.id, duration, true, '');
     this.syncFromStore();
     this.remainingSeconds = this.settings.shortBreakMinutes * 60;
     this.elapsedSeconds = 0;
+    this.focusAccumulatedSeconds = 0;
+    this.focusLastStartedAt = 0;
     this.serviceMessage = FocusBackgroundService.stopPomodoroGuard();
     FocusNotificationService.publishBasic('番茄完成', `${task.title} 已收获 1 个番茄`);
     await focusAmbientService.stop();
@@ -783,12 +797,16 @@ struct Index {
   private async interruptPomodoro(): Promise<void> {
     const task: FocusTask = this.getSelectedTask();
     const reason: string = this.interruptionReason.trim().length === 0 ? '未填写原因' : this.interruptionReason.trim();
+    this.updateTimerFromClock();
     this.stopTicker();
     this.timerStatus = PomodoroStatus.IDLE;
     await focusStore.recordPomodoro(task.id, Math.max(this.elapsedSeconds, 60), false, reason);
     this.syncFromStore();
     this.remainingSeconds = this.settings.focusMinutes * 60;
     this.elapsedSeconds = 0;
+    this.focusSessionTotalSeconds = this.settings.focusMinutes * 60;
+    this.focusAccumulatedSeconds = 0;
+    this.focusLastStartedAt = 0;
     this.interruptionReason = '';
     this.showInterruptDialog = false;
     this.serviceMessage = FocusBackgroundService.stopPomodoroGuard();
@@ -797,16 +815,16 @@ struct Index {
 
   private startTicker(): void {
     this.stopTicker();
+    this.updateTimerFromClock();
     this.timerId = setInterval(() => {
       if (this.timerStatus !== PomodoroStatus.RUNNING) {
         return;
       }
-      if (this.remainingSeconds <= 1) {
+      this.updateTimerFromClock();
+      if (this.remainingSeconds <= 0) {
         this.completePomodoro();
         return;
       }
-      this.remainingSeconds = this.remainingSeconds - 1;
-      this.elapsedSeconds = this.elapsedSeconds + 1;
       this.pulseOn = !this.pulseOn;
     }, 1000);
   }
@@ -816,6 +834,20 @@ struct Index {
       clearInterval(this.timerId);
       this.timerId = -1;
     }
+  }
+
+  private updateTimerFromClock(): void {
+    if (this.timerStatus !== PomodoroStatus.RUNNING) {
+      return;
+    }
+    const runningSeconds: number = this.focusLastStartedAt <= 0 ? 0 : Math.floor((Date.now() - this.focusLastStartedAt) / 1000);
+    const elapsed: number = Math.min(this.focusSessionTotalSeconds, this.focusAccumulatedSeconds + Math.max(0, runningSeconds));
+    this.elapsedSeconds = elapsed;
+    this.remainingSeconds = Math.max(0, this.focusSessionTotalSeconds - elapsed);
+    if (this.remainingSeconds > 0) {
+      return;
+    }
+    this.focusAccumulatedSeconds = this.focusSessionTotalSeconds;
   }
 
   private async requestNotification(): Promise<void> {

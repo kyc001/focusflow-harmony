@@ -92,7 +92,7 @@ entry/src/main/ets/services/FocusAmbientService.ets
 
 ### 云同步
 
-云同步模块把本地 RDB 数据与后端数据库进行双向同步。移动端登录后会保存用户标识，并通过同步接口拉取和推送项目、任务、番茄钟记录。任务和番茄记录会携带 `clientRequestId`，本地拉取时也会按该标识去重，避免重复同步污染复盘统计。
+云同步模块把本地 RDB 数据与后端数据库进行双向同步。移动端登录后会保存用户标识，并通过同步接口拉取和推送项目、任务、番茄钟记录。任务和番茄记录会携带稳定的 `clientRequestId`，重复推送或重复拉取时按该标识 upsert，避免重复同步污染任务列表和复盘统计。项目和任务删除会保留 `isDeleted` 墓碑并继续参与 push；客户端和服务端都按 `updatedAt` 做 Last-Write-Wins 比较，避免旧副本覆盖新修改。
 
 模拟器默认后端地址：
 
@@ -453,7 +453,7 @@ POST   /api/sync/push
 X-User-Id: 1
 ```
 
-后端响应统一使用 `Result<T>` 包装。Jackson 使用 `SNAKE_CASE` 输出字段，前端同步服务已兼容 snake_case 和 camelCase。番茄记录同步时使用 `clientRequestId` 做本地和服务端幂等标识，重复拉取同一条记录时更新原记录而不是新增一条。
+后端响应统一使用 `Result<T>` 包装。Jackson 使用 `SNAKE_CASE` 输出字段，前端同步服务已兼容 snake_case 和 camelCase。任务和番茄记录同步时使用 `clientRequestId` 做本地和服务端幂等标识，重复拉取同一条记录时更新原记录而不是新增一条。项目、任务和番茄记录都带 `updatedAt`，同步合并时保留较新的版本；项目和任务还带 `isDeleted`，用于把删除结果同步到另一端。
 
 ## 数据库说明
 
@@ -655,13 +655,26 @@ ArkTS / PackageHap 通过，但 PackageApp 被系统 Java 注册表卡住。
 - 使用 `@Concurrent` 函数在 TaskPool 中计算周统计、项目占比、连续学习天数和植物解锁
 - TaskPool 不可用时回退到同步计算，保证统计页面仍可展示
 
-### 双向同步重复番茄记录
+### 同步幂等、删除墓碑和冲突裁决
 
 处理：
 
+- 客户端 `tasks` 表增加 `client_request_id` 和 `is_deleted`
 - 客户端 `pomodoros` 表增加 `client_request_id`
+- 任务使用稳定 `client-task-${id}` 作为幂等键
 - 本地新增番茄时生成稳定 `clientRequestId`
 - 服务端拉取番茄记录时按 `clientRequestId` upsert，避免重复插入
+- 删除任务或项目时保留 `isDeleted` 墓碑，并在同步时继续上推
+- 前端合并和后端 push 都按 `updatedAt` 保留较新的版本
+
+### 专注计时后台漂移
+
+处理：
+
+- 开始或恢复专注时记录时间戳
+- 每次刷新 UI 时用 `Date.now()` 计算已过时间和剩余时间
+- 定时器只负责触发刷新，不再作为唯一计时来源
+- 完成或中断前先按当前时间修正计时状态
 
 ## 安全注意事项
 
@@ -682,6 +695,8 @@ ArkTS / PackageHap 通过，但 PackageApp 被系统 Java 注册表卡住。
 ```powershell
 rg -n "sk-[A-Za-z0-9_-]{20,}|tp-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]+|api[_-]?key|token|secret|password" -S --glob '!oh_modules/**' --glob '!node_modules/**' --glob '!**/build/**' --glob '!focus-server/target/**'
 ```
+
+AI Key 通过本地 `.env` 注入，构建时生成的 `entry/src/main/resources/rawfile/ai-env.json` 也不进入版本控制。注意 rawfile 会被打进 HAP，Preferences 也不是加密保险箱，所以文档和答辩中只把它描述为“本地配置注入、不进 Git”，不要宣称已经做到安全加密存储。
 
 ## 更多上下文
 

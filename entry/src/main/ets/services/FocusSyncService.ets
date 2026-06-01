@@ -277,7 +277,7 @@ export class FocusSyncService {
       return { success: false, message: `下拉失败：${pullResult.message}` };
     }
     await this.mergeServerData(pullResult.bundle);
-    const localProjects: FocusProject[] = await focusDatabase.getProjects();
+    const localProjects: FocusProject[] = await focusDatabase.getProjectsForSync();
     const localTasks: FocusTask[] = await focusDatabase.getTasks();
     const localPomodoros: PomodoroRecord[] = await focusDatabase.getPomodoros();
     const pushResult = await this.pushToServer(localProjects, localTasks, localPomodoros);
@@ -293,15 +293,28 @@ export class FocusSyncService {
 
   private async mergeServerData(bundle: SyncBundle): Promise<void> {
     for (const sp of bundle.projects) {
+      const projectUpdatedAt: number = this.numberValue(sp.updatedAt, sp.updated_at, Date.now());
+      const localUpdatedAt: number = await focusDatabase.localProjectUpdatedAt(sp.id);
+      if (localUpdatedAt > projectUpdatedAt) {
+        continue;
+      }
       const local: FocusProject = {
         id: sp.id,
         name: sp.name,
         color: sp.color,
-        icon: sp.icon
+        icon: sp.icon,
+        updatedAt: projectUpdatedAt,
+        isDeleted: this.numberValue(sp.isDeleted, sp.is_deleted, 0)
       };
       await focusDatabase.upsertProject(local);
     }
     for (const st of bundle.tasks) {
+      const taskUpdatedAt: number = this.numberValue(st.updatedAt, st.updated_at, Date.now());
+      const taskClientRequestId: string = this.stringValue(st.clientRequestId, st.client_request_id, `client-task-${st.id}`);
+      const localUpdatedAt: number = await focusDatabase.localTaskUpdatedAt(st.id, taskClientRequestId);
+      if (localUpdatedAt > taskUpdatedAt) {
+        continue;
+      }
       const local: FocusTask = {
         id: st.id,
         title: st.title,
@@ -314,7 +327,10 @@ export class FocusSyncService {
         createdAt: this.numberValue(st.createdAt, st.created_at, Date.now()),
         completedAt: this.numberValue(st.completedAt, st.completed_at, 0),
         tags: this.parseJsonArray(this.stringValue(st.tagsJson, st.tags_json, '[]')),
-        subtasks: this.parseJsonArray(this.stringValue(st.subtasksJson, st.subtasks_json, '[]'))
+        subtasks: this.parseJsonArray(this.stringValue(st.subtasksJson, st.subtasks_json, '[]')),
+        updatedAt: taskUpdatedAt,
+        isDeleted: this.numberValue(st.isDeleted, st.is_deleted, 0),
+        clientRequestId: taskClientRequestId
       };
       await focusDatabase.upsertTask(local);
     }
@@ -341,12 +357,13 @@ export class FocusSyncService {
       name: p.name,
       color: p.color,
       icon: p.icon,
-      updatedAt: Date.now(),
-      isDeleted: 0
+      updatedAt: p.updatedAt === undefined || p.updatedAt <= 0 ? Date.now() : p.updatedAt,
+      isDeleted: p.isDeleted === undefined ? 0 : p.isDeleted
     };
   }
 
   private toServerTask(t: FocusTask): ServerTask {
+    const clientRequestId: string = this.localTaskClientRequestId(t);
     return {
       id: t.id,
       userId: this.userId,
@@ -358,13 +375,20 @@ export class FocusSyncService {
       status: t.status,
       pomodoroCount: t.pomodoroCount,
       createdAt: t.createdAt,
-      updatedAt: Date.now(),
+      updatedAt: t.updatedAt === undefined || t.updatedAt <= 0 ? Date.now() : t.updatedAt,
       completedAt: t.completedAt,
-      isDeleted: 0,
-      clientRequestId: `client-${t.id}-${Date.now()}`,
+      isDeleted: t.isDeleted === undefined ? (t.status === 2 ? 1 : 0) : t.isDeleted,
+      clientRequestId: clientRequestId,
       tagsJson: JSON.stringify(t.tags),
       subtasksJson: JSON.stringify(t.subtasks)
     };
+  }
+
+  private localTaskClientRequestId(t: FocusTask): string {
+    if (t.clientRequestId !== undefined && t.clientRequestId.trim().length > 0) {
+      return t.clientRequestId.trim();
+    }
+    return `client-task-${t.id}`;
   }
 
   private toServerPomodoro(r: PomodoroRecord): ServerPomodoro {

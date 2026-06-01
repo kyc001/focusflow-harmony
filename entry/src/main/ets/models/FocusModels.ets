@@ -22,6 +22,8 @@ export interface FocusProject {
   name: string;
   color: string;
   icon: string;
+  updatedAt?: number;
+  isDeleted?: number;
 }
 
 export interface FocusTask {
@@ -37,6 +39,9 @@ export interface FocusTask {
   completedAt: number;
   tags: string[];
   subtasks: string[];
+  updatedAt?: number;
+  isDeleted?: number;
+  clientRequestId?: string;
 }
 
 export interface StudyResource {

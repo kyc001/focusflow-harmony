@@ -5,23 +5,12 @@ import {
   BORDER_SOFT,
   CARD_GLASS,
   CARD_GLASS_BLUR,
-  GLOW_BLUE,
-  GRADIENT_HERO_1,
-  GRADIENT_HERO_2,
-  GRADIENT_HERO_3,
   RADIUS_XL,
-  SHADOW_FLOAT_COLOR,
-  SHADOW_FLOAT_OFFSET_X,
-  SHADOW_FLOAT_OFFSET_Y,
-  SHADOW_FLOAT_RADIUS,
   SPACING_LG,
   SPACING_XXL,
-  SUCCESS,
   SUCCESS_SOFT,
-  SURFACE_ALT,
   TEXT_MAIN,
   TEXT_MUTED,
-  TEXT_SUB,
   VIOLET_SOFT
 } from '../utils/FocusDesignTokens';
 import {
@@ -84,11 +73,11 @@ export struct ProfileView {
         .layoutWeight(1)
         .margin({ left: 12 })
         Column() {
-          SoftIconBadge({ variant: 'heatmap', badgeSize: 34, fill: '#FFFFFF' })
+          SoftIconBadge({ variant: 'heatmap', badgeSize: 34, fill: ACCENT_SOFT })
           Text(`${focusStore.streakDays()} 天`)
             .fontSize(11)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
+            .fontColor(ACCENT)
             .margin({ top: 4 })
         }
         .alignItems(HorizontalAlign.Center)
@@ -109,8 +98,8 @@ export struct ProfileView {
         .height(40)
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
-        .backgroundColor('#1AFFFFFF')
-        .fontColor('#FFFFFF')
+        .backgroundColor(ACCENT_SOFT)
+        .fontColor(ACCENT)
         .borderRadius(12)
         .margin({ top: 14 })
         .onClick(() => {
@@ -119,33 +108,32 @@ export struct ProfileView {
     }
     .width('100%')
     .padding(18)
-    .linearGradient({
-      angle: 135,
-      colors: [[GRADIENT_HERO_1, 0.0], [GRADIENT_HERO_2, 0.52], [GRADIENT_HERO_3, 1.0]]
-    })
+    .backgroundColor(CARD_GLASS)
+    .backdropBlur(CARD_GLASS_BLUR)
     .borderRadius(RADIUS_XL)
-    .shadow({ radius: SHADOW_FLOAT_RADIUS, color: SHADOW_FLOAT_COLOR, offsetX: SHADOW_FLOAT_OFFSET_X, offsetY: SHADOW_FLOAT_OFFSET_Y })
+    .border({ width: 1, color: BORDER_SOFT })
+    .shadow({ radius: 14, color: '#0B14260F', offsetX: 0, offsetY: 4 })
   }
 
   @Builder
   private ProfileSoftStat(label: string, value: string, icon: string) {
     Column() {
-      SoftIconBadge({ variant: icon, badgeSize: 30, fill: '#FFFFFF' })
+      SoftIconBadge({ variant: icon, badgeSize: 30, fill: icon === 'timer' ? ACCENT_SOFT : icon === 'medal' ? SUCCESS_SOFT : VIOLET_SOFT })
       Text(value)
         .fontSize(13)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#FFFFFF')
+        .fontColor(TEXT_MAIN)
         .margin({ top: 6 })
       Text(label)
         .fontSize(10)
-        .fontColor('#DDE4FF')
+        .fontColor(TEXT_MUTED)
         .margin({ top: 2 })
     }
     .layoutWeight(1)
     .height(88)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor('#1AFFFFFF')
+    .backgroundColor('#F3F6FB')
     .borderRadius(14)
   }
 

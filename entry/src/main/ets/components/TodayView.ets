@@ -1,12 +1,8 @@
 import {
   ACCENT,
-  ACCENT_SOFT,
   BORDER_SOFT,
   CARD_GLASS,
   CARD_GLASS_BLUR,
-  CARD_SOFT,
-  GRADIENT_ACCENT_END,
-  GRADIENT_ACCENT_START,
   SHADOW_CARD_COLOR,
   SHADOW_CARD_OFFSET_X,
   SHADOW_CARD_OFFSET_Y,
@@ -15,9 +11,7 @@ import {
   SHADOW_FLOAT_OFFSET_X,
   SHADOW_FLOAT_OFFSET_Y,
   SHADOW_FLOAT_RADIUS,
-  SUCCESS,
   SUCCESS_SOFT,
-  SURFACE_ALT,
   TEXT_MAIN,
   TEXT_MUTED,
   TEXT_SUB,
@@ -43,129 +37,15 @@ const EMPTY_TASK: FocusTask = {
 };
 
 @Component
-export struct QuickAddTaskCard {
-  @Prop notificationReady: boolean = false;
-  @State draftTitle: string = '';
-
-  onAddTask: (title: string) => void = () => {};
-  onRequestNotification: () => void = () => {};
-
-  private submitTask(): void {
-    const title: string = this.draftTitle.trim();
-    if (title.length === 0) {
-      return;
-    }
-    this.onAddTask(title);
-    this.draftTitle = '';
-  }
-
-  build() {
-    Column() {
-      Row() {
-        Image($r('app.media.focus_ui_quick_add'))
-          .width(44)
-          .height(44)
-          .objectFit(ImageFit.Cover)
-          .borderRadius(12)
-          .margin({ right: 10 })
-        Column() {
-          Text('快速添加任务')
-            .fontSize(15)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(TEXT_MAIN)
-          Text('自动归入默认项目 / 紧急重要')
-            .fontSize(11)
-            .fontColor(TEXT_MUTED)
-            .margin({ top: 2 })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
-        Text('本地写入')
-          .fontSize(11)
-          .fontColor(ACCENT)
-          .padding({ left: 9, right: 9, top: 5, bottom: 5 })
-          .backgroundColor(ACCENT_SOFT)
-          .borderRadius(9)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-
-      TextInput({ placeholder: '例如：整理期末答辩 PPT', text: this.draftTitle })
-        .height(46)
-        .backgroundColor(CARD_SOFT)
-        .borderRadius(12)
-        .border({ width: 1, color: BORDER_SOFT })
-        .padding({ left: 14, right: 14 })
-        .fontSize(14)
-        .margin({ top: 14 })
-        .onChange((value: string) => {
-          this.draftTitle = value;
-        })
-        .onSubmit(() => {
-          this.submitTask();
-        })
-
-      Row() {
-        Button('添加任务')
-          .height(42)
-          .layoutWeight(1)
-          .fontSize(14)
-          .fontWeight(FontWeight.Bold)
-          .backgroundColor(ACCENT)
-          .linearGradient({
-            angle: 90,
-            colors: [[GRADIENT_ACCENT_START, 0.0], [GRADIENT_ACCENT_END, 1.0]]
-          })
-          .fontColor('#FFFFFF')
-          .borderRadius(12)
-          .shadow({ radius: 14, color: '#253A7A1C', offsetX: 0, offsetY: 6 })
-          .onClick(() => {
-            this.submitTask();
-          })
-        Button(this.notificationReady ? '通知已开启' : '开启通知')
-          .height(42)
-          .layoutWeight(1)
-          .fontSize(13)
-          .fontWeight(FontWeight.Medium)
-          .backgroundColor(SURFACE_ALT)
-          .fontColor(this.notificationReady ? SUCCESS : TEXT_SUB)
-          .borderRadius(12)
-          .margin({ left: 10 })
-          .onClick(() => {
-            this.onRequestNotification();
-          })
-      }
-      .width('100%')
-      .margin({ top: 12 })
-
-      Text(this.notificationReady ? '通知已启用，到期与番茄结束会提醒你' : '建议开启通知，避免错过到期时间')
-        .fontSize(11)
-        .fontColor(TEXT_MUTED)
-        .margin({ top: 10 })
-    }
-    .width('100%')
-    .padding(16)
-    .alignItems(HorizontalAlign.Start)
-    .backgroundColor(CARD_GLASS)
-    .borderRadius(18)
-    .border({ width: 1, color: BORDER_SOFT })
-    .shadow({ radius: SHADOW_CARD_RADIUS, color: SHADOW_CARD_COLOR, offsetX: SHADOW_CARD_OFFSET_X, offsetY: SHADOW_CARD_OFFSET_Y })
-  }
-}
-
-@Component
 export struct TodayView {
   @Prop tasks: FocusTask[] = [];
   @Prop selectedTask: FocusTask = EMPTY_TASK;
   @Prop totalFocusMinutes: number = 0;
-  @Prop notificationReady: boolean = false;
 
   onStartFocus: (taskId: number) => void = () => {};
   onToggleTask: (taskId: number) => void = () => {};
   onDeleteTask: (taskId: number) => void = () => {};
   onRestoreTask: (taskId: number) => void = () => {};
-  onAddTask: (title: string) => void = () => {};
-  onRequestNotification: () => void = () => {};
 
   private todayTasks(): FocusTask[] {
     return this.tasks
@@ -198,11 +78,6 @@ export struct TodayView {
       Column() {
         this.TodayHeroCard()
         this.TodayTaskList()
-        QuickAddTaskCard({
-          notificationReady: this.notificationReady,
-          onAddTask: this.onAddTask,
-          onRequestNotification: this.onRequestNotification
-        })
       }
       .padding({ left: 18, right: 18, top: 18, bottom: 18 })
     }

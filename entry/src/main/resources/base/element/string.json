@@ -35,6 +35,10 @@
     {
       "name": "FocusAbility_desc",
       "value": "独立番茄专注窗口"
+    },
+    {
+      "name": "camera_permission_reason",
+      "value": "用于拍摄任务图片并提取学习待办"
     }
   ]
 }

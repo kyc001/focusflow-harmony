@@ -13,11 +13,18 @@ import {
 const ONE_HOUR: number = 60 * 60 * 1000;
 const ONE_DAY: number = 24 * ONE_HOUR;
 
+function localDayAt(dayOffset: number, hour: number, minute: number = 0): number {
+  const date: Date = new Date();
+  date.setDate(date.getDate() + dayOffset);
+  date.setHours(hour, minute, 0, 0);
+  return date.getTime();
+}
+
 export function createSeedProjects(): FocusProject[] {
   return [
     { id: 1, name: '数据库', color: '#4F7BFF', icon: 'DB' },
-    { id: 2, name: '科研', color: '#12A87D', icon: 'R' },
-    { id: 3, name: '协程演讲', color: '#F59E0B', icon: 'P' },
+    { id: 2, name: '资料整理', color: '#12A87D', icon: 'R' },
+    { id: 3, name: '复盘演示', color: '#F59E0B', icon: 'P' },
     { id: 4, name: '移动开发', color: '#E4566E', icon: 'A' }
   ];
 }
@@ -27,67 +34,67 @@ export function createSeedTasks(): FocusTask[] {
   return [
     {
       id: 1,
-      title: '完成 HW4 实验报告复盘',
-      note: '整理接口、页面和测试截图，作为期末答辩素材。',
+      title: '知序 App 答辩最终检查',
+      note: '确认快速添加、图片提取、专注计时、资料库和同步演示路径。',
       projectId: 4,
       priority: 0,
-      dueAt: now + 4 * ONE_HOUR,
+      dueAt: localDayAt(2, 9, 30),
       status: TaskStatus.TODO,
       pomodoroCount: 1,
       createdAt: now - ONE_DAY,
       completedAt: 0,
-      tags: ['报告', '高优'],
-      subtasks: ['补充架构图', '标注关键代码']
+      tags: ['答辩', '演示'],
+      subtasks: ['检查模拟器数据', '确认 PPT 顺序', '准备 2 分钟讲解']
     },
     {
       id: 2,
-      title: '数据库索引章节总结',
-      note: '复习 B+ 树、聚簇索引和查询优化。',
-      projectId: 1,
+      title: '准备课程演示截图素材',
+      note: '保留任务候选确认、资料提炼、专注计时和云同步页面截图。',
+      projectId: 4,
       priority: 1,
-      dueAt: now + ONE_DAY,
+      dueAt: localDayAt(2, 10, 0),
       status: TaskStatus.TODO,
       pomodoroCount: 2,
       createdAt: now - 2 * ONE_DAY,
       completedAt: 0,
-      tags: ['期末', '笔记'],
-      subtasks: ['画一张思维导图']
+      tags: ['截图', '材料'],
+      subtasks: ['截取任务确认页', '截取复盘统计页']
     },
     {
       id: 3,
-      title: '读论文 Related Work',
-      note: '提炼 3 篇相关工作，用一句话写贡献。',
-      projectId: 2,
+      title: '数据库与同步流程讲解稿',
+      note: '说明本地 RDB、后端接口、dirty 标记和先拉取再上推策略。',
+      projectId: 1,
       priority: 2,
-      dueAt: now + 2 * ONE_DAY,
+      dueAt: localDayAt(2, 16, 0),
       status: TaskStatus.TODO,
       pomodoroCount: 0,
       createdAt: now - ONE_DAY,
       completedAt: 0,
-      tags: ['科研'],
-      subtasks: ['Paper A', 'Paper B', 'Paper C']
+      tags: ['同步', '数据库'],
+      subtasks: ['列出本地表', '演示一次双向同步']
     },
     {
       id: 4,
-      title: '协程演讲 Demo 排练',
-      note: '控制在 6 分钟内，突出挂起、恢复、调度三个点。',
+      title: '复盘统计与番茄演示',
+      note: '展示完成数、专注分钟、项目分布和学习森林解锁效果。',
       projectId: 3,
       priority: 0,
-      dueAt: now + 3 * ONE_DAY,
+      dueAt: localDayAt(2, 20, 0),
       status: TaskStatus.TODO,
       pomodoroCount: 0,
       createdAt: now,
       completedAt: 0,
-      tags: ['展示'],
-      subtasks: ['检查录屏', '压缩 PPT']
+      tags: ['复盘', '番茄'],
+      subtasks: ['完成一个番茄', '刷新复盘页', '说明统计来源']
     },
     {
       id: 5,
-      title: '整理知序 App 答辩话术',
-      note: '突出服务卡片、一多布局、后台任务、本地数据闭环。',
+      title: '完成 PPT 最终校对',
+      note: '检查关键流程图、截图和答辩重点是否与 App 当前版本一致。',
       projectId: 4,
       priority: 1,
-      dueAt: now + 5 * ONE_HOUR,
+      dueAt: localDayAt(1, 22, 0),
       status: TaskStatus.DONE,
       pomodoroCount: 1,
       createdAt: now - 2 * ONE_DAY,

@@ -50,6 +50,25 @@ export interface FocusTask {
   clientRequestId?: string;
 }
 
+export interface QuickTaskDraft {
+  title: string;
+  note: string;
+  projectId?: number;
+  priority: number;
+  dueAt?: number;
+  dueOffsetHours?: number;
+  source?: string;
+  tags?: string[];
+  subtasks?: string[];
+}
+
+export interface ImageTaskExtractionResult {
+  drafts: QuickTaskDraft[];
+  message: string;
+  rawContent: string;
+  source: string;
+}
+
 export interface StudyResource {
   id: number;
   title: string;

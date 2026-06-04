@@ -1,6 +1,11 @@
 import { common } from '@kit.AbilityKit';
-import { picker } from '@kit.CoreFileKit';
+import { camera, cameraPicker } from '@kit.CameraKit';
+import { fileIo, picker } from '@kit.CoreFileKit';
+import { textRecognition } from '@kit.CoreVisionKit';
+import { image } from '@kit.ImageKit';
+import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import http from '@ohos.net.http';
+import util from '@ohos.util';
 import { authRepository, LoginProfile } from '../repository/AuthRepository';
 import {
   FocusSmallUiAsset,
@@ -10,8 +15,8 @@ import {
 } from '../components/FocusVisuals';
 import { ProfileView } from '../components/ProfileView';
 import { ReviewView } from '../components/ReviewView';
-import { TasksView } from '../components/TasksView';
-import { QuickAddTaskCard, TodayView } from '../components/TodayView';
+import { QuickAddTaskCard, TasksView } from '../components/TasksView';
+import { TodayView } from '../components/TodayView';
 import { FocusSessionContent, FocusSettingsPanel } from '../components/FocusSessionView';
 import { focusAiCoachService } from '../services/FocusAiCoachService';
 import { ResourcesView } from '../components/ResourcesView';
@@ -93,8 +98,10 @@ import {
   FocusProject,
   FocusSettings,
   FocusTask,
+  ImageTaskExtractionResult,
   PomodoroRecord,
   PomodoroStatus,
+  QuickTaskDraft,
   ResourceSummaryStatus,
   ResourceInsight,
   StudyResource,
@@ -165,6 +172,11 @@ struct Index {
   @Provide('pathStack') navStack: NavPathStack = new NavPathStack();
   @State aiLastRefreshTime: number = 0;
   @State showAiSettingsDialog: boolean = false;
+  @State taskImageLoading: boolean = false;
+  @State taskImageMessage: string = '可拍照或上传图片，由 mimo-v2.5 提取任务';
+  @State taskImageDrafts: QuickTaskDraft[] = [];
+  @State taskImageDraftIndex: number = 0;
+  @State taskImageRawPreview: string = '';
   @State syncUsername: string = '';
   @State syncPassword: string = '';
   @State syncBaseUrl: string = 'http://10.0.2.2:8080';
@@ -467,14 +479,25 @@ struct Index {
     return fallback === undefined ? this.tasks[0] : fallback;
   }
 
-  private async addQuickTask(titleInput: string): Promise<void> {
-    const title: string = titleInput.trim();
+  private async addQuickTask(draft: QuickTaskDraft): Promise<void> {
+    const title: string = draft.title.trim();
     if (title.length === 0) {
+      this.taskImageMessage = '请先写任务标题';
       return;
     }
-    const projectId: number = this.defaultProjectId();
-    const task: FocusTask = await focusStore.addTask(title, projectId, 1, 8);
+    const task: FocusTask = await focusStore.addTaskFromDraft({
+      title: title,
+      note: draft.note,
+      projectId: draft.projectId,
+      priority: draft.priority,
+      dueAt: draft.dueAt,
+      dueOffsetHours: draft.dueOffsetHours,
+      source: draft.source,
+      tags: draft.tags,
+      subtasks: draft.subtasks
+    }, this.defaultProjectId());
     this.selectedTaskId = task.id;
+    this.taskImageMessage = `已添加：${task.title}`;
     this.syncFromStore();
   }
 
@@ -505,6 +528,250 @@ struct Index {
   private async restoreTask(taskId: number): Promise<void> {
     await focusStore.restoreTask(taskId);
     this.syncFromStore();
+  }
+
+  private async pickTaskImage(): Promise<void> {
+    if (this.taskImageLoading) {
+      return;
+    }
+    if (!this.isRemoteAiReady()) {
+      this.taskImageMessage = '请先在 AI 设置中启用远程模型并填写 API Key';
+      return;
+    }
+    this.taskImageLoading = true;
+    try {
+      const options: photoAccessHelper.PhotoSelectOptions = new photoAccessHelper.PhotoSelectOptions();
+      options.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE;
+      options.maxSelectNumber = 1;
+      options.isPhotoTakingSupported = true;
+      const photoPicker: photoAccessHelper.PhotoViewPicker = new photoAccessHelper.PhotoViewPicker();
+      const result: photoAccessHelper.PhotoSelectResult = await photoPicker.select(options);
+      if (result.photoUris.length === 0) {
+        this.taskImageMessage = '没有选择图片';
+        return;
+      }
+      await this.extractTaskFromImageUri(result.photoUris[0], '上传图片');
+    } catch (err) {
+      this.taskImageMessage = '图片上传或识别失败，请换一张图片重试';
+    } finally {
+      this.taskImageLoading = false;
+    }
+  }
+
+  private async captureTaskImage(): Promise<void> {
+    if (this.taskImageLoading) {
+      return;
+    }
+    if (!this.isRemoteAiReady()) {
+      this.taskImageMessage = '请先在 AI 设置中启用远程模型并填写 API Key';
+      return;
+    }
+    this.taskImageLoading = true;
+    try {
+      const context = getContext(this) as common.UIAbilityContext;
+      const profile: cameraPicker.PickerProfile = new cameraPicker.PickerProfile();
+      profile.cameraPosition = camera.CameraPosition.CAMERA_POSITION_BACK;
+      const result: cameraPicker.PickerResult = await cameraPicker.pick(
+        context,
+        [cameraPicker.PickerMediaType.PHOTO],
+        profile
+      );
+      if (result.resultUri.length === 0) {
+        this.taskImageMessage = '没有获取到照片';
+        return;
+      }
+      await this.extractTaskFromImageUri(result.resultUri, '拍照');
+    } catch (err) {
+      this.taskImageMessage = '拍照或识别失败，请改用上传图片';
+    } finally {
+      this.taskImageLoading = false;
+    }
+  }
+
+  private async extractTaskFromImageUri(uri: string, sourceLabel: string): Promise<void> {
+    this.taskImageMessage = `${sourceLabel}完成，正在尝试端侧 OCR...`;
+    let ocrText: string = '';
+    try {
+      ocrText = await this.recognizeTaskImageText(uri);
+    } catch (err) {
+      ocrText = '';
+    }
+    let textFailureMessage: string = '';
+    if (ocrText.trim().length > 0) {
+      this.taskImageMessage = `${sourceLabel}完成，OCR 已识别 ${ocrText.trim().length} 字，正在调用 mimo-v2.5 解析任务...`;
+      const textResult: ImageTaskExtractionResult = await focusAiCoachService.requestTaskFromText(
+        this.aiSettings,
+        ocrText
+      );
+      if (textResult.source !== 'error' && textResult.drafts.length > 0) {
+        this.taskImageDrafts = textResult.drafts;
+        this.taskImageDraftIndex = 0;
+        this.taskImageRawPreview = textResult.rawContent;
+        this.taskImageMessage = textResult.message;
+        return;
+      }
+      textFailureMessage = textResult.message;
+    }
+
+    this.taskImageMessage = ocrText.trim().length > 0 ?
+      `${sourceLabel}完成，OCR 文本解析未生成任务，正在改用 mimo-v2.5 视觉提取...` :
+      `${sourceLabel}完成，OCR 未识别到文字，正在调用 mimo-v2.5 视觉提取任务...`;
+    const imageBase64: string = await this.readUriAsBase64(uri);
+    const result: ImageTaskExtractionResult = await focusAiCoachService.requestTaskFromImage(
+      this.aiSettings,
+      imageBase64,
+      this.imageMimeFromUri(uri)
+    );
+    if (result.source === 'error' || result.drafts.length === 0) {
+      this.taskImageDrafts = [];
+      this.taskImageDraftIndex = 0;
+      this.taskImageRawPreview = ocrText.trim().length > 0 ? this.previewImageText(ocrText, 180) : result.rawContent;
+      this.taskImageMessage = textFailureMessage.length > 0 ?
+        `${textFailureMessage}；视觉解析也未生成任务：${result.message}` :
+        result.message;
+      return;
+    }
+    this.taskImageDrafts = result.drafts;
+    this.taskImageDraftIndex = 0;
+    this.taskImageRawPreview = result.rawContent;
+    this.taskImageMessage = result.message;
+  }
+
+  private async recognizeTaskImageText(uri: string): Promise<string> {
+    let selectedFile: fileIo.File | undefined = undefined;
+    let source: image.ImageSource | undefined = undefined;
+    let pixelMap: image.PixelMap | undefined = undefined;
+    try {
+      await textRecognition.init();
+      selectedFile = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
+      source = image.createImageSource(selectedFile.fd);
+      pixelMap = await source.createPixelMap();
+      const result = await textRecognition.recognizeText({
+        pixelMap: pixelMap
+      }, {
+        isDirectionDetectionSupported: true
+      });
+      return result.value.trim();
+    } finally {
+      if (pixelMap !== undefined) {
+        await pixelMap.release();
+      }
+      if (source !== undefined) {
+        await source.release();
+      }
+      if (selectedFile !== undefined) {
+        await fileIo.close(selectedFile);
+      }
+      try {
+        await textRecognition.release();
+      } catch (err) {
+      }
+    }
+  }
+
+  private previewImageText(value: string, limit: number): string {
+    const normalized: string = value.replace(/\s+/g, ' ').trim();
+    if (normalized.length <= limit) {
+      return normalized;
+    }
+    return `${normalized.substring(0, limit)}...`;
+  }
+
+  private selectImageDraft(index: number): void {
+    if (index < 0 || index >= this.taskImageDrafts.length) {
+      return;
+    }
+    this.taskImageDraftIndex = index;
+  }
+
+  private updateImageDraft(index: number, draft: QuickTaskDraft): void {
+    if (index < 0 || index >= this.taskImageDrafts.length) {
+      return;
+    }
+    const drafts: QuickTaskDraft[] = this.taskImageDrafts.slice();
+    drafts[index] = draft;
+    this.taskImageDrafts = drafts;
+  }
+
+  private async confirmImageDraft(index: number): Promise<void> {
+    if (index < 0 || index >= this.taskImageDrafts.length) {
+      return;
+    }
+    const draft: QuickTaskDraft = this.taskImageDrafts[index];
+    if (draft.title.trim().length === 0) {
+      this.taskImageMessage = '请先确认识别出的任务标题';
+      return;
+    }
+    const task: FocusTask = await focusStore.addTaskFromDraft(draft, this.defaultProjectId());
+    this.selectedTaskId = task.id;
+    const drafts: QuickTaskDraft[] = this.taskImageDrafts.slice();
+    drafts.splice(index, 1);
+    this.taskImageDrafts = drafts;
+    this.taskImageDraftIndex = drafts.length === 0 ? 0 : Math.min(index, drafts.length - 1);
+    this.taskImageMessage = drafts.length === 0 ? `已保存图片任务：${task.title}` : `已保存：${task.title}，还剩 ${drafts.length} 条待确认`;
+    this.syncFromStore();
+  }
+
+  private async confirmAllImageDrafts(): Promise<void> {
+    if (this.taskImageDrafts.length === 0) {
+      return;
+    }
+    let savedCount: number = 0;
+    let lastTask: FocusTask | undefined = undefined;
+    for (let index: number = 0; index < this.taskImageDrafts.length; index++) {
+      const draft: QuickTaskDraft = this.taskImageDrafts[index];
+      if (draft.title.trim().length === 0) {
+        continue;
+      }
+      lastTask = await focusStore.addTaskFromDraft(draft, this.defaultProjectId());
+      savedCount++;
+    }
+    if (lastTask !== undefined) {
+      this.selectedTaskId = lastTask.id;
+    }
+    this.taskImageDrafts = [];
+    this.taskImageDraftIndex = 0;
+    this.taskImageMessage = savedCount > 0 ? `已保存 ${savedCount} 条图片识别任务` : '没有可保存的图片识别任务';
+    this.syncFromStore();
+  }
+
+  private cancelImageDrafts(): void {
+    this.taskImageDrafts = [];
+    this.taskImageDraftIndex = 0;
+    this.taskImageRawPreview = '';
+    this.taskImageMessage = '已取消本次图片识别结果';
+  }
+
+  private async readUriAsBase64(uri: string): Promise<string> {
+    const file: fileIo.File = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
+    try {
+      const stat: fileIo.Stat = await fileIo.stat(file.fd);
+      if (stat.size <= 0) {
+        throw new Error('empty image');
+      }
+      const maxImageBytes: number = 6 * 1024 * 1024;
+      if (stat.size > maxImageBytes) {
+        throw new Error('image too large');
+      }
+      const buffer: ArrayBuffer = new ArrayBuffer(stat.size);
+      const bytesRead: number = await fileIo.read(file.fd, buffer, { length: stat.size });
+      const bytes: Uint8Array = new Uint8Array(buffer, 0, bytesRead);
+      const helper: util.Base64Helper = new util.Base64Helper();
+      return helper.encodeToStringSync(bytes, util.Type.BASIC);
+    } finally {
+      await fileIo.close(file);
+    }
+  }
+
+  private imageMimeFromUri(uri: string): string {
+    const lower: string = uri.toLowerCase();
+    if (lower.indexOf('.png') >= 0) {
+      return 'image/png';
+    }
+    if (lower.indexOf('.webp') >= 0) {
+      return 'image/webp';
+    }
+    return 'image/jpeg';
   }
 
   private isRemoteAiReady(): boolean {
@@ -955,7 +1222,6 @@ struct Index {
                 tasks: this.tasks,
                 selectedTask: this.getSelectedTask(),
                 totalFocusMinutes: focusStore.totalFocusMinutes(),
-                notificationReady: this.notificationReady,
                 onStartFocus: (taskId: number) => {
                   this.selectTask(taskId);
                 },
@@ -967,12 +1233,6 @@ struct Index {
                 },
                 onRestoreTask: (taskId: number) => {
                   this.restoreTask(taskId);
-                },
-                onAddTask: (title: string) => {
-                  this.addQuickTask(title);
-                },
-                onRequestNotification: () => {
-                  this.requestNotification();
                 }
               })
             }
@@ -1408,11 +1668,38 @@ struct Index {
       Column() {
         QuickAddTaskCard({
           notificationReady: this.notificationReady,
-          onAddTask: (title: string) => {
-            this.addQuickTask(title);
+          remoteAiReady: this.isRemoteAiReady(),
+          imageLoading: this.taskImageLoading,
+          imageMessage: this.taskImageMessage,
+          imageDrafts: this.taskImageDrafts,
+          imageDraftIndex: this.taskImageDraftIndex,
+          imageRawPreview: this.taskImageRawPreview,
+          onAddTask: (draft: QuickTaskDraft) => {
+            this.addQuickTask(draft);
           },
           onRequestNotification: () => {
             this.requestNotification();
+          },
+          onPickTaskImage: () => {
+            this.pickTaskImage();
+          },
+          onCaptureTaskImage: () => {
+            this.captureTaskImage();
+          },
+          onSelectImageDraft: (index: number) => {
+            this.selectImageDraft(index);
+          },
+          onUpdateImageDraft: (index: number, draft: QuickTaskDraft) => {
+            this.updateImageDraft(index, draft);
+          },
+          onConfirmImageDraft: (index: number) => {
+            this.confirmImageDraft(index);
+          },
+          onConfirmAllImageDrafts: () => {
+            this.confirmAllImageDrafts();
+          },
+          onCancelImageDrafts: () => {
+            this.cancelImageDrafts();
           }
         })
         TasksView({

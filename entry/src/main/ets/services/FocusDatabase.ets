@@ -7,6 +7,7 @@ type ValueType = relationalStore.ValueType;
 
 const DB_NAME: string = 'focus.db';
 const DB_VERSION: number = 6;
+const PRESENTATION_DATA_VERSION: number = 1;
 
 export class FocusDatabase {
   private store?: relationalStore.RdbStore;
@@ -24,6 +25,7 @@ export class FocusDatabase {
     await this.createTables();
     await this.seedIfEmpty();
     await this.seedStudyResourcesIfEmpty();
+    await this.refreshPresentationTasks();
   }
 
   async createTables(): Promise<void> {
@@ -91,6 +93,12 @@ export class FocusDatabase {
         'created_at INTEGER NOT NULL, ' +
         'updated_at INTEGER NOT NULL, ' +
         'review_due_at INTEGER NOT NULL DEFAULT 0' +
+        ')'
+    );
+    await store.executeSql(
+      'CREATE TABLE IF NOT EXISTS app_meta (' +
+        'key TEXT PRIMARY KEY, ' +
+        'value TEXT NOT NULL' +
         ')'
     );
     await this.addColumnIfMissing('projects', 'updated_at', 'INTEGER NOT NULL DEFAULT 0');
@@ -571,6 +579,72 @@ export class FocusDatabase {
     }
   }
 
+  private async refreshPresentationTasks(): Promise<void> {
+    const presentationVersion: number = await this.metaNumber('presentation_data_version');
+    if (presentationVersion >= PRESENTATION_DATA_VERSION) {
+      return;
+    }
+
+    const now: number = Date.now();
+    const demoProjects: FocusProject[] = createSeedProjects();
+    for (const project of demoProjects) {
+      await this.upsertProject({
+        id: project.id,
+        name: project.name,
+        color: project.color,
+        icon: project.icon,
+        updatedAt: now,
+        isDeleted: 0
+      }, true);
+    }
+
+    const demoTasks: FocusTask[] = createSeedTasks();
+    for (const task of demoTasks) {
+      await this.upsertTask({
+        id: task.id,
+        title: task.title,
+        note: task.note,
+        projectId: task.projectId,
+        priority: task.priority,
+        dueAt: task.dueAt,
+        status: task.status,
+        pomodoroCount: task.pomodoroCount,
+        createdAt: task.createdAt,
+        completedAt: task.completedAt,
+        tags: task.tags,
+        subtasks: task.subtasks,
+        updatedAt: now,
+        isDeleted: 0,
+        clientRequestId: `client-task-${task.id}`
+      }, true);
+    }
+
+    const activeTasks: FocusTask[] = await this.queryTasks(
+      'WHERE status = ? AND is_deleted = 0',
+      [TaskStatus.TODO]
+    );
+    for (const task of activeTasks) {
+      if (task.id >= 1 && task.id <= demoTasks.length) {
+        continue;
+      }
+      if (task.dueAt <= now || this.looksLikeOldGeneratedTask(task)) {
+        await this.requireStore().executeSql(
+          'UPDATE tasks SET status = ?, is_deleted = 1, updated_at = ?, dirty = 1 WHERE id = ?',
+          [TaskStatus.DELETED, now, task.id]
+        );
+      }
+    }
+    await this.setMetaValue('presentation_data_version', `${PRESENTATION_DATA_VERSION}`);
+  }
+
+  private looksLikeOldGeneratedTask(task: FocusTask): boolean {
+    const text: string = `${task.title}\n${task.note}\n${task.tags.join(' ')}`;
+    return text.indexOf('HW4') >= 0 ||
+      text.indexOf('Related Work') >= 0 ||
+      text.indexOf('协程演讲 Demo') >= 0 ||
+      text.indexOf('数据库索引章节总结') >= 0;
+  }
+
   private async addColumnIfMissing(tableName: string, columnName: string, definition: string): Promise<void> {
     const resultSet: relationalStore.ResultSet = await this.query(`PRAGMA table_info(${tableName})`);
     let exists: boolean = false;
@@ -599,6 +673,29 @@ export class FocusDatabase {
     } finally {
       resultSet.close();
     }
+  }
+
+  private async metaNumber(key: string): Promise<number> {
+    const resultSet: relationalStore.ResultSet = await this.query(
+      'SELECT value FROM app_meta WHERE key = ? LIMIT 1',
+      [key]
+    );
+    try {
+      if (resultSet.goToNextRow()) {
+        const parsed: number = Number(this.stringValue(resultSet, 'value', '0'));
+        return Number.isNaN(parsed) ? 0 : parsed;
+      }
+      return 0;
+    } finally {
+      resultSet.close();
+    }
+  }
+
+  private async setMetaValue(key: string, value: string): Promise<void> {
+    await this.requireStore().executeSql(
+      'INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)',
+      [key, value]
+    );
   }
 
   private async findPomodoroByClientRequestId(clientRequestId: string): Promise<PomodoroRecord | undefined> {

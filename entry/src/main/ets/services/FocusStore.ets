@@ -6,6 +6,7 @@ import {
   FocusTask,
   ForestPlant,
   PomodoroRecord,
+  QuickTaskDraft,
   ResourceSummaryStatus,
   ResourceInsight,
   ReviewStats,
@@ -143,20 +144,39 @@ export class FocusStore {
   }
 
   async addTask(title: string, projectId: number, priority: number, dueOffsetHours: number): Promise<FocusTask> {
-    const now: number = Date.now();
-    const task: FocusTask = {
-      id: 0,
+    return this.addTaskFromDraft({
       title: title,
       note: '快速添加的学习任务，可在任务页继续拆分。',
       projectId: projectId,
       priority: priority,
-      dueAt: now + dueOffsetHours * 60 * 60 * 1000,
+      dueOffsetHours: dueOffsetHours,
+      tags: ['快速添加'],
+      subtasks: []
+    }, projectId);
+  }
+
+  async addTaskFromDraft(draft: QuickTaskDraft, fallbackProjectId: number): Promise<FocusTask> {
+    const now: number = Date.now();
+    const cleanedTitle: string = draft.title.trim();
+    const offsetHours: number = draft.dueOffsetHours === undefined ? 8 : draft.dueOffsetHours;
+    const dueAt: number = draft.dueAt !== undefined && draft.dueAt > 0 ?
+      draft.dueAt :
+      now + Math.max(1, Math.min(24 * 14, Math.round(offsetHours))) * 60 * 60 * 1000;
+    const source: string = draft.source === undefined ? 'manual' : draft.source;
+    const fallbackTags: string[] = source === 'image' ? ['图片提取'] : ['快速添加'];
+    const task: FocusTask = {
+      id: 0,
+      title: cleanedTitle.length > 0 ? cleanedTitle : '未命名任务',
+      note: draft.note.trim().length > 0 ? draft.note.trim() : '快速添加的学习任务，可在任务页继续拆分。',
+      projectId: draft.projectId !== undefined && draft.projectId > 0 ? draft.projectId : fallbackProjectId,
+      priority: Math.max(0, Math.min(3, Math.round(draft.priority))),
+      dueAt: dueAt,
       status: TaskStatus.TODO,
       pomodoroCount: 0,
       createdAt: now,
       completedAt: 0,
-      tags: ['快速添加'],
-      subtasks: []
+      tags: draft.tags !== undefined && draft.tags.length > 0 ? draft.tags.slice(0, 4) : fallbackTags,
+      subtasks: draft.subtasks !== undefined ? draft.subtasks.slice(0, 4) : []
     };
     const saved: FocusTask = await focusDatabase.addTask(task);
     await this.refresh();

@@ -734,7 +734,7 @@ Path=fonts/
     \pagestyle{empty}
     \@twosidefalse
     \NKTtitlepage
-    \NKTdeclaration
+    % Course report version: omit the thesis declaration page.
     % \NKTauthorization    
     \clearpage
     \ifx\NKT@key@lunwenleibie\NKT@string@boshi
@@ -831,9 +831,9 @@ Path=fonts/
 
   {\def\CJKglue{\hskip 0.25em}\zihaoer
      \ifx\NKT@key@lunwenleibie\NKT@string@boshi 
-      本科生毕业论文（设计）%
+      本科生课程论文%
      \else
-       本科生毕业论文（设计）%
+       本科生课程论文%
      \fi}
 
   % \vskip 10mm
@@ -901,37 +901,9 @@ Path=fonts/
   \hskip 0.5em%
   \underline{\hbox to 115mm{\zihaosan{\cukai\NKT@keyvalue{#2}\hfil}}}}
   
-\def\NKT@declaration{
-本人郑重声明：所呈交的学位论文，是本人在指导教师指导下，进行研究工作所取得的成果。
-除文中已经注明引用的内容外，本学位论文的研究成果不包含任何他人创作的、已公开发表
-或没有公开发表的作品内容。对本论文所涉及的研究工作做出贡献的其他个人和集体，均已
-在文中以明确方式标明。本学位论文原创性声明的法律责任由本人承担。}
+\def\NKT@declaration{}
 
-\long\def\NKTdeclaration{
-  \clearpage
-  \@makeschapterhead{\centerline{\zihaosan\bfseries 关于南开大学本科生毕业论文（设计）的声明}}
-%  \vskip 24pt
-
-  \fontsize{12}{24}\selectfont
-   \vskip 10mm
-  \NKT@declaration
-
-  \vskip 10mm
-  \hskip 19em 学位论文作者签名：
-  
-  \hskip 25em 年\hskip 2em 月\hskip 2em 日\hbox to 1em{}
-  
-   \vskip 15mm
-
- 
- 本人声明：该学位论文是本人指导学生完成的研究成果，已经审阅过论文的全部内容，
- 并能够保证题目、关键词、摘要部分中英文内容的一致性和准确性。
- 
- \vskip 10mm
-  \hskip 17em 学位论文指导教师签名：
-  
-  \hskip 25em 年\hskip 2em 月\hskip 2em 日\hbox to 1em{}
-  }
+\long\def\NKTdeclaration{}
 
 \newcommand\setpaperdimen[2]{
   \pdfpagewidth=#1 true mm

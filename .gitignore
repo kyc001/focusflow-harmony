@@ -36,3 +36,4 @@ focus-server/backend-smoke.*.log
 /report/nku-thesis-template-2020/*.fls
 /report/nku-thesis-template-2020/*.fdb_latexmk
 /report/nku-thesis-template-2020/pdf-check-*.png
+/submission

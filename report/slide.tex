@@ -1,16 +1,14 @@
 %-----------------------------------
-%-----------------------------------
 % Beamer template made by 月栖竹坞
 % 2025.10.08
 % xelatex
-%-----------------------------------
 %-----------------------------------
 
 \documentclass{beamer}
 
 \mode<presentation> {
-	\usetheme{Madrid}
-	\usecolortheme{rose}
+  \usetheme{Madrid}
+  \usecolortheme{rose}
 }
 
 \usepackage{graphicx}
@@ -35,11 +33,12 @@
 \setbeamertemplate{caption}[numbered]
 
 \newcommand{\code}[1]{\texttt{\footnotesize #1}}
+\newcommand{\codesmall}[1]{\texttt{\scriptsize #1}}
 \newcommand{\tagbox}[2]{%
   \tikz[baseline=(x.base)] \node[rounded corners=2pt, fill=#1, inner xsep=5pt, inner ysep=2.5pt] (x) {\scriptsize\bfseries #2};%
 }
 \newcommand{\metric}[3]{%
-  \begin{beamercolorbox}[wd=\linewidth,sep=0.7em,rounded=true,center]{block body}
+  \begin{beamercolorbox}[wd=\linewidth,sep=0.65em,rounded=true,center]{block body}
     {\Large\bfseries\color{accentLine}#1}\\[-0.2em]
     {\small\color{muted}#2}\\[-0.1em]
     {\scriptsize #3}
@@ -48,14 +47,14 @@
 \newcommand{\phonepic}[2]{%
   \begin{minipage}{0.31\linewidth}
     \centering
-    \includegraphics[height=3.55cm]{#1}\\[-0.2em]
+    \includegraphics[height=3.45cm]{#1}\\[-0.2em]
     {\scriptsize\color{muted}#2}
   \end{minipage}
 }
 \newcommand{\smallcard}[3]{%
-  \begin{beamercolorbox}[wd=\linewidth,sep=0.75em,rounded=true]{block body}
-    \tagbox{#1}{#2}\par\vspace{0.35em}
-    #3
+  \begin{beamercolorbox}[wd=\linewidth,sep=0.60em,rounded=true]{block body}
+    \tagbox{#1}{#2}\par\vspace{0.25em}
+    {\small #3}
   \end{beamercolorbox}
 }
 
@@ -71,52 +70,52 @@
   \titlepage
 \end{frame}
 
-\begin{frame}
-  \frametitle{Overview}
+\begin{frame}{汇报提纲}
   \tableofcontents
 \end{frame}
 
 %------------------------------------------------
-\section{项目目标}
-\begin{frame}{选题目标：把学习行为串成闭环}
+\section{项目定位}
+\begin{frame}{一页说清：知序解决什么}
   \begin{columns}[T,onlytextwidth]
-    \column{0.54\textwidth}
-      \textbf{痛点：}课程资料、任务清单、番茄钟和复盘统计常分散在多个工具里。
-      \vspace{0.8em}
+    \column{0.55\textwidth}
+      \textbf{背景只抓一个问题：}学习资料、任务、专注记录和复盘常分散在不同工具，数据难以形成连续闭环。
+
+      \vspace{0.7em}
+      \textbf{项目目标：}在 HarmonyOS 端侧完成“资料整理 -- 任务分解 -- 番茄执行 -- 复盘反馈”，后端同步和远程 AI 作为增强能力。
+
+      \vspace{0.7em}
       \begin{itemize}
-        \item 资料沉淀后不一定能转成行动。
-        \item 番茄记录难以回到具体任务和课程项目。
-        \item 远程服务不可用时，核心学习流程容易中断。
+        \item 离线状态下，任务、资料、番茄和复盘仍可运行。
+        \item 网络可用时，支持 AI 提炼、图片提取任务和云同步。
+        \item 答辩重点展示移动端、端侧数据库、原生能力和后端接口的完整链路。
       \end{itemize}
-      \vspace{0.6em}
-      \textbf{目标：}用 HarmonyOS 端侧能力实现一个本地优先的学习管理应用。
     \column{0.40\textwidth}
-      \metric{5+}{核心页面}{今日、任务、资料、专注、复盘、我的}
-      \vspace{0.5em}
-      \metric{4 张}{本地 RDB 表}{projects / tasks / pomodoros / study\_resources}
-      \vspace{0.5em}
-      \metric{2 种}{后端数据库}{MySQL 正式演示，H2 快速测试}
+      \metric{ArkTS}{前端实现}{ArkUI + Navigation + 原生能力}
+      \vspace{0.45em}
+      \metric{RDB}{本地优先}{业务数据首先写入端侧数据库}
+      \vspace{0.45em}
+      \metric{Spring Boot}{后端服务}{REST + MyBatis + JWT + MySQL/H2}
   \end{columns}
 \end{frame}
 
-%------------------------------------------------
-\begin{frame}{功能闭环：从资料到复盘}
+\begin{frame}{业务闭环：从资料到复盘}
   \begin{center}
     \begin{tikzpicture}[
-      node distance=0.16cm,
-      flowstep/.style={rectangle, rounded corners=4pt, draw=lineGray, fill=softBlue, minimum width=1.70cm, minimum height=0.85cm, align=center, font=\scriptsize\bfseries},
+      node distance=0.18cm,
+      flowstep/.style={rectangle, rounded corners=4pt, draw=lineGray, fill=softBlue, minimum width=1.75cm, minimum height=0.84cm, align=center, font=\scriptsize\bfseries},
       arrow/.style={-{Latex[length=2.2mm]}, thick, draw=accentLine}
     ]
       \node[flowstep, fill=softBlue] (res) {资料\\笔记/链接/文件};
       \node[flowstep, fill=softGreen, right=of res] (ai) {AI 提炼\\摘要/要点};
-      \node[flowstep, fill=softAmber, right=of ai] (task) {任务\\优先级/子任务};
-      \node[flowstep, fill=softRed, right=of task] (focus) {番茄专注\\完成/中断};
+      \node[flowstep, fill=softAmber, right=of ai] (task) {任务\\截止/优先级};
+      \node[flowstep, fill=softRed, right=of task] (focus) {番茄\\完成/中断};
       \node[flowstep, fill=softGray, right=of focus] (review) {复盘\\统计/同步};
       \draw[arrow] (res) -- (ai);
       \draw[arrow] (ai) -- (task);
       \draw[arrow] (task) -- (focus);
       \draw[arrow] (focus) -- (review);
-      \draw[arrow] (review.south) .. controls +(0,-1.0) and +(0,-1.0) .. node[below, font=\scriptsize, color=muted]{反馈下一轮学习计划} (res.south);
+      \draw[arrow] (review.south) .. controls +(0,-0.85) and +(0,-0.85) .. node[below, font=\scriptsize, color=muted]{反馈下一轮学习安排} (res.south);
     \end{tikzpicture}
   \end{center}
 
@@ -130,206 +129,347 @@
 \end{frame}
 
 %------------------------------------------------
-\section{系统设计}
-\begin{frame}{技术架构：本地优先 + 后端同步}
+\section{技术路线}
+\begin{frame}{总体技术路线：端侧闭环，服务端增强}
   \begin{center}
-    \resizebox{0.96\linewidth}{!}{%
+    \resizebox{0.98\linewidth}{!}{%
       \begin{tikzpicture}[
-        node distance=0.55cm and 0.65cm,
-        box/.style={rectangle, rounded corners=3pt, draw=lineGray, fill=white, minimum width=3.1cm, minimum height=0.78cm, align=center, font=\scriptsize},
+        node distance=0.50cm and 0.55cm,
+        box/.style={rectangle, rounded corners=3pt, draw=lineGray, fill=white, minimum width=2.65cm, minimum height=0.72cm, align=center, font=\scriptsize},
         view/.style={box, fill=softBlue},
-        store/.style={box, fill=softGreen},
+        service/.style={box, fill=softGreen},
         data/.style={box, fill=softAmber},
         remote/.style={box, fill=softRed},
         arrow/.style={-{Latex[length=2mm]}, thick, draw=accentLine}
       ]
-        \node[view] (ui) {ArkUI 页面\\今日/任务/资料/专注/复盘};
-        \node[store, below=of ui] (store) {FocusStore\\状态门面与业务动作};
-        \node[data, below left=of store] (rdb) {HarmonyOS RDB\\核心业务数据};
-        \node[data, below right=of store] (pref) {Preferences\\登录态/设置/AI 配置};
-        \node[store, right=1.35cm of store] (sync) {FocusSyncService\\HTTP 双向同步};
+        \node[view] (pages) {ArkUI 页面\\Today/Tasks/Resources/Focus};
+        \node[view, below=of pages] (components) {组件层\\QuickAdd/TaskRow/ReviewView};
+        \node[service, below=of components] (store) {FocusStore\\状态门面与业务动作};
+        \node[data, below left=of store] (rdb) {FocusDatabase\\HarmonyOS RDB};
+        \node[data, below=of store] (pref) {Preferences\\设置/登录态/AI};
+        \node[data, below right=of store] (raw) {rawfile\\音频/ArkWeb 图表};
+        \node[service, right=1.1cm of store] (sync) {FocusSyncService\\pull/merge/push};
         \node[remote, right=of sync] (server) {Spring Boot\\REST API};
         \node[remote, below=of server] (db) {MySQL / H2\\后端数据库};
-        \draw[arrow] (ui) -- (store);
+        \node[remote, above=of server] (ai) {Remote AI\\mimo-v2.5};
+        \draw[arrow] (pages) -- (components);
+        \draw[arrow] (components) -- (store);
         \draw[arrow] (store) -- (rdb);
         \draw[arrow] (store) -- (pref);
+        \draw[arrow] (store) -- (raw);
         \draw[arrow] (store) -- (sync);
         \draw[arrow] (sync) -- (server);
         \draw[arrow] (server) -- (db);
+        \draw[arrow] (store.north east) -- (ai.west);
       \end{tikzpicture}
     }
   \end{center}
-  \vspace{0.3em}
-  \begin{block}{分层原则}
-    \small
-    \begin{itemize}
-      \item 视图组件负责展示和交互；\code{FocusStore} 汇聚本地数据并刷新状态。
-      \item \code{FocusDatabase} 负责 RDB 建表和 CRUD；后端作为同步与备份增强。
-    \end{itemize}
-  \end{block}
-\end{frame}
-
-%------------------------------------------------
-\begin{frame}{端侧数据：RDB 保存学习闭环}
-  \begin{table}
-    \small
-    \begin{tabularx}{\linewidth}{p{2.5cm}p{4.15cm}X}
-      \toprule
-      表 & 关键字段 & 作用 \\
-      \midrule
-      \code{projects} & name、color、updated\_at、dirty & 组织课程或学习项目，参与同步。 \\
-      \code{tasks} & title、status、priority、client\_request\_id & 保存任务、完成状态、软删除和幂等标识。 \\
-      \code{pomodoros} & task\_id、duration、completed、interrupt\_reason & 记录每一次专注结果，支撑复盘统计。 \\
-      \code{study\_resources} & title、content、summary、key\_points\_json & 保存资料、AI 摘要和关联任务线索。 \\
-      \bottomrule
-    \end{tabularx}
-  \end{table}
 
   \vspace{0.2em}
-  \begin{block}{设计取舍}
-    核心数据优先写入本地 RDB；标签、子任务、资料要点用 JSON 字符串保存，减少课程项目范围内的表结构复杂度。
+  \begin{block}{核心原则}
+    \small
+    页面只负责展示和交互，数据读写、AI 请求、同步、音频播放都下沉到服务层；本地 RDB 是主数据源，远程服务只增强体验和备份能力。
+  \end{block}
+\end{frame}
+
+\begin{frame}{技术选型与代码落点}
+  \small
+  \begin{tabularx}{\linewidth}{p{2.0cm}p{3.35cm}X}
+    \toprule
+    技术点 & 代码位置 & 作用 \\
+    \midrule
+    ArkUI / Navigation & \codesmall{Index.ets}\par\codesmall{components/*} & 底部 Tabs、二级页面栈、组件化界面。 \\
+    RDB & \codesmall{FocusDatabase} & 建表、迁移、CRUD、dirty 标记和软删除。 \\
+    Store 门面 & \codesmall{FocusStore} & 汇总项目、任务、资料、番茄并刷新统计快照。 \\
+    AI / OCR & \codesmall{Index}\par\codesmall{AiCoachService} & 端侧 OCR、文本解析、视觉兜底和空响应诊断。 \\
+    ArkWeb / TaskPool & \codesmall{ReviewView}\par\codesmall{FocusStore} & 本地图表展示与复盘统计后台预计算。 \\
+    AVPlayer & \codesmall{AmbientService} & 循环播放 rawfile 白噪音并释放资源。 \\
+    Spring Boot & \codesmall{focus-server} & JWT 登录、业务接口、同步接口和 MyBatis 数据访问。 \\
+    \bottomrule
+  \end{tabularx}
+\end{frame}
+
+%------------------------------------------------
+\section{前端核心实现}
+\begin{frame}{前端分层：Index 编排，Store 接业务}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.48\textwidth}
+      \smallcard{softBlue}{页面层}
+        {\code{Index.ets} 维护页面状态、路由栈、Tab 切换和用户事件回调。}
+      \vspace{0.22em}
+      \smallcard{softGreen}{组件层}
+        {\code{TodayView}、\code{TasksView}、\code{ResourcesView}、\code{FocusSessionView}、\code{ReviewView} 只接收状态和回调。}
+      \vspace{0.22em}
+      \smallcard{softAmber}{服务层}
+        {\code{FocusStore} 调用数据库、设置、AI、同步和音频服务，完成后刷新 UI 状态。}
+    \column{0.48\textwidth}
+      \begin{block}{一次任务新增的链路}
+        \small
+        \begin{enumerate}
+          \item \code{QuickAddTaskCard} 收集标题、备注、截止时间、项目和象限。
+          \item \code{Index.ets} 组装 \code{QuickTaskDraft}。
+          \item \code{FocusStore.addTaskFromDraft} 规范化字段。
+          \item \code{FocusDatabase.addTask} 写入 RDB。
+          \item \code{FocusStore.refresh} 重新读取并触发页面刷新。
+        \end{enumerate}
+      \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{核心功能一：快速添加与图片提取任务}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.38\textwidth}
+      \centering
+      \includegraphics[height=5.05cm]{app-tasks.jpeg}\\[-0.2em]
+      {\scriptsize\color{muted}任务页：多行输入、截止时间、图片候选确认}
+    \column{0.58\textwidth}
+      \begin{block}{功能实现}
+        \small
+        \begin{itemize}
+          \item 手动输入：第一行作为标题，后续行可转为备注或子任务。
+          \item 时间输入：支持“今天18:00 / 明天09:00 / 6小时后”等自然表达。
+          \item 图片输入：拍照或上传图片，CoreVision OCR 优先识别文本；文本解析失败时，再把图片交给配置的 mimo-v2.5 做视觉兜底。
+          \item 安全写入：AI 结果先作为候选草稿展示，用户确认单条或全部后才写入 RDB。
+        \end{itemize}
+      \end{block}
+      \vspace{0.2em}
+      \tagbox{softBlue}{OCR 优先}
+      \tagbox{softGreen}{视觉兜底}
+      \tagbox{softAmber}{候选确认}
+      \tagbox{softRed}{RDB 落库}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{核心功能二：资料库到行动任务}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.38\textwidth}
+      \centering
+      \includegraphics[height=4.75cm]{app-resources.jpeg}\\[-0.2em]
+      {\scriptsize\color{muted}资料页：录入、文件引用、AI 提炼}
+    \column{0.58\textwidth}
+      \begin{block}{资料处理链路}
+        \footnotesize
+        \begin{enumerate}
+          \item 资料可来自笔记、网页链接、PDF 摘录或本地文件引用。
+          \item \code{study\_resources} 保存标题、类型、正文摘录、摘要和复习时间。
+          \item 远程 AI 可生成摘要、要点和下一步任务建议。
+          \item \code{FocusStore.createTaskFromResource} 把资料提炼结果转成可执行任务。
+        \end{enumerate}
+      \end{block}
+      \vspace{0.1em}
+      \begin{block}{设计边界}
+        \footnotesize
+        当前保存文件引用和用户备注，不直接解析完整 PDF/DOCX/PPTX，保证课程项目范围内实现稳定。
+      \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{核心功能三：番茄专注与复盘统计}
+  \centering
+  \phonepic{app-focus.jpeg}{番茄专注}
+  \hfill
+  \phonepic{app-review.jpeg}{复盘统计}
+  \hfill
+  \phonepic{app-profile.jpeg}{我的入口}
+
+  \vspace{0.55em}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.49\textwidth}
+      \begin{block}{专注实现}
+        \small
+        用开始时间戳计算剩余时间，减少切后台后纯倒计时漂移；完成或中断后写入 \code{pomodoros} 表，并通过 AVPlayer 播放本地白噪音。
+      \end{block}
+    \column{0.49\textwidth}
+      \begin{block}{复盘实现}
+        \small
+        复盘统计由 \code{FocusStore} 聚合任务和番茄记录，TaskPool 预计算统计快照，ArkWeb 加载本地 \code{charts/index.html} 展示图表。
+      \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{端侧数据模型：本地优先的基础}
+  \scriptsize
+  \begin{tabularx}{\linewidth}{p{2.1cm}p{3.75cm}X}
+    \toprule
+    表 & 关键字段 & 说明 \\
+    \midrule
+    \codesmall{projects} & name、updated\_at、is\_deleted、dirty & 课程/学习项目；参与软删除和同步。 \\
+    \codesmall{tasks} & title、due\_at、status、request\_id、tags & 任务主体；支持象限、截止时间、标签、子任务和幂等同步。 \\
+    \codesmall{pomodoros} & task\_id、start\_at、duration、completed & 每次专注的事实记录，支撑统计和任务番茄数。 \\
+    \codesmall{resources} & title、source\_type、summary、review\_due & 资料内容、AI 提炼结果和复习线索。 \\
+    \codesmall{app\_meta} & key、value & 保存演示数据刷新版本等轻量元信息。 \\
+    \bottomrule
+  \end{tabularx}
+
+  \vspace{0.5em}
+  \begin{block}{同步相关字段}
+    \footnotesize
+    \code{dirty} 控制本地待上推记录；\code{is\_deleted} 表示删除墓碑；\code{client\_request\_id} 降低重复提交造成的重复任务或重复番茄。
   \end{block}
 \end{frame}
 
 %------------------------------------------------
-\section{核心实现}
-\begin{frame}{关键流程一：添加任务如何落库并刷新}
+\section{后端与同步}
+\begin{frame}{服务端技术路线：REST + MyBatis + JWT}
   \begin{columns}[T,onlytextwidth]
-    \column{0.55\textwidth}
-      \begin{tikzpicture}[
-        node distance=0.38cm,
-        box/.style={rectangle, rounded corners=3pt, draw=lineGray, fill=softGray, minimum width=6.0cm, minimum height=0.58cm, align=center, font=\small},
-        arrow/.style={-{Latex[length=2mm]}, thick, draw=accentLine}
-      ]
-        \node[box, fill=softBlue] (a) {任务页 QuickAddTaskCard 输入};
-        \node[box, below=of a] (b) {Index.ets 接收文本或图片草稿};
-        \node[box, below=of b] (c) {FocusStore.addTaskFromDraft 构造任务对象};
-        \node[box, below=of c] (d) {FocusDatabase.addTask 写入 tasks 表};
-        \node[box, below=of d] (e) {FocusStore.refresh 读取最新快照};
-        \node[box, fill=softGreen, below=of e] (f) {Index 更新 @State，ArkUI 自动刷新};
-        \draw[arrow] (a) -- (b);
-        \draw[arrow] (b) -- (c);
-        \draw[arrow] (c) -- (d);
-        \draw[arrow] (d) -- (e);
-        \draw[arrow] (e) -- (f);
-      \end{tikzpicture}
-    \column{0.40\textwidth}
-      \begin{block}{答辩重点}
-        这个入口支持多行、截止时间、拍照和上传图片；图片先尝试端侧 OCR，再由 mimo-v2.5 解析为候选草稿，用户确认后再进入本地任务写入流程。
+    \column{0.49\textwidth}
+      \begin{block}{后端分层}
+        \small
+        \begin{itemize}
+          \item Controller：用户、项目、任务、番茄、统计、同步接口。
+          \item DTO/Entity：请求响应对象与数据库实体。
+          \item Mapper/XML：MyBatis SQL 映射，支持分页、统计和增量查询。
+          \item Config/Service：JWT 拦截器、跨域配置和令牌签发。
+        \end{itemize}
       \end{block}
-      \vspace{0.4em}
-      \begin{block}{课程知识点}
-        \code{@State}、组件传参、异步数据库访问、结果集释放、MVVM 分层。
-      \end{block}
-  \end{columns}
-\end{frame}
-
-%------------------------------------------------
-\begin{frame}{关键流程二：专注计时与独立窗口}
-  \begin{columns}[T,onlytextwidth]
-    \column{0.33\textwidth}
+      \tagbox{softBlue}{Spring Boot}
+      \tagbox{softGreen}{MyBatis}
+      \tagbox{softAmber}{JWT}
+      \tagbox{softRed}{MySQL/H2}
+    \column{0.46\textwidth}
       \centering
-      \includegraphics[height=4.25cm]{app-focus.jpeg}\\[-0.2em]
-      {\scriptsize\color{muted}专注页运行效果}
-    \column{0.62\textwidth}
-      \begin{itemize}
-        \item 计时器不单纯依赖 \code{setInterval} 每秒减一，而是用 \code{Date.now()} 与开始时间戳计算真实经过时间。
-        \item 完成或中断后写入 \code{pomodoros} 表，并更新任务番茄数。
-        \item 白噪音通过 \code{AVPlayer} 播放 rawfile 本地音频，停止时释放播放器资源。
-        \item \code{FocusAbility} 提供独立沉浸专注窗口，\code{onCreate} 与 \code{onNewWant} 都解析 Want 参数，适配 singleton 热启动。
-      \end{itemize}
-      \vspace{0.4em}
-      \tagbox{softBlue}{UIAbility}
-      \tagbox{softGreen}{Want 参数}
-      \tagbox{softAmber}{AVPlayer}
-      \tagbox{softRed}{RDB 记录}
+      \includegraphics[width=\linewidth]{swagger-ui.png}\\[-0.2em]
+      {\scriptsize\color{muted}Swagger/OpenAPI 接口文档}
   \end{columns}
 \end{frame}
 
-%------------------------------------------------
-\begin{frame}{关键流程三：云同步策略}
+\begin{frame}{后端接口覆盖}
+  \small
+  \begin{tabularx}{\linewidth}{p{2.25cm}p{3.7cm}X}
+    \toprule
+    模块 & 接口 & 作用 \\
+    \midrule
+    用户 & \code{/api/user/login}、\code{/register} & 登录、注册、连通性检查，返回 JWT。 \\
+    项目 & \code{/api/projects} & 课程项目增删改查和软删除。 \\
+    任务 & \code{/api/tasks} & 任务分页、创建、更新、删除。 \\
+    番茄 & \code{/api/pomodoros} & 创建专注记录、按范围查询。 \\
+    统计 & \code{/api/stats/summary} & 后端统计汇总。 \\
+    同步 & \code{/api/sync/pull}、\code{/push} & 增量拉取和本地变更上推。 \\
+    \bottomrule
+  \end{tabularx}
+
+  \vspace{0.4em}
+  \begin{block}{鉴权方式}
+    \small
+    登录成功后移动端在 \code{Authorization: Bearer <token>} 中携带 JWT，后端拦截器校验后将用户标识写入请求上下文，业务接口不信任客户端传入的用户编号。
+  \end{block}
+\end{frame}
+
+\begin{frame}{双向同步：先拉取，再上推}
   \begin{columns}[T,onlytextwidth]
     \column{0.46\textwidth}
       \centering
-      \includegraphics[height=4.15cm]{app-sync.jpeg}\\[-0.2em]
-      {\scriptsize\color{muted}云同步页面}
+      \includegraphics[height=4.7cm]{app-sync.jpeg}\\[-0.2em]
+      {\scriptsize\color{muted}云同步页：地址、登录和同步操作}
     \column{0.50\textwidth}
-      \begin{block}{同步步骤}
+      \begin{block}{客户端流程}
+        \small
         \begin{enumerate}
-          \item \textbf{Pull}：按 \code{serverTime} 游标拉取增量数据。
-          \item \textbf{Merge}：合并到本地 RDB，按 \code{updatedAt} 判断新旧。
-          \item \textbf{Push}：上传本地 \code{dirty = 1} 的项目、任务和番茄记录。
-          \item \textbf{Mark}：成功后本地清除 dirty，并保存新的同步游标。
+          \item 读取 \code{lastServerTime} 作为增量游标。
+          \item 调用 \code{pullFromServer} 拉取服务端变更。
+          \item 按 \code{updatedAt} 合并到本地 RDB。
+          \item 查询本地 \code{dirty=1} 数据并调用 \code{pushToServer}。
+          \item 上推成功后清除 dirty，保存新的服务端时间。
         \end{enumerate}
       \end{block}
-      \vspace{0.3em}
-      \small
-      \tagbox{softBlue}{dirty 增量上推}
-      \tagbox{softGreen}{clientRequestId 幂等去重}
-      \tagbox{softAmber}{updatedAt 冲突处理}
-      \tagbox{softRed}{JWT 鉴权}
+      \tagbox{softBlue}{serverTime 游标}
+      \tagbox{softGreen}{dirty 增量}
+      \tagbox{softAmber}{updatedAt LWW}
   \end{columns}
 \end{frame}
 
-%------------------------------------------------
-\begin{frame}{课程知识点覆盖}
-  \begin{columns}[T,onlytextwidth]
-    \column{0.48\textwidth}
-      \begin{block}{HarmonyOS 端侧能力}
-        \begin{itemize}
-          \item \textbf{Navigation}：资料库、复盘、云同步、设置使用真实页面栈。
-          \item \textbf{RDB}：\code{FocusDatabase} 建表、CRUD、迁移字段与 ResultSet 释放。
-          \item \textbf{Preferences}：保存登录态、AI 配置和专注设置。
-        \end{itemize}
-      \end{block}
-    \column{0.48\textwidth}
-      \begin{block}{并发、混合渲染与后端}
-        \begin{itemize}
-          \item \textbf{TaskPool / ArkWeb}：复盘统计后台快照与 H5 图表。
-          \item \textbf{UIAbility}：主入口、独立专注窗口和桌面服务卡片。
-          \item \textbf{Spring Boot}：JWT 鉴权、MyBatis 数据访问和同步接口。
-        \end{itemize}
-      \end{block}
-  \end{columns}
+\begin{frame}{同步一致性：避免重复和“删除后恢复”}
+  \begin{center}
+    \resizebox{0.95\linewidth}{!}{%
+      \begin{tikzpicture}[
+        node distance=0.42cm and 0.65cm,
+        box/.style={rectangle, rounded corners=3pt, draw=lineGray, fill=softGray, minimum width=2.85cm, minimum height=0.68cm, align=center, font=\scriptsize},
+        arrow/.style={-{Latex[length=2mm]}, thick, draw=accentLine}
+      ]
+        \node[box, fill=softBlue] (local) {本地新增/修改/删除\\dirty=1};
+        \node[box, right=of local, fill=softGreen] (push) {Push 请求\\tasks/projects/pomodoros};
+        \node[box, right=of push, fill=softAmber] (server) {后端事务写入\\@Transactional};
+        \node[box, below=of server, fill=softRed] (judge) {查 id 或 clientRequestId\\比较 updatedAt};
+        \node[box, left=of judge, fill=softGreen] (mark) {上推成功\\清除 dirty};
+        \node[box, left=of mark, fill=softBlue] (pull) {下次 Pull\\携带删除墓碑};
+        \draw[arrow] (local) -- (push);
+        \draw[arrow] (push) -- (server);
+        \draw[arrow] (server) -- (judge);
+        \draw[arrow] (judge) -- (mark);
+        \draw[arrow] (mark) -- (pull);
+      \end{tikzpicture}
+    }
+  \end{center}
+
+  \vspace{0.5em}
+  \begin{itemize}
+    \item \textbf{重复提交：}任务和番茄记录带 \code{clientRequestId}，服务端先查同一请求标识再决定插入或更新。
+    \item \textbf{冲突处理：}客户端和服务端都比较 \code{updatedAt}，保留不旧于已有版本的数据。
+    \item \textbf{删除传播：}项目和任务保留 \code{isDeleted} tombstone，同步时继续上推删除语义。
+  \end{itemize}
 \end{frame}
 
 %------------------------------------------------
 \section{演示与总结}
-\begin{frame}{运行效果与演示路径}
+\begin{frame}{演示路径：按技术链路讲}
   \centering
-  \phonepic{app-resources.jpeg}{资料库}
+  \phonepic{app-today.jpeg}{1. 今日任务聚合}
   \hfill
-  \phonepic{app-focus.jpeg}{番茄专注}
+  \phonepic{app-tasks.jpeg}{2. 快速添加/图片候选}
   \hfill
-  \phonepic{app-profile.jpeg}{我的页面}
+  \phonepic{app-sync.jpeg}{3. 后端同步}
 
-  \vspace{0.6em}
-  \begin{block}{录屏演示顺序}
-    启动 Spring Boot 后端 $\rightarrow$ 打开 HarmonyOS 应用 $\rightarrow$ 登录/本地使用 $\rightarrow$ 添加任务 $\rightarrow$ 开始专注 $\rightarrow$ 查看复盘 $\rightarrow$ 执行云同步。
+  \vspace{0.55em}
+  \begin{block}{建议答辩演示顺序}
+    \small
+    启动 H2 后端 $\rightarrow$ 登录 demo/secret $\rightarrow$ 在任务页快速添加或上传截图 $\rightarrow$ 开始番茄专注 $\rightarrow$ 查看复盘统计 $\rightarrow$ 执行同步并展示 Swagger 接口。
   \end{block}
 \end{frame}
 
-%------------------------------------------------
+\begin{frame}{课程知识点落地}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.48\textwidth}
+      \begin{block}{HarmonyOS 前端}
+        \small
+        \begin{itemize}
+          \item ArkTS / ArkUI 声明式页面与组件拆分。
+          \item Navigation / NavPathStack 二级页面栈。
+          \item RDB、Preferences、AVPlayer、ArkWeb、TaskPool、FormAbility。
+        \end{itemize}
+      \end{block}
+    \column{0.48\textwidth}
+      \begin{block}{后端与工程化}
+        \small
+        \begin{itemize}
+          \item Spring Boot REST API 与统一响应封装。
+          \item MyBatis XML SQL、MySQL/H2 双数据库。
+          \item JWT 鉴权、增量同步、构建脚本和演示数据。
+        \end{itemize}
+      \end{block}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{总结与展望}
   \begin{columns}[T,onlytextwidth]
     \column{0.48\textwidth}
       \begin{block}{已完成}
+        \small
         \begin{itemize}
-          \item 原生 HarmonyOS 前端与组件化页面。
-          \item 本地 RDB 持久化与学习闭环。
-          \item Spring Boot 后端、JWT 鉴权和 MyBatis 数据访问。
-          \item 任务、番茄、资料、复盘、云同步等完整演示链路。
+          \item 端侧本地优先学习闭环。
+          \item 任务、资料、专注、复盘、云同步完整链路。
+          \item 前端原生能力、后端接口和数据库同步均可演示。
         \end{itemize}
       \end{block}
     \column{0.48\textwidth}
       \begin{block}{后续改进}
+        \small
         \begin{itemize}
-          \item 更细粒度的同步冲突合并策略。
-          \item AI 资料问答、周报生成和阶段复习计划。
-          \item 真机通知、后台计时可靠性与无障碍体验优化。
+          \item 更细粒度的同步冲突合并和失败重试。
+          \item PDF/DOCX/PPTX 正文解析与资料问答。
+          \item 平板布局、无障碍和真机后台计时可靠性。
         \end{itemize}
       \end{block}
-      \vspace{0.8em}
+      \vspace{0.7em}
       \centering
       {\Huge\bfseries\color{accentLine}谢谢！}\\
       {\large 欢迎老师批评指正}

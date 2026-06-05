@@ -7,7 +7,7 @@
 
 针对上述问题，本文设计并实现了一款名为“知序”的 HarmonyOS 学习管理应用。系统采用本地优先架构，以端侧关系型数据库 RDB 作为核心数据源，以 Preferences 保存运行时配置，并按照 MVVM 模式组织模型、视图和控制逻辑。应用提供今日看板、任务管理、资料库、番茄专注、复盘统计和云同步等功能：学习资料可被保存到本地并在远程 AI 可用时提炼为摘要和要点，资料提炼结果可进一步生成任务，任务完成过程通过番茄记录写入本地数据库，并最终反映到复盘统计中。后端采用 Spring Boot、MyBatis 与 MySQL/H2 数据库实现用户、项目、任务、番茄记录和同步接口，为跨设备备份和全栈展示提供支撑。
 
-测试结果表明，系统能够在离线状态下完成资料保存、任务创建、番茄专注和复盘统计等核心操作；在后端服务可用时，可完成登录、数据拉取和数据上推。通过补充前端快速添加入口、同步连接提示、白噪音资源加载和构建脚本，系统的可用性和演示稳定性得到提升。客户端 HAP/APP 构建、后端 Maven 接口测试和模拟器运行验证共同构成项目交付依据。
+测试结果表明，系统能够在离线状态下完成资料保存、任务创建、番茄专注和复盘统计等核心操作；在后端服务可用时，可完成登录、数据拉取和数据上推。通过补充前端快速添加入口、同步连接提示、白噪音资源加载和构建脚本，系统的可用性和演示稳定性得到提升。客户端 HAP/APP 构建、后端 Maven 构建验证、接口联调和模拟器运行验证共同构成项目交付依据。
 }
 \end{spacing}
 \end{zhaiyao}
@@ -22,7 +22,7 @@ With the widespread use of mobile Internet, smart devices and generative artific
 
 To address this problem, this thesis designs and implements ZhiXu, a HarmonyOS study-management application. The system follows a local-first architecture, uses the on-device relational database RDB as the core data source, stores runtime configurations with Preferences, and organizes model, view and control logic under the MVVM pattern. The application provides Today dashboard, task management, resource library, Pomodoro focus, review statistics and cloud synchronization. Study resources can be stored locally and, when remote AI is available, distilled into summaries and key points; the distilled result can be converted into tasks; completed Pomodoro sessions are persisted locally and then reflected in review statistics. The backend is implemented with Spring Boot, MyBatis and MySQL/H2 to provide user, project, task, Pomodoro and synchronization APIs.
 
-The test results show that the system can complete core operations such as resource storage, task creation, Pomodoro focus and review statistics in an offline state. When the backend service is available, it supports login, data pulling and data pushing. By improving quick task creation, synchronization hints, white-noise resource loading and build scripts, the system achieves better usability and demonstration stability. Client HAP/APP builds, backend Maven API tests and emulator-based runtime checks are used as delivery verification evidence.
+The test results show that the system can complete core operations such as resource storage, task creation, Pomodoro focus and review statistics in an offline state. When the backend service is available, it supports login, data pulling and data pushing. By improving quick task creation, synchronization hints, white-noise resource loading and build scripts, the system achieves better usability and demonstration stability. Client HAP/APP builds, backend Maven build checks, API integration checks and emulator-based runtime checks are used as delivery verification evidence.
 \end{spacing}
 \end{abstract}
 

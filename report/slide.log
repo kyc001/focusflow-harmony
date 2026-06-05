@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999995 (MiKTeX 24.1) (preloaded format=xelatex 2025.8.11)  5 JUN 2026 09:39
+This is XeTeX, Version 3.141592653-2.6-0.999995 (MiKTeX 24.1) (preloaded format=xelatex 2025.8.11)  5 JUN 2026 10:19
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1243,22 +1243,22 @@ LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 ]
 File: nku-thesis-template-2020/figures/app-today.jpeg Graphic file (type bmp)
 <nku-thesis-template-2020/figures/app-today.jpeg>
-LaTeX Font Info:    Trying to load font information for U+msa on input line 130
+LaTeX Font Info:    Trying to load font information for U+msa on input line 134
 .
  (D:\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 130
+LaTeX Font Info:    Trying to load font information for U+msb on input line 134
 .
  (D:\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 LaTeX Font Info:    Font shape `TU/lmss/m/it' in size <10.95> not available
-(Font)              Font shape `TU/lmss/m/sl' tried instead on input line 130.
+(Font)              Font shape `TU/lmss/m/sl' tried instead on input line 134.
 LaTeX Font Info:    Font shape `TU/lmss/m/it' in size <8> not available
-(Font)              Font shape `TU/lmss/m/sl' tried instead on input line 130.
+(Font)              Font shape `TU/lmss/m/sl' tried instead on input line 134.
 LaTeX Font Info:    Font shape `TU/lmss/m/it' in size <6> not available
-(Font)              Font shape `TU/lmss/m/sl' tried instead on input line 130.
+(Font)              Font shape `TU/lmss/m/sl' tried instead on input line 134.
 File: nku-thesis-template-2020/figures/app-tasks.jpeg Graphic file (type bmp)
 <nku-thesis-template-2020/figures/app-tasks.jpeg>
 File: nku-thesis-template-2020/figures/app-review.jpeg Graphic file (type bmp)
@@ -1292,14 +1292,14 @@ Package fontspec Info: Font family 'FangSong(0)' created for font 'FangSong'
 (fontspec)             - 'small caps'  (m/sc) with NFSS spec.: 
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 191--191
+Underfull \hbox (badness 10000) in paragraph at lines 195--195
 []|\TU/lmss/m/n/10 ArkWeb /
  []
 
 [6
 
 ]
-Overfull \vbox (0.2742pt too high) detected at line 218
+Overfull \vbox (0.2742pt too high) detected at line 222
  []
 
 [7
@@ -1326,50 +1326,56 @@ File: nku-thesis-template-2020/figures/app-profile.jpeg Graphic file (type bmp)
  [10
 
 ]
-Underfull \hbox (badness 10000) in paragraph at lines 310--310
+File: nku-thesis-template-2020/figures/desktop-card-cropped.jpg Graphic file (t
+ype bmp)
+<nku-thesis-template-2020/figures/desktop-card-cropped.jpg>
+ [11
+
+]
+Underfull \hbox (badness 10000) in paragraph at lines 338--338
 []|\TU/lmss/m/n/8 title\TU/MicrosoftYaHei(0)/m/n/8 、| \TU/lmss/m/n/8 due_at\TU/
 MicrosoftYaHei(0)/m/n/8 、| \TU/lmss/m/n/8 status\TU/MicrosoftYaHei(0)/m/n/8 、| 
 \TU/lmss/m/n/8 re-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 310--310
+Underfull \hbox (badness 10000) in paragraph at lines 338--338
 []|\TU/lmss/m/n/8 task_id\TU/MicrosoftYaHei(0)/m/n/8 、| \TU/lmss/m/n/8 start_at
 \TU/MicrosoftYaHei(0)/m/n/8 、| \TU/lmss/m/n/8 duration\TU/MicrosoftYaHei(0)/m/n
 /8 、|
  []
 
-[11
+[12
 
 ]
 File: nku-thesis-template-2020/figures/swagger-ui.png Graphic file (type bmp)
 <nku-thesis-template-2020/figures/swagger-ui.png>
- [12
+ [13
 
 ]
-Underfull \hbox (badness 10000) in paragraph at lines 357--357
+Underfull \hbox (badness 10000) in paragraph at lines 385--385
 []|\TU/lmtt/m/n/9 /api/user/login\TU/MicrosoftYaHei(0)/m/n/10 、|
  []
 
-[13
+[14
 
 ]
 File: nku-thesis-template-2020/figures/app-sync.jpeg Graphic file (type bmp)
 <nku-thesis-template-2020/figures/app-sync.jpeg>
- [14
-
-] [15
+ [15
 
 ] [16
 
 ] [17
 
+] [18
+
 ]
 File: 证书.jpg Graphic file (type bmp)
 <证书.jpg>
- [18
+ [19
 
-] [19
+] [20
 
 ]
 \tf@nav=\write6
@@ -1390,12 +1396,12 @@ Package rerunfilecheck Info: File `slide.out' has not changed.
 (rerunfilecheck)             Checksum: F9EE7918A522805A7DD48D28E666BA1D;407.
  ) 
 Here is how much of TeX's memory you used:
- 32276 strings out of 409617
- 722098 string characters out of 5781118
+ 32304 strings out of 409617
+ 723343 string characters out of 5781118
  1945191 words of memory out of 5000000
- 53727 multiletter control sequences out of 15000+600000
+ 53754 multiletter control sequences out of 15000+600000
  567448 words of font info for 126 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  128i,15n,123p,420b,1180s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on slide.xdv (19 pages, 293956 bytes).
+Output written on slide.xdv (20 pages, 313612 bytes).

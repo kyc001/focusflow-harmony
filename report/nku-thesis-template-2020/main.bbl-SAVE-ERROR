@@ -1,0 +1,458 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.2 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nty/global//global/global}
+    \entry{cirillo2018pomodoro}{article}{}
+      \name{author}{1}{}{%
+        {{hash=b816ead7ec71b78ad50069d17d303f04}{%
+           family={Cirillo},
+           familyi={C\bibinitperiod},
+           given={Francesco},
+           giveni={F\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Chronicle Books}%
+      }
+      \strng{namehash}{b816ead7ec71b78ad50069d17d303f04}
+      \strng{fullhash}{b816ead7ec71b78ad50069d17d303f04}
+      \strng{bibnamehash}{b816ead7ec71b78ad50069d17d303f04}
+      \strng{authorbibnamehash}{b816ead7ec71b78ad50069d17d303f04}
+      \strng{authornamehash}{b816ead7ec71b78ad50069d17d303f04}
+      \strng{authorfullhash}{b816ead7ec71b78ad50069d17d303f04}
+      \field{sortinit}{C}
+      \field{sortinithash}{4d103a86280481745c9c897c925753c0}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{FC Garage}
+      \field{title}{The {Pomodoro} Technique}
+      \field{year}{2018}
+    \endentry
+    \entry{crompton2018use}{article}{}
+      \name{author}{2}{}{%
+        {{hash=7434f95508d08e72c225cc8dcc36e4bc}{%
+           family={Crompton},
+           familyi={C\bibinitperiod},
+           given={Helen},
+           giveni={H\bibinitperiod}}}%
+        {{hash=a69c827c6779db40f4b14bf0cca7a757}{%
+           family={Burke},
+           familyi={B\bibinitperiod},
+           given={Diane},
+           giveni={D\bibinitperiod}}}%
+      }
+      \strng{namehash}{991a6b42eaa6ae3e3777d91bc562b898}
+      \strng{fullhash}{991a6b42eaa6ae3e3777d91bc562b898}
+      \strng{bibnamehash}{991a6b42eaa6ae3e3777d91bc562b898}
+      \strng{authorbibnamehash}{991a6b42eaa6ae3e3777d91bc562b898}
+      \strng{authornamehash}{991a6b42eaa6ae3e3777d91bc562b898}
+      \strng{authorfullhash}{991a6b42eaa6ae3e3777d91bc562b898}
+      \field{sortinit}{C}
+      \field{sortinithash}{4d103a86280481745c9c897c925753c0}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Computers \& Education}
+      \field{title}{The use of mobile learning in higher education: A systematic review}
+      \field{volume}{123}
+      \field{year}{2018}
+      \field{pages}{53\bibrangedash 64}
+      \range{pages}{12}
+      \verb{doi}
+      \verb 10.1016/j.compedu.2018.04.007
+      \endverb
+    \endentry
+    \entry{harmonyos2024}{misc}{}
+      \name{author}{1}{}{%
+        {{hash=6ff29b4dbe6c216c31a43b6d785a4602}{%
+           family={{HarmonyOS Developer}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{6ff29b4dbe6c216c31a43b6d785a4602}
+      \strng{fullhash}{6ff29b4dbe6c216c31a43b6d785a4602}
+      \strng{bibnamehash}{6ff29b4dbe6c216c31a43b6d785a4602}
+      \strng{authorbibnamehash}{6ff29b4dbe6c216c31a43b6d785a4602}
+      \strng{authornamehash}{6ff29b4dbe6c216c31a43b6d785a4602}
+      \strng{authorfullhash}{6ff29b4dbe6c216c31a43b6d785a4602}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://developer.huawei.com/consumer/cn/doc/harmonyos-guides}}
+      \field{note}{Accessed: 2026-05-01}
+      \field{title}{{HarmonyOS} Application Development Guide}
+      \field{year}{2024}
+    \endentry
+    \entry{harmonyosArkWeb2026}{misc}{}
+      \name{author}{1}{}{%
+        {{hash=da344dc63f6f3351abeae7990219bcc5}{%
+           family={{Huawei Developers}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{fullhash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{bibnamehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{authorbibnamehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{authornamehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{authorfullhash}{da344dc63f6f3351abeae7990219bcc5}
+      \field{extraname}{1}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/web-page-loading-with-web-components}}
+      \field{note}{Accessed: 2026-06-01}
+      \field{title}{Loading Web Pages with {ArkWeb} Components}
+      \field{year}{2026}
+    \endentry
+    \entry{harmonyosRdb2026}{misc}{}
+      \name{author}{1}{}{%
+        {{hash=da344dc63f6f3351abeae7990219bcc5}{%
+           family={{Huawei Developers}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{fullhash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{bibnamehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{authorbibnamehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{authornamehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{authorfullhash}{da344dc63f6f3351abeae7990219bcc5}
+      \field{extraname}{2}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/data-persistence-by-rdb-store}}
+      \field{note}{Accessed: 2026-06-01}
+      \field{title}{Persisting Data with {RDB Store}}
+      \field{year}{2026}
+    \endentry
+    \entry{harmonyosTaskPool2026}{misc}{}
+      \name{author}{1}{}{%
+        {{hash=da344dc63f6f3351abeae7990219bcc5}{%
+           family={{Huawei Developers}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{fullhash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{bibnamehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{authorbibnamehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{authornamehash}{da344dc63f6f3351abeae7990219bcc5}
+      \strng{authorfullhash}{da344dc63f6f3351abeae7990219bcc5}
+      \field{extraname}{3}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/taskpool-introduction}}
+      \field{note}{Accessed: 2026-06-01}
+      \field{title}{{TaskPool}: Parallel Task Development}
+      \field{year}{2026}
+    \endentry
+    \entry{kabudi2021ai}{article}{}
+      \name{author}{3}{}{%
+        {{hash=957164ba2ce043003da07b99c4f383b8}{%
+           family={Kabudi},
+           familyi={K\bibinitperiod},
+           given={Tumaini},
+           giveni={T\bibinitperiod}}}%
+        {{hash=09d6f903d0df9647b3b9c52cb0d809b8}{%
+           family={Pappas},
+           familyi={P\bibinitperiod},
+           given={Ilias},
+           giveni={I\bibinitperiod}}}%
+        {{hash=0c73be0d85f31426f21f01352f5536ef}{%
+           family={Olsen},
+           familyi={O\bibinitperiod},
+           given={Dag\bibnamedelima H{å}kon},
+           giveni={D\bibinitperiod\bibinitdelim H\bibinitperiod}}}%
+      }
+      \strng{namehash}{9378d17041f6f2b659deb1a0abea9ae4}
+      \strng{fullhash}{9378d17041f6f2b659deb1a0abea9ae4}
+      \strng{bibnamehash}{9378d17041f6f2b659deb1a0abea9ae4}
+      \strng{authorbibnamehash}{9378d17041f6f2b659deb1a0abea9ae4}
+      \strng{authornamehash}{9378d17041f6f2b659deb1a0abea9ae4}
+      \strng{authorfullhash}{9378d17041f6f2b659deb1a0abea9ae4}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Computers and Education: Artificial Intelligence}
+      \field{title}{{AI}-enabled adaptive learning systems: A systematic mapping of the literature}
+      \field{volume}{2}
+      \field{year}{2021}
+      \field{pages}{100017}
+      \range{pages}{1}
+      \verb{doi}
+      \verb 10.1016/j.caeai.2021.100017
+      \endverb
+    \endentry
+    \entry{kasneci2023chatgpt}{article}{}
+      \name{author}{23}{}{%
+        {{hash=c72fad49713fef4e273c39cc783e7c68}{%
+           family={Kasneci},
+           familyi={K\bibinitperiod},
+           given={Enkelejda},
+           giveni={E\bibinitperiod}}}%
+        {{hash=5163d3438e7144941f8dbbf1717eef09}{%
+           family={Se{ß}ler},
+           familyi={S\bibinitperiod},
+           given={Kathrin},
+           giveni={K\bibinitperiod}}}%
+        {{hash=0c2382e747e5eb9911ca43074baefe29}{%
+           family={Küchemann},
+           familyi={K\bibinitperiod},
+           given={Stefan},
+           giveni={S\bibinitperiod}}}%
+        {{hash=1a1d1ad761cc5b3f309dd5f58d4a143e}{%
+           family={Bannert},
+           familyi={B\bibinitperiod},
+           given={Maria},
+           giveni={M\bibinitperiod}}}%
+        {{hash=8bef110b9a9b7baa3e3c9296baf944ba}{%
+           family={Dementieva},
+           familyi={D\bibinitperiod},
+           given={Daryna},
+           giveni={D\bibinitperiod}}}%
+        {{hash=6f2d5c9c6cec8ceffa6290e8bf6bddf2}{%
+           family={Fischer},
+           familyi={F\bibinitperiod},
+           given={Frank},
+           giveni={F\bibinitperiod}}}%
+        {{hash=494d637131f50aa2a57073bf6c5f7672}{%
+           family={Gasser},
+           familyi={G\bibinitperiod},
+           given={Urs},
+           giveni={U\bibinitperiod}}}%
+        {{hash=575b1832386aabbd188fba8611b9b410}{%
+           family={Groh},
+           familyi={G\bibinitperiod},
+           given={Georg},
+           giveni={G\bibinitperiod}}}%
+        {{hash=1335d8f7eb7d45ba7b633488786afa17}{%
+           family={Günnemann},
+           familyi={G\bibinitperiod},
+           given={Stephan},
+           giveni={S\bibinitperiod}}}%
+        {{hash=ce2458f8ac2ca4f2198649b4e8a00380}{%
+           family={Hüllermeier},
+           familyi={H\bibinitperiod},
+           given={Eyke},
+           giveni={E\bibinitperiod}}}%
+        {{hash=4a15aa849b8abfaec9b6d44e15a93245}{%
+           family={Krusche},
+           familyi={K\bibinitperiod},
+           given={Stephan},
+           giveni={S\bibinitperiod}}}%
+        {{hash=2e7b05c7e0c405468d37834ab05737b3}{%
+           family={Kutyniok},
+           familyi={K\bibinitperiod},
+           given={Gitta},
+           giveni={G\bibinitperiod}}}%
+        {{hash=5c2a845d58deb7713744b47e8b052c04}{%
+           family={Michaeli},
+           familyi={M\bibinitperiod},
+           given={Tilman},
+           giveni={T\bibinitperiod}}}%
+        {{hash=de230b866877a5e5b49f15bf04aef63e}{%
+           family={Nerdel},
+           familyi={N\bibinitperiod},
+           given={Claudia},
+           giveni={C\bibinitperiod}}}%
+        {{hash=caec2bc4e6990b09f5473339c33cc124}{%
+           family={Pfeffer},
+           familyi={P\bibinitperiod},
+           given={Jürgen},
+           giveni={J\bibinitperiod}}}%
+        {{hash=b9641eead8902970e45fc3b0452cbd2b}{%
+           family={Poquet},
+           familyi={P\bibinitperiod},
+           given={Oleksandra},
+           giveni={O\bibinitperiod}}}%
+        {{hash=d8d811af5b74abad8cd6b169ab55b1dd}{%
+           family={Sailer},
+           familyi={S\bibinitperiod},
+           given={Michael},
+           giveni={M\bibinitperiod}}}%
+        {{hash=45a58d13999ee4667e6f84f6b6718ae9}{%
+           family={Schmidt},
+           familyi={S\bibinitperiod},
+           given={Albrecht},
+           giveni={A\bibinitperiod}}}%
+        {{hash=89021f571c88552ac3ef31ab6c41514e}{%
+           family={Seidel},
+           familyi={S\bibinitperiod},
+           given={Tina},
+           giveni={T\bibinitperiod}}}%
+        {{hash=d337dc293962f197c1e8dd712cb2b148}{%
+           family={Stadler},
+           familyi={S\bibinitperiod},
+           given={Matthias},
+           giveni={M\bibinitperiod}}}%
+        {{hash=8651f7074783c65eada28bd9483764ee}{%
+           family={Weller},
+           familyi={W\bibinitperiod},
+           given={Jochen},
+           giveni={J\bibinitperiod}}}%
+        {{hash=9cffa1b4c64e70b388a1df20f7b776af}{%
+           family={Kuhn},
+           familyi={K\bibinitperiod},
+           given={Jochen},
+           giveni={J\bibinitperiod}}}%
+        {{hash=38a915387a57fd2fe2a67ca2c13d444f}{%
+           family={Kasneci},
+           familyi={K\bibinitperiod},
+           given={Gjergji},
+           giveni={G\bibinitperiod}}}%
+      }
+      \strng{namehash}{79432845715541a7f52fa25906b5eb06}
+      \strng{fullhash}{130ec7d3ec8204ddbc271be0091e710d}
+      \strng{bibnamehash}{79432845715541a7f52fa25906b5eb06}
+      \strng{authorbibnamehash}{79432845715541a7f52fa25906b5eb06}
+      \strng{authornamehash}{79432845715541a7f52fa25906b5eb06}
+      \strng{authorfullhash}{130ec7d3ec8204ddbc271be0091e710d}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Learning and Individual Differences}
+      \field{title}{{ChatGPT} for Good? On Opportunities and Challenges of Large Language Models for Education}
+      \field{volume}{103}
+      \field{year}{2023}
+      \field{pages}{102274}
+      \range{pages}{1}
+      \verb{doi}
+      \verb 10.1016/j.lindif.2023.102274
+      \endverb
+    \endentry
+    \entry{kleppmann2019localfirst}{inproceedings}{}
+      \name{author}{4}{}{%
+        {{hash=34b8d5b1d29d175527a6642f3ec8a76d}{%
+           family={Kleppmann},
+           familyi={K\bibinitperiod},
+           given={Martin},
+           giveni={M\bibinitperiod}}}%
+        {{hash=78c94d63299ff16130ed37a90dc97dcd}{%
+           family={Wiggins},
+           familyi={W\bibinitperiod},
+           given={Adam},
+           giveni={A\bibinitperiod}}}%
+        {{hash=08be746e5ba7584220bcbba879dcd1a8}{%
+           family={Hardenberg},
+           familyi={H\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod},
+           prefix={van},
+           prefixi={v\bibinitperiod}}}%
+        {{hash=f5993cfac255bd2b5bb68477efc3e861}{%
+           family={McGranaghan},
+           familyi={M\bibinitperiod},
+           given={Mark},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{190bc155ebad979b359619e3af909d01}
+      \strng{fullhash}{f478c18f14ce2a2878a72bae33c2bed3}
+      \strng{bibnamehash}{190bc155ebad979b359619e3af909d01}
+      \strng{authorbibnamehash}{190bc155ebad979b359619e3af909d01}
+      \strng{authornamehash}{190bc155ebad979b359619e3af909d01}
+      \strng{authorfullhash}{f478c18f14ce2a2878a72bae33c2bed3}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 2019 ACM SIGPLAN International Symposium on New Ideas, New Paradigms, and Reflections on Programming and Software}
+      \field{title}{Local-first software: You own your data, in spite of the cloud}
+      \field{year}{2019}
+      \verb{doi}
+      \verb 10.1145/3359591.3359737
+      \endverb
+    \endentry
+    \entry{santiago2022pomodoro}{article}{}
+      \name{author}{2}{}{%
+        {{hash=cee405aad18a2b784db9c172e8b53a04}{%
+           family={Santiago},
+           familyi={S\bibinitperiod},
+           given={Christian},
+           giveni={C\bibinitperiod}}}%
+        {{hash=dc06ee5e6704f369610c921e4c0a6414}{%
+           family={Gurat},
+           familyi={G\bibinitperiod},
+           given={Melanie},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{72e474f8015b6f0e8179a78ef694141c}
+      \strng{fullhash}{72e474f8015b6f0e8179a78ef694141c}
+      \strng{bibnamehash}{72e474f8015b6f0e8179a78ef694141c}
+      \strng{authorbibnamehash}{72e474f8015b6f0e8179a78ef694141c}
+      \strng{authornamehash}{72e474f8015b6f0e8179a78ef694141c}
+      \strng{authorfullhash}{72e474f8015b6f0e8179a78ef694141c}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{International Research Journal of Management, IT and Social Sciences}
+      \field{number}{4}
+      \field{title}{Effect of {Pomodoro} technique on student Mendelian genetics concept mastery during synchronous remote learning}
+      \field{volume}{10}
+      \field{year}{2023}
+      \verb{doi}
+      \verb 10.21744/irjmis.v10n4.2287
+      \endverb
+    \endentry
+    \entry{sung2016effects}{article}{}
+      \name{author}{3}{}{%
+        {{hash=5aa4416680945404fb00134a25fd5672}{%
+           family={Sung},
+           familyi={S\bibinitperiod},
+           given={Yi-Shian},
+           giveni={Y\bibinithyphendelim S\bibinitperiod}}}%
+        {{hash=f3b09b4a6f668b68cf587e09b0cbf240}{%
+           family={Chang},
+           familyi={C\bibinitperiod},
+           given={Kuo-En},
+           giveni={K\bibinithyphendelim E\bibinitperiod}}}%
+        {{hash=9361e07df038e332e5f20f385d83ecab}{%
+           family={Liu},
+           familyi={L\bibinitperiod},
+           given={Tzu-Chien},
+           giveni={T\bibinithyphendelim C\bibinitperiod}}}%
+      }
+      \strng{namehash}{5a3a35ed4f4bc54f4f52db029a2c26d2}
+      \strng{fullhash}{5a3a35ed4f4bc54f4f52db029a2c26d2}
+      \strng{bibnamehash}{5a3a35ed4f4bc54f4f52db029a2c26d2}
+      \strng{authorbibnamehash}{5a3a35ed4f4bc54f4f52db029a2c26d2}
+      \strng{authornamehash}{5a3a35ed4f4bc54f4f52db029a2c26d2}
+      \strng{authorfullhash}{5a3a35ed4f4bc54f4f52db029a2c26d2}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Computers \& Education}
+      \field{title}{The effects of integrating mobile devices with teaching and learning on students' learning performance: A meta-analysis and research synthesis}
+      \field{volume}{94}
+      \field{year}{2016}
+      \field{pages}{252\bibrangedash 275}
+      \range{pages}{24}
+      \verb{doi}
+      \verb 10.1016/j.compedu.2015.11.008
+      \endverb
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+

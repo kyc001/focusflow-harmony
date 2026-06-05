@@ -1,10 +1,10 @@
 # Fdb version 4
-["xdvipdfmx"] 1780623578.60748 "slide.xdv" "slide.pdf" "slide" 1780623581.46041 0
-  "slide.xdv" 1780623577 293956 e869513704d21b4a8013b1c5425853a0 "xelatex"
+["xdvipdfmx"] 1780625997.57864 "slide.xdv" "slide.pdf" "slide" 1780626000.2278 0
+  "slide.xdv" 1780625997 313612 ea4576668acbd1e01c15877650e17e1a "xelatex"
   (generated)
   "slide.pdf"
   (rewritten before read)
-["xelatex"] 1780623570.87925 "slide.tex" "slide.xdv" "slide" 1780623581.29047 0
+["xelatex"] 1780625992.78039 "slide.tex" "slide.xdv" "slide" 1780626000.20072 0
   "C:/Users/kyc/AppData/Local/MiKTeX/miktex/data/le/xetex/xelatex.fmt" 1754917906 37531838 9aff8774a66bed40d0dd7cdee7b87bcb ""
   "C:/WINDOWS/Fonts/msyh.ttc" 1761364784 19704352 1e10e74402e59d54499af795caf0b135 ""
   "D:/MiKTeX/fonts/tfm/adobe/zapfding/pzdr.tfm" 1136743454 1528 7e12f4c0fcf5a072cebdcfbfc610f54c ""
@@ -240,12 +240,13 @@
   "nku-thesis-template-2020/figures/app-sync.jpeg" 1780301860 151322 8689266b24b52b01081820c518ca6247 ""
   "nku-thesis-template-2020/figures/app-tasks.jpeg" 1780578837 220804 94eb6cf11f6971030b2ef7252ddf6931 ""
   "nku-thesis-template-2020/figures/app-today.jpeg" 1780309625 775763 a15ccbbe679b83cccebd1490781369cf ""
+  "nku-thesis-template-2020/figures/desktop-card-cropped.jpg" 1780625009 168607 84d8df293d2cd09e70c5a2f2d344314b ""
   "nku-thesis-template-2020/figures/swagger-ui.png" 1780323982 63096 97680fd32b848d6f8ea088c42dba9439 ""
-  "slide.aux" 1780623577 4987 d28f3b84bdbb363151b5df38f2654d99 "xelatex"
-  "slide.nav" 1780623577 2750 8489cd4c2a995ff020b9cf206f57fef3 "xelatex"
-  "slide.out" 1780623577 407 f9ee7918a522805a7dd48d28e666ba1d "xelatex"
-  "slide.tex" 1780623561 19802 2b63da6e0b00667762b0c795437685d5 ""
-  "slide.toc" 1780623577 254 e0f9c3626b86fb910e97d324f2b5c109 "xelatex"
+  "slide.aux" 1780625997 5157 5c4edc9cc91b9115f6af7c228a433cdc "xelatex"
+  "slide.nav" 1780625997 2842 31787634f74878d6bdd3b21de0ae9d01 "xelatex"
+  "slide.out" 1780625997 407 f9ee7918a522805a7dd48d28e666ba1d "xelatex"
+  "slide.tex" 1780625967 20982 3c362fa8a0a182a2b5f5a658034ea70d ""
+  "slide.toc" 1780625997 254 cf2a0cceb967f342877e7a24ea6ee059 "xelatex"
   "证书.jpg" 1778236360 279200 ddf6232b7096a8e99247f8bba2191eef ""
   (generated)
   "slide.aux"

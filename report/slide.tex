@@ -69,6 +69,10 @@
 %------------------------------------------------
 \begin{frame}
   \titlepage
+  \vspace{-1.0em}
+  \begin{center}
+    {\small\color{muted}\href{https://github.com/kyc001/focusflow-harmony}{GitHub: github.com/kyc001/focusflow-harmony}}
+  \end{center}
 \end{frame}
 
 \begin{frame}{汇报提纲}
@@ -284,6 +288,30 @@
       \begin{block}{复盘实现}
         \small
         复盘统计由 \code{FocusStore} 聚合任务和番茄记录，TaskPool 预计算统计快照，ArkWeb 加载本地 \code{charts/index.html} 展示图表。
+      \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{原生能力：桌面服务卡片}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.36\textwidth}
+      \centering
+      \includegraphics[height=5.25cm]{desktop-card-cropped.jpg}\\[-0.2em]
+      {\scriptsize\color{muted}桌面卡片：今日待办、资料与番茄进度}
+    \column{0.60\textwidth}
+      \begin{block}{卡片展示内容}
+        \small
+        桌面卡片聚合今日 Top 3、待办数量、资料数量和番茄进度，让用户不用进入应用也能看到当天学习摘要。
+      \end{block}
+      \vspace{0.25em}
+      \begin{block}{实现方式}
+        \small
+        \begin{itemize}
+          \item \code{EntryFormAbility} 提供系统桌面入口。
+          \item 主应用刷新后写入轻量 \code{Preferences} 快照。
+          \item 卡片读取快照并绑定数据，避免在 Form 扩展中初始化完整数据库。
+          \item 用户点击卡片后回到应用主流程。
+        \end{itemize}
       \end{block}
   \end{columns}
 \end{frame}

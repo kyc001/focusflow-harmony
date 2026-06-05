@@ -31,6 +31,7 @@
 \definecolor{lineGray}{HTML}{DDDDDD}
 
 \setbeamertemplate{caption}[numbered]
+\setbeamertemplate{navigation symbols}{}
 
 \newcommand{\code}[1]{\texttt{\footnotesize #1}}
 \newcommand{\codesmall}[1]{\texttt{\scriptsize #1}}
@@ -411,21 +412,6 @@
 
 %------------------------------------------------
 \section{演示与总结}
-\begin{frame}{演示路径：按技术链路讲}
-  \centering
-  \phonepic{app-today.jpeg}{1. 今日任务聚合}
-  \hfill
-  \phonepic{app-tasks.jpeg}{2. 快速添加/图片候选}
-  \hfill
-  \phonepic{app-sync.jpeg}{3. 后端同步}
-
-  \vspace{0.55em}
-  \begin{block}{建议答辩演示顺序}
-    \small
-    启动 H2 后端 $\rightarrow$ 登录 demo/secret $\rightarrow$ 在任务页快速添加或上传截图 $\rightarrow$ 开始番茄专注 $\rightarrow$ 查看复盘统计 $\rightarrow$ 执行同步并展示 Swagger 接口。
-  \end{block}
-\end{frame}
-
 \begin{frame}{课程知识点落地}
   \begin{columns}[T,onlytextwidth]
     \column{0.48\textwidth}
@@ -469,11 +455,19 @@
           \item 平板布局、无障碍和真机后台计时可靠性。
         \end{itemize}
       \end{block}
-      \vspace{0.7em}
-      \centering
-      {\Huge\bfseries\color{accentLine}谢谢！}\\
-      {\large 欢迎老师批评指正}
   \end{columns}
+\end{frame}
+
+\begin{frame}[plain]
+  \centering
+  \includegraphics[height=0.93\paperheight]{证书.jpg}
+\end{frame}
+
+\begin{frame}{}
+  \centering
+  \vspace{1.6cm}
+  {\Huge\bfseries\color{accentLine}谢谢！}\\[0.8em]
+  {\Large 欢迎老师批评指正}
 \end{frame}
 
 \end{document}
